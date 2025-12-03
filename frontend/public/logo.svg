@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <defs>
+    <linearGradient id="moovGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B00;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#E55A00;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF8C42;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="lightGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8C42;stop-opacity:0.3" />
+      <stop offset="100%" style="stop-color:#FF6B00;stop-opacity:0.1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle with subtle gradient -->
+  <circle cx="100" cy="100" r="95" fill="url(#lightGradient)" opacity="0.2"/>
+  
+  <!-- Main map pin / location marker -->
+  <g transform="translate(100, 70)">
+    <!-- Pin body -->
+    <path d="M 0,-40 C -22,-40 -40,-22 -40,0 C -40,15 -20,35 0,60 C 20,35 40,15 40,0 C 40,-22 22,-40 0,-40 Z" 
+          fill="url(#moovGradient)" 
+          stroke="#FFFFFF" 
+          stroke-width="3"/>
+    
+    <!-- Inner circle -->
+    <circle cx="0" cy="0" r="12" fill="#FFFFFF"/>
+    
+    <!-- Lightning bolt in the center (representing energy/money transfer) -->
+    <path d="M 2,-8 L -4,0 L 0,0 L -2,8 L 4,0 L 0,0 Z" 
+          fill="url(#moovGradient)"/>
+  </g>
+  
+  <!-- Network connection dots around -->
+  <g opacity="0.6">
+    <!-- Top right dot -->
+    <circle cx="140" cy="60" r="6" fill="url(#moovGradient)"/>
+    <line x1="120" y1="70" x2="140" y2="60" stroke="url(#moovGradient)" stroke-width="2" stroke-dasharray="3,3"/>
+    
+    <!-- Right dot -->
+    <circle cx="160" cy="100" r="6" fill="url(#moovGradient)"/>
+    <line x1="130" y1="95" x2="160" y2="100" stroke="url(#moovGradient)" stroke-width="2" stroke-dasharray="3,3"/>
+    
+    <!-- Bottom right dot -->
+    <circle cx="135" cy="140" r="6" fill="url(#moovGradient)"/>
+    <line x1="115" y1="125" x2="135" y2="140" stroke="url(#moovGradient)" stroke-width="2" stroke-dasharray="3,3"/>
+    
+    <!-- Left dot -->
+    <circle cx="40" cy="100" r="6" fill="url(#moovGradient)"/>
+    <line x1="70" y1="95" x2="40" y2="100" stroke="url(#moovGradient)" stroke-width="2" stroke-dasharray="3,3"/>
+    
+    <!-- Top left dot -->
+    <circle cx="60" cy="60" r="6" fill="url(#moovGradient)"/>
+    <line x1="80" y1="70" x2="60" y2="60" stroke="url(#moovGradient)" stroke-width="2" stroke-dasharray="3,3"/>
+  </g>
+  
+  <!-- Subtle orbit ring -->
+  <circle cx="100" cy="100" r="70" fill="none" stroke="url(#moovGradient)" stroke-width="1.5" opacity="0.3" stroke-dasharray="5,5"/>
+</svg>

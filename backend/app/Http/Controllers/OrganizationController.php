@@ -30,12 +30,22 @@ class OrganizationController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|unique:organizations',
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'is_active' => 'boolean',
+            'contact_firstname' => 'required|string|max:255',
+            'contact_lastname' => 'required|string|max:255',
+            'contact_phone' => 'required|string|max:20',
+            'contact_email' => 'required|email|max:255',
         ]);
+
+        // Générer automatiquement le code dealer
+        $prefix = 'DLR';
+        $lastOrg = Organization::orderBy('id', 'desc')->first();
+        $number = $lastOrg ? $lastOrg->id + 1 : 1;
+        $validated['code'] = $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+        
+        // Utiliser les infos du contact pour phone et email de l'organization
+        $validated['phone'] = $validated['contact_phone'];
+        $validated['email'] = $validated['contact_email'];
+        $validated['is_active'] = true;
 
         $organization = Organization::create($validated);
 
@@ -57,12 +67,19 @@ class OrganizationController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'code' => 'sometimes|string|unique:organizations,code,' . $id,
-            'phone' => 'nullable|string',
-            'email' => 'nullable|email',
-            'address' => 'nullable|string',
-            'is_active' => 'boolean',
+            'contact_firstname' => 'sometimes|string|max:255',
+            'contact_lastname' => 'sometimes|string|max:255',
+            'contact_phone' => 'sometimes|string|max:20',
+            'contact_email' => 'sometimes|email|max:255',
         ]);
+
+        // Si les infos de contact sont mises à jour, mettre à jour aussi phone et email
+        if (isset($validated['contact_phone'])) {
+            $validated['phone'] = $validated['contact_phone'];
+        }
+        if (isset($validated['contact_email'])) {
+            $validated['email'] = $validated['contact_email'];
+        }
 
         $organization->update($validated);
 

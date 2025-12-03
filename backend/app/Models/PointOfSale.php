@@ -78,6 +78,26 @@ class PointOfSale extends Model
         return $this->belongsTo(User::class, 'validated_by');
     }
 
+    public function uploads()
+    {
+        return $this->hasMany(PointOfSaleUpload::class);
+    }
+
+    public function idDocuments()
+    {
+        return $this->hasMany(PointOfSaleUpload::class)->where('type', 'id_document');
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(PointOfSaleUpload::class)->where('type', 'photo');
+    }
+
+    public function fiscalDocuments()
+    {
+        return $this->hasMany(PointOfSaleUpload::class)->where('type', 'fiscal_document');
+    }
+
     public function scopePending($query)
     {
         return $query->where('status', 'pending');

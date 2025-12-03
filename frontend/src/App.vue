@@ -1,11 +1,20 @@
 <script setup>
 import { RouterView } from 'vue-router';
 import { useAuthStore } from './stores/auth';
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
+import { useToast } from './composables/useToast';
+import Toast from './components/Toast.vue';
 
 const authStore = useAuthStore();
+const { setToastComponent } = useToast();
+const toastRef = ref(null);
 
 onMounted(() => {
+  // Set toast component reference
+  if (toastRef.value) {
+    setToastComponent(toastRef.value);
+  }
+
   // Fetch user data if authenticated
   if (authStore.isAuthenticated) {
     authStore.fetchUser().catch(() => {
@@ -16,8 +25,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div id="app" class="min-h-screen bg-gray-50">
+  <div id="app" class="min-h-screen gradient-mesh">
     <RouterView />
+    <Toast ref="toastRef" />
   </div>
 </template>
 

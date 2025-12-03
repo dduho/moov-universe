@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  --color-moov-orange: #FF6B00;
+  --color-moov-orange-light: #FF8C42;
+  --color-moov-orange-dark: #E55A00;
+  
+  --font-family-sans: 'Lexend', system-ui, -apple-system, sans-serif;
+}
+
+/* Glassmorphism utilities */
+@layer utilities {
+  .glass {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .glass-strong {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  .glass-card {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+  }
+  
+  .gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  }
+  
+  .gradient-moov {
+    background: linear-gradient(135deg, #FF6B00 0%, #E55A00 50%, #FF8C42 100%);
+  }
+  
+  .gradient-mesh {
+    background: 
+      radial-gradient(at 0% 0%, rgba(255, 107, 0, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(229, 90, 0, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, rgba(255, 140, 66, 0.3) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(102, 126, 234, 0.3) 0px, transparent 50%);
+  }
+}

@@ -49,10 +49,46 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: '/dealers',
+    name: 'DealerList',
+    component: () => import('../views/DealerList.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/dealers/:id',
+    name: 'DealerDetail',
+    component: () => import('../views/DealerDetail.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/statistics',
     name: 'Statistics',
     component: () => import('../views/Statistics.vue'),
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/users',
+    name: 'UserList',
+    component: () => import('../views/UserList.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/notifications',
+    name: 'NotificationList',
+    component: () => import('../views/NotificationList.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/activity-logs',
+    name: 'ActivityLogList',
+    component: () => import('../views/ActivityLogList.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/settings',
+    name: 'Settings',
+    component: () => import('../views/Settings.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
 ];
 

@@ -82,8 +82,31 @@ class User extends Authenticatable
         return $this->hasRole('dealer');
     }
 
-    public function isCommercial()
+    /**
+     * Check if user can access a specific organization's data
+     */
+    public function canAccessOrganization($organizationId)
     {
-        return $this->hasRole('commercial');
+        // Admins can access all organizations
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        // Dealers can only access their own organization
+        return $this->organization_id == $organizationId;
+    }
+
+    /**
+     * Get query scope for user's accessible organizations
+     */
+    public function getAccessibleOrganizationIds()
+    {
+        // Admins can access all organizations
+        if ($this->isAdmin()) {
+            return null; // null means all
+        }
+
+        // Dealers can only access their own organization
+        return [$this->organization_id];
     }
 }

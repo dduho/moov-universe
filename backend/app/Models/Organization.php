@@ -16,6 +16,10 @@ class Organization extends Model
         'email',
         'address',
         'is_active',
+        'contact_firstname',
+        'contact_lastname',
+        'contact_phone',
+        'contact_email',
     ];
 
     protected $casts = [

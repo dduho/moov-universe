@@ -18,7 +18,7 @@ class PointOfSaleController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = PointOfSale::with(['organization', 'creator', 'validator']);
+        $query = PointOfSale::with(['organization', 'creator', 'validator', 'uploads']);
 
         // Filter based on user role
         if (!$user->isAdmin()) {
@@ -51,13 +51,14 @@ class PointOfSaleController extends Controller
             });
         }
 
-        $perPage = $request->get('per_page', 15);
+        $perPage = $request->get('per_page', 1000); // Default to 1000 to get all
         return response()->json($query->orderBy('created_at', 'desc')->paginate($perPage));
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
+            'organization_id' => 'required|exists:organizations,id',
             'dealer_name' => 'required|string',
             'numero_flooz' => 'required|string',
             'shortcode' => 'nullable|string',
@@ -101,14 +102,46 @@ class PointOfSaleController extends Controller
             $validated['longitude']
         );
 
-        $validated['organization_id'] = $user->organization_id;
+        // For non-admin users, force their organization_id
+        if (!$user->isAdmin()) {
+            $validated['organization_id'] = $user->organization_id;
+        }
+        
         $validated['created_by'] = $user->id;
         $validated['status'] = 'pending';
 
         $pdv = PointOfSale::create($validated);
 
+        // Attach uploaded files
+        if ($request->has('owner_id_document_ids')) {
+            foreach ($request->owner_id_document_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'type' => 'id_document',
+                ]);
+            }
+        }
+
+        if ($request->has('photo_ids')) {
+            foreach ($request->photo_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'type' => 'photo',
+                ]);
+            }
+        }
+
+        if ($request->has('fiscal_document_ids')) {
+            foreach ($request->fiscal_document_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'type' => 'fiscal_document',
+                ]);
+            }
+        }
+
         return response()->json([
-            'pdv' => $pdv->load(['organization', 'creator']),
+            'pdv' => $pdv->load(['organization', 'creator', 'idDocuments', 'photos', 'fiscalDocuments']),
             'proximity_alert' => $proximityCheck,
         ], 201);
     }
@@ -116,7 +149,7 @@ class PointOfSaleController extends Controller
     public function show($id, Request $request)
     {
         $user = $request->user();
-        $query = PointOfSale::with(['organization', 'creator', 'validator']);
+        $query = PointOfSale::with(['organization', 'creator', 'validator', 'idDocuments', 'photos', 'fiscalDocuments']);
 
         if (!$user->isAdmin()) {
             $query->where('organization_id', $user->organization_id);
@@ -124,7 +157,20 @@ class PointOfSaleController extends Controller
 
         $pdv = $query->findOrFail($id);
 
-        return response()->json($pdv);
+        // Check proximity if PDV has coordinates
+        $proximityCheck = null;
+        if ($pdv->latitude && $pdv->longitude) {
+            $proximityCheck = $this->proximityService->checkProximity(
+                $pdv->latitude,
+                $pdv->longitude,
+                $pdv->id
+            );
+        }
+
+        return response()->json([
+            'pdv' => $pdv,
+            'proximity_alert' => $proximityCheck,
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -167,7 +213,7 @@ class PointOfSaleController extends Controller
         return response()->json($pdv->load(['organization', 'creator']));
     }
 
-    public function validate(Request $request, $id)
+    public function validatePdv(Request $request, $id)
     {
         $user = $request->user();
 

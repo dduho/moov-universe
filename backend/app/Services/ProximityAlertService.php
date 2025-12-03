@@ -12,7 +12,7 @@ class ProximityAlertService
      */
     public function checkProximity(float $lat, float $lng, ?int $excludeId = null): array
     {
-        $alertDistance = SystemSetting::getValue('proximity_alert_distance', 300);
+        $alertDistance = SystemSetting::getValue('pdv_proximity_threshold', 300);
         
         $nearbyPdvs = PointOfSale::query()
             ->where('status', 'validated')

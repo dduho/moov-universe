@@ -122,5 +122,32 @@ class StatisticsController extends Controller
 
         return response()->json($data);
     }
+
+    public function validation(Request $request)
+    {
+        $user = $request->user();
+
+        // Get today's validated and rejected count
+        $validatedToday = PointOfSale::where('status', 'validated')
+            ->whereDate('updated_at', today())
+            ->count();
+
+        $rejectedToday = PointOfSale::where('status', 'rejected')
+            ->whereDate('updated_at', today())
+            ->count();
+
+        // Calculate average validation time (in hours)
+        $avgTime = PointOfSale::whereNotNull('validated_at')
+            ->selectRaw('AVG(TIMESTAMPDIFF(HOUR, created_at, validated_at)) as avg_hours')
+            ->value('avg_hours');
+
+        $averageTime = $avgTime ? round($avgTime) . 'h' : '0h';
+
+        return response()->json([
+            'validatedToday' => $validatedToday,
+            'rejectedToday' => $rejectedToday,
+            'averageTime' => $averageTime,
+        ]);
+    }
 }
 

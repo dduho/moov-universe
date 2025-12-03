@@ -17,17 +17,12 @@ class RoleSeeder extends Seeder
             [
                 'name' => 'admin',
                 'display_name' => 'Administrateur Moov Money',
-                'description' => 'Staff Moov avec accès complet à tous les PDV',
+                'description' => 'Employé Moov Money avec accès complet à tous les Dealers et PDV',
             ],
             [
                 'name' => 'dealer',
-                'display_name' => 'Dealer',
-                'description' => 'Dealer gérant une organisation avec ses propres PDV',
-            ],
-            [
-                'name' => 'commercial',
-                'display_name' => 'Commercial',
-                'description' => 'Commercial/Employé d\'un dealer',
+                'display_name' => 'Utilisateur Dealer',
+                'description' => 'Utilisateur appartenant à un Dealer, accès limité aux PDV de son organisation uniquement',
             ],
         ];
 

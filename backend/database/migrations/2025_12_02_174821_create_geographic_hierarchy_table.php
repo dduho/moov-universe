@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('geographic_hierarchy', function (Blueprint $table) {
+        Schema::create('geographic_hierarchies', function (Blueprint $table) {
             $table->id();
             $table->string('region');
             $table->string('prefecture');
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('geographic_hierarchy');
+        Schema::dropIfExists('geographic_hierarchies');
     }
 };
