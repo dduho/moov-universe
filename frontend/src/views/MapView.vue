@@ -109,7 +109,7 @@
           />
         </div>
 
-        <div class="flex justify-end mt-4">
+        <div class="flex justify-start mt-4">
           <button
             @click="resetFilters"
             class="px-6 py-3 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 whitespace-nowrap"
