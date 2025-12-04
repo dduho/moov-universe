@@ -137,9 +137,28 @@ const isPDF = (file) => {
 
 const getFileUrl = (file) => {
   if (!file) return '';
-  if (file.url) return file.url;
-  if (file.path) return UploadService.getFileUrl(file.path);
-  if (file instanceof File) return URL.createObjectURL(file);
+  
+  // If it's a File object (local preview before upload)
+  if (file instanceof File) {
+    const url = URL.createObjectURL(file);
+    console.log('FileViewer - Created local URL for File object:', url);
+    return url;
+  }
+  
+  // If it's an uploaded file with path
+  if (file.path) {
+    const pathUrl = UploadService.getFileUrl(file.path);
+    console.log('FileViewer - Generated URL from file.path:', pathUrl);
+    return pathUrl;
+  }
+  
+  // If URL is provided
+  if (file.url) {
+    console.log('FileViewer - Using file.url:', file.url);
+    return file.url;
+  }
+  
+  console.warn('FileViewer - Unable to generate URL for file:', file);
   return '';
 };
 

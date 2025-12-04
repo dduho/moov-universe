@@ -39,7 +39,8 @@
             :options="[
               { label: 'Tous les rôles', value: '' },
               { label: 'Administrateur', value: 'admin' },
-              { label: 'Dealer', value: 'dealer' }
+              { label: 'Propriétaire Dealer', value: 'dealer_owner' },
+              { label: 'Commercial Dealer', value: 'dealer_agent' }
             ]"
             option-label="label"
             option-value="value"
@@ -329,7 +330,10 @@ const stats = computed(() => ({
   total: userStore.users.length,
   active: userStore.users.filter(u => u.is_active).length,
   admins: userStore.users.filter(u => (u.role?.name || u.role) === 'admin').length,
-  dealers: userStore.users.filter(u => (u.role?.name || u.role) === 'dealer').length
+  dealers: userStore.users.filter(u => {
+    const roleName = u.role?.name || u.role;
+    return roleName === 'dealer_owner' || roleName === 'dealer_agent';
+  }).length
 }));
 
 const getUserInitials = (user) => {
@@ -343,7 +347,8 @@ const getUserInitials = (user) => {
 const getRoleBadgeClass = (role) => {
   const classes = {
     admin: 'bg-purple-100 text-purple-800',
-    dealer: 'bg-blue-100 text-blue-800'
+    dealer_owner: 'bg-blue-100 text-blue-800',
+    dealer_agent: 'bg-green-100 text-green-800'
   };
   return classes[role] || 'bg-gray-100 text-gray-800'
 };
@@ -351,7 +356,8 @@ const getRoleBadgeClass = (role) => {
 const getRoleLabel = (role) => {
   const labels = {
     admin: 'Administrateur',
-    dealer: 'Dealer'
+    dealer_owner: 'Propriétaire Dealer',
+    dealer_agent: 'Commercial Dealer'
   };
   return labels[role] || role;
 };

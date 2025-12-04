@@ -93,6 +93,7 @@
                 mask="shortcode"
                 placeholder="XXX XXXX"
                 :error="errors.shortcode"
+                required
               />
             </div>
 
@@ -129,7 +130,6 @@
                 type="text"
                 placeholder="Prénom du propriétaire"
                 :error="errors.owner_first_name"
-                required
               />
               <FormInput
                 v-model="formData.owner_last_name"
@@ -137,7 +137,6 @@
                 type="text"
                 placeholder="Nom du propriétaire"
                 :error="errors.owner_last_name"
-                required
               />
             </div>
 
@@ -147,7 +146,6 @@
                 label="Date de naissance"
                 type="date"
                 :error="errors.owner_date_of_birth"
-                required
               />
               <FormSelect
                 v-model="formData.owner_gender"
@@ -156,7 +154,6 @@
                 option-label="label"
                 option-value="value"
                 :error="errors.owner_gender"
-                required
               />
             </div>
 
@@ -186,15 +183,16 @@
                 option-label="label"
                 option-value="value"
                 :error="errors.owner_id_type"
-                required
               />
               <FormInput
                 v-model="formData.owner_id_number"
                 label="Numéro de pièce"
                 type="text"
-                placeholder="Ex: 12345678"
+                :placeholder="currentIdMask ? currentIdMask.display : 'Sélectionnez d\'abord un type de pièce'"
+                :disabled="!formData.owner_id_type"
+                :maxlength="currentIdMask?.maxLength"
                 :error="errors.owner_id_number"
-                required
+                @input="handleIdNumberInput"
               />
             </div>
 
@@ -205,11 +203,13 @@
                 type="date"
                 :error="errors.owner_id_expiry_date"
               />
-              <FormInput
+              <FormSelect
                 v-model="formData.owner_nationality"
                 label="Nationalité"
-                type="text"
-                placeholder="Ex: Togolaise"
+                :options="nationalityOptions"
+                option-label="label"
+                option-value="value"
+                placeholder="Sélectionnez une nationalité"
                 :error="errors.owner_nationality"
               />
             </div>
@@ -224,7 +224,7 @@
 
             <!-- ID Document Upload -->
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-4">Pièce d'identité (scan) *</label>
+              <label class="block text-sm font-bold text-gray-700 mb-4">Pièce d'identité (scan) </label>
               <FileUploader
                 :multiple="true"
                 :max-files="2"
@@ -238,7 +238,7 @@
                 v-if="uploadedIDDocument.length > 0"
                 :files="uploadedIDDocument"
                 :allow-delete="true"
-                @delete="(file) => uploadedIDDocument = uploadedIDDocument.filter(f => f.id !== file.id)"
+                @delete="handleDeleteIDDocument"
                 class="mt-4"
               />
             </div>
@@ -296,23 +296,25 @@
                 option-value="value"
                 placeholder="Sélectionnez un canton"
                 :disabled="!formData.commune"
+                :error="errors.canton"
               />
             </div>
 
             <div class="grid grid-cols-2 gap-6">
-              <FormInput
+              <AutocompleteInput
                 v-model="formData.city"
                 label="Ville"
-                type="text"
-                placeholder="Ville"
+                placeholder="Tapez pour rechercher une ville..."
+                :suggestions="citySuggestions"
                 :error="errors.city"
                 required
+                @update:modelValue="onCityChange"
               />
-              <FormInput
+              <AutocompleteInput
                 v-model="formData.neighborhood"
                 label="Quartier"
-                type="text"
-                placeholder="Quartier"
+                placeholder="Tapez pour rechercher un quartier..."
+                :suggestions="neighborhoodSuggestions"
                 :error="errors.neighborhood"
                 required
               />
@@ -323,6 +325,7 @@
               label="Description de la localisation"
               :rows="3"
               placeholder="Ex: À côté du marché central, près de la pharmacie..."
+              :error="errors.location_description"
             />
 
             <!-- GPS Capture -->
@@ -342,6 +345,7 @@
                   step="any"
                   placeholder="Ex: 6.1256"
                   :disabled="loadingGPS"
+                  :error="errors.latitude"
                   required
                 />
                 <FormInput
@@ -351,6 +355,7 @@
                   step="any"
                   placeholder="Ex: 1.2254"
                   :disabled="loadingGPS"
+                  :error="errors.longitude"
                   required
                 />
               </div>
@@ -386,23 +391,57 @@
                 </svg>
                 Informations fiscales
               </h3>
-              <div class="grid grid-cols-2 gap-6">
-                <FormInput
-                  v-model="formData.nif"
-                  label="NIF"
-                  type="text"
-                  placeholder="Numéro d'Identification Fiscale"
-                  :error="errors.nif"
-                />
-                <FormSelect
-                  v-model="formData.tax_regime"
-                  label="Régime fiscal"
-                  :options="taxRegimeOptions"
-                  option-label="label"
-                  option-value="value"
-                  placeholder="Sélectionnez un régime"
-                  :error="errors.tax_regime"
-                />
+              <div class="space-y-6">
+                <!-- Radio: A-t-il un NIF? -->
+                <div>
+                  <label class="block text-sm font-bold text-gray-700 mb-3">Le point de vente a-t-il un NIF ? *</label>
+                  <div class="flex items-center gap-6">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        v-model="formData.has_nif"
+                        type="radio"
+                        value="oui"
+                        class="w-5 h-5 text-moov-orange focus:ring-2 focus:ring-moov-orange/20"
+                      >
+                      <span class="text-sm font-semibold text-gray-700">Oui</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                      <input
+                        v-model="formData.has_nif"
+                        type="radio"
+                        value="non"
+                        class="w-5 h-5 text-moov-orange focus:ring-2 focus:ring-moov-orange/20"
+                      >
+                      <span class="text-sm font-semibold text-gray-700">Non</span>
+                    </label>
+                  </div>
+                  <p v-if="errors.has_nif" class="mt-2 text-sm text-red-600 font-semibold">{{ errors.has_nif }}</p>
+                  <p v-else-if="shouldShowNifField" class="mt-2 text-xs text-gray-500">
+                    Le NIF est obligatoire pour ce profil ou car vous avez indiqué en avoir un.
+                  </p>
+                </div>
+
+                <!-- Champ NIF (conditionnel) -->
+                <div v-if="shouldShowNifField" class="grid grid-cols-2 gap-6">
+                  <FormInput
+                    v-model="formData.nif"
+                    label="NIF"
+                    type="text"
+                    placeholder="Numéro d'Identification Fiscale"
+                    :error="errors.nif"
+                    :required="shouldShowNifField"
+                  />
+                  <FormSelect
+                    v-model="formData.tax_regime"
+                    label="Régime fiscal"
+                    :options="taxRegimeOptions"
+                    option-label="label"
+                    option-value="value"
+                    placeholder="Sélectionnez un régime"
+                    :error="errors.tax_regime"
+                    :required="shouldShowNifField"
+                  />
+                </div>
               </div>
             </div>
 
@@ -423,6 +462,8 @@
                   option-label="label"
                   option-value="value"
                   placeholder="Type de support"
+                  required
+                  :error="errors.visibility_support"
                 />
                 <FormSelect
                   v-model="formData.support_state"
@@ -444,12 +485,13 @@
                 </svg>
                 Code d'agent
               </h3>
-              <FormInput
+              <MaskedInput
                 v-model="formData.cagnt_number"
                 label="Numéro CAGNT"
-                type="text"
-                placeholder="Ex: CAGNT123456"
+                mask="phone"
+                placeholder="228 XX XX XX XX"
                 :error="errors.cagnt_number"
+                required
               />
             </div>
 
@@ -477,7 +519,7 @@
                 v-if="uploadedFiscalDocuments.length > 0"
                 :files="uploadedFiscalDocuments"
                 :allow-delete="true"
-                @delete="(file) => uploadedFiscalDocuments = uploadedFiscalDocuments.filter(f => f.id !== file.id)"
+                @delete="handleDeleteFiscalDocument"
                 class="mt-4"
               />
             </div>
@@ -488,9 +530,9 @@
                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
-                Photos du point de vente
+                Photos du point de vente *
               </h3>
-              <p class="text-sm text-gray-600 mb-4">Ajoutez 3 à 5 photos du PDV (devanture, intérieur, environnement)</p>
+              <p class="text-sm text-gray-600 mb-4">Ajoutez au moins 1 photo du PDV (devanture, intérieur, environnement) - Maximum 4 photos</p>
               
               <FileUploader
                 :multiple="true"
@@ -506,7 +548,7 @@
                 v-if="uploadedPhotos.length > 0"
                 :files="uploadedPhotos"
                 :allow-delete="true"
-                @delete="(file) => uploadedPhotos = uploadedPhotos.filter(f => f.id !== file.id)"
+                @delete="handleDeletePhoto"
                 class="mt-4"
               />
             </div>
@@ -523,8 +565,8 @@
               <div class="grid grid-cols-2 gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">Organisation:</span> {{ getOrganizationName() }}</div>
                 <div><span class="font-semibold text-gray-600">Nom du PDV:</span> {{ formData.point_name }}</div>
-                <div><span class="font-semibold text-gray-600">Numéro Flooz:</span> {{ formData.flooz_number }}</div>
-                <div><span class="font-semibold text-gray-600">Shortcode:</span> {{ formData.shortcode || 'N/A' }}</div>
+                <div><span class="font-semibold text-gray-600">Numéro Flooz:</span> {{ formatPhone(formData.flooz_number) }}</div>
+                <div><span class="font-semibold text-gray-600">Shortcode:</span> {{ formatShortcode(formData.shortcode) || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Profil:</span> {{ formData.profile || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Type d'activité:</span> {{ formData.activity_type || 'N/A' }}</div>
               </div>
@@ -537,9 +579,9 @@
                 <div><span class="font-semibold text-gray-600">Nom complet:</span> {{ formData.owner_first_name }} {{ formData.owner_last_name }}</div>
                 <div><span class="font-semibold text-gray-600">Date de naissance:</span> {{ formData.owner_date_of_birth }}</div>
                 <div><span class="font-semibold text-gray-600">Genre:</span> {{ formData.owner_gender === 'M' ? 'Masculin' : 'Féminin' }}</div>
-                <div><span class="font-semibold text-gray-600">Téléphone:</span> {{ formData.owner_phone }}</div>
-                <div><span class="font-semibold text-gray-600">Contact alternatif:</span> {{ formData.alternative_contact || 'N/A' }}</div>
-                <div><span class="font-semibold text-gray-600">Pièce d'identité:</span> {{ formData.owner_id_type }} - {{ formData.owner_id_number }}</div>
+                <div><span class="font-semibold text-gray-600">Téléphone:</span> {{ formatPhone(formData.owner_phone) }}</div>
+                <div><span class="font-semibold text-gray-600">Contact alternatif:</span> {{ formatPhone(formData.alternative_contact) || 'N/A' }}</div>
+                <div><span class="font-semibold text-gray-600">Pièce d'identité:</span> {{ getIdTypeLabel }} - {{ formData.owner_id_number || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Date d'expiration:</span> {{ formData.owner_id_expiry_date || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Nationalité:</span> {{ formData.owner_nationality || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Profession:</span> {{ formData.owner_profession || 'N/A' }}</div>
@@ -568,7 +610,7 @@
                 <div><span class="font-semibold text-gray-600">Régime fiscal:</span> {{ formData.tax_regime || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Support de visibilité:</span> {{ formData.visibility_support || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">État du support:</span> {{ formData.support_state || 'N/A' }}</div>
-                <div><span class="font-semibold text-gray-600">Numéro CAGNT:</span> {{ formData.cagnt_number || 'N/A' }}</div>
+                <div><span class="font-semibold text-gray-600">Numéro CAGNT:</span> {{ formatPhone(formData.cagnt_number) || 'N/A' }}</div>
               </div>
             </div>
 
@@ -617,10 +659,12 @@
           <button
             v-if="currentStep < 5"
             @click="nextStep"
+            :disabled="validating"
             type="button"
-            class="px-6 py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200"
+            class="px-6 py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Suivant →
+            <span v-if="validating" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+            {{ validating ? 'Vérification...' : 'Suivant →' }}
           </button>
           <button
             v-else
@@ -674,7 +718,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, h, watch } from 'vue';
+import { ref, onMounted, computed, h, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import FileUploader from '../components/FileUploader.vue';
@@ -682,6 +726,7 @@ import FileGallery from '../components/FileGallery.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
 import MaskedInput from '../components/MaskedInput.vue';
+import AutocompleteInput from '../components/AutocompleteInput.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { useToast } from '../composables/useToast';
 import FormTextarea from '../components/FormTextarea.vue';
@@ -690,6 +735,9 @@ import UploadService from '../services/UploadService';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import { geographicHierarchy } from '../data/geographicHierarchy';
+import { getCitiesByCommune } from '../data/citiesAndVillages';
+import { getNeighborhoodsByCity } from '../data/neighborhoods';
+import { formatPhone, formatShortcode } from '../utils/formatters';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -701,6 +749,7 @@ const STORAGE_KEY = 'pdv_form_draft';
 const currentStep = ref(1);
 const loadingGPS = ref(false);
 const submitting = ref(false);
+const validating = ref(false);
 const proximityAlert = ref(null);
 const organizations = ref([]);
 const errors = ref({});
@@ -735,7 +784,8 @@ const profileOptions = [
   { label: 'Sélectionnez un profil', value: '' },
   { label: 'DISTRO', value: 'DISTRO' },
   { label: 'AGNT', value: 'AGNT' },
-  { label: 'DSTROWNIF', value: 'DSTROWNIF' },
+  { label: 'DISTROWNIF', value: 'DISTROWNIF' },
+  { label: 'DISTROTC', value: 'DISTROTC' },
   { label: 'BANKAGNT', value: 'BANKAGNT' },
   { label: 'FTAGNT', value: 'FTAGNT' }
 ];
@@ -748,10 +798,317 @@ const genderOptions = [
 
 const idTypeOptions = [
   { label: 'Sélectionnez', value: '' },
-  { label: 'CNI', value: 'CNI' },
-  { label: 'Passeport', value: 'Passeport' },
-  { label: 'Permis de conduire', value: 'Permis' }
+  { label: "Carte Nationale d'Identité", value: 'cni' },
+  { label: 'Passeport', value: 'passport' },
+  { label: 'Carte de séjour', value: 'residence' },
+  { label: "Carte d'électeur", value: 'elector' },
+  { label: 'Permis de conduire', value: 'driving_license' },
+  { label: "Carte d'identité étrangère", value: 'foreign_id' },
+  { label: 'Carte ANID', value: 'anid_card' }
 ];
+
+const nationalityOptions = [
+  { label: 'Sélectionnez', value: '' },
+  { label: 'Afghane', value: 'Afghane' },
+  { label: 'Albanaise', value: 'Albanaise' },
+  { label: 'Algérienne', value: 'Algérienne' },
+  { label: 'Allemande', value: 'Allemande' },
+  { label: 'Américaine', value: 'Américaine' },
+  { label: 'Andorrane', value: 'Andorrane' },
+  { label: 'Angolaise', value: 'Angolaise' },
+  { label: 'Antiguaise et barbudienne', value: 'Antiguaise et barbudienne' },
+  { label: 'Argentine', value: 'Argentine' },
+  { label: 'Arménienne', value: 'Arménienne' },
+  { label: 'Australienne', value: 'Australienne' },
+  { label: 'Autrichienne', value: 'Autrichienne' },
+  { label: 'Azerbaïdjanaise', value: 'Azerbaïdjanaise' },
+  { label: 'Bahamienne', value: 'Bahamienne' },
+  { label: 'Bahreïnienne', value: 'Bahreïnienne' },
+  { label: 'Bangladaise', value: 'Bangladaise' },
+  { label: 'Barbadienne', value: 'Barbadienne' },
+  { label: 'Belge', value: 'Belge' },
+  { label: 'Bélizienne', value: 'Bélizienne' },
+  { label: 'Béninoise', value: 'Béninoise' },
+  { label: 'Bhoutanaise', value: 'Bhoutanaise' },
+  { label: 'Biélorusse', value: 'Biélorusse' },
+  { label: 'Birmane', value: 'Birmane' },
+  { label: 'Bissau-Guinéenne', value: 'Bissau-Guinéenne' },
+  { label: 'Bolivienne', value: 'Bolivienne' },
+  { label: 'Bosnienne', value: 'Bosnienne' },
+  { label: 'Botswanaise', value: 'Botswanaise' },
+  { label: 'Brésilienne', value: 'Brésilienne' },
+  { label: 'Britannique', value: 'Britannique' },
+  { label: 'Brunéienne', value: 'Brunéienne' },
+  { label: 'Bulgare', value: 'Bulgare' },
+  { label: 'Burkinabé', value: 'Burkinabé' },
+  { label: 'Burundaise', value: 'Burundaise' },
+  { label: 'Cambodgienne', value: 'Cambodgienne' },
+  { label: 'Camerounaise', value: 'Camerounaise' },
+  { label: 'Canadienne', value: 'Canadienne' },
+  { label: 'Cap-verdienne', value: 'Cap-verdienne' },
+  { label: 'Centrafricaine', value: 'Centrafricaine' },
+  { label: 'Chilienne', value: 'Chilienne' },
+  { label: 'Chinoise', value: 'Chinoise' },
+  { label: 'Chypriote', value: 'Chypriote' },
+  { label: 'Colombienne', value: 'Colombienne' },
+  { label: 'Comorienne', value: 'Comorienne' },
+  { label: 'Congolaise', value: 'Congolaise' },
+  { label: 'Congolaise (RDC)', value: 'Congolaise (RDC)' },
+  { label: 'Nord-coréenne', value: 'Nord-coréenne' },
+  { label: 'Sud-coréenne', value: 'Sud-coréenne' },
+  { label: 'Costaricaine', value: 'Costaricaine' },
+  { label: 'Croate', value: 'Croate' },
+  { label: 'Cubaine', value: 'Cubaine' },
+  { label: 'Danoise', value: 'Danoise' },
+  { label: 'Djiboutienne', value: 'Djiboutienne' },
+  { label: 'Dominicaine', value: 'Dominicaine' },
+  { label: 'Dominiquaise', value: 'Dominiquaise' },
+  { label: 'Égyptienne', value: 'Égyptienne' },
+  { label: 'Émirienne', value: 'Émirienne' },
+  { label: 'Équato-guinéenne', value: 'Équato-guinéenne' },
+  { label: 'Équatorienne', value: 'Équatorienne' },
+  { label: 'Érythréenne', value: 'Érythréenne' },
+  { label: 'Espagnole', value: 'Espagnole' },
+  { label: 'Estonienne', value: 'Estonienne' },
+  { label: 'Éthiopienne', value: 'Éthiopienne' },
+  { label: 'Fidjienne', value: 'Fidjienne' },
+  { label: 'Finlandaise', value: 'Finlandaise' },
+  { label: 'Française', value: 'Française' },
+  { label: 'Gabonaise', value: 'Gabonaise' },
+  { label: 'Gambienne', value: 'Gambienne' },
+  { label: 'Géorgienne', value: 'Géorgienne' },
+  { label: 'Ghanéenne', value: 'Ghanéenne' },
+  { label: 'Grecque', value: 'Grecque' },
+  { label: 'Grenadienne', value: 'Grenadienne' },
+  { label: 'Guatémaltèque', value: 'Guatémaltèque' },
+  { label: 'Guinéenne', value: 'Guinéenne' },
+  { label: 'Guyanienne', value: 'Guyanienne' },
+  { label: 'Haïtienne', value: 'Haïtienne' },
+  { label: 'Hellénique', value: 'Hellénique' },
+  { label: 'Hondurienne', value: 'Hondurienne' },
+  { label: 'Hongroise', value: 'Hongroise' },
+  { label: 'Indienne', value: 'Indienne' },
+  { label: 'Indonésienne', value: 'Indonésienne' },
+  { label: 'Irakienne', value: 'Irakienne' },
+  { label: 'Iranienne', value: 'Iranienne' },
+  { label: 'Irlandaise', value: 'Irlandaise' },
+  { label: 'Islandaise', value: 'Islandaise' },
+  { label: 'Israélienne', value: 'Israélienne' },
+  { label: 'Italienne', value: 'Italienne' },
+  { label: 'Ivoirienne', value: 'Ivoirienne' },
+  { label: 'Jamaïcaine', value: 'Jamaïcaine' },
+  { label: 'Japonaise', value: 'Japonaise' },
+  { label: 'Jordanienne', value: 'Jordanienne' },
+  { label: 'Kazakhstanaise', value: 'Kazakhstanaise' },
+  { label: 'Kényane', value: 'Kényane' },
+  { label: 'Kirghize', value: 'Kirghize' },
+  { label: 'Kiribatienne', value: 'Kiribatienne' },
+  { label: 'Koweïtienne', value: 'Koweïtienne' },
+  { label: 'Laotienne', value: 'Laotienne' },
+  { label: 'Lesothane', value: 'Lesothane' },
+  { label: 'Lettone', value: 'Lettone' },
+  { label: 'Libanaise', value: 'Libanaise' },
+  { label: 'Libérienne', value: 'Libérienne' },
+  { label: 'Libyenne', value: 'Libyenne' },
+  { label: 'Liechtensteinoise', value: 'Liechtensteinoise' },
+  { label: 'Lituanienne', value: 'Lituanienne' },
+  { label: 'Luxembourgeoise', value: 'Luxembourgeoise' },
+  { label: 'Macédonienne', value: 'Macédonienne' },
+  { label: 'Malgache', value: 'Malgache' },
+  { label: 'Malaisienne', value: 'Malaisienne' },
+  { label: 'Malawienne', value: 'Malawienne' },
+  { label: 'Maldivienne', value: 'Maldivienne' },
+  { label: 'Malienne', value: 'Malienne' },
+  { label: 'Maltaise', value: 'Maltaise' },
+  { label: 'Marocaine', value: 'Marocaine' },
+  { label: 'Marshallaise', value: 'Marshallaise' },
+  { label: 'Mauricienne', value: 'Mauricienne' },
+  { label: 'Mauritanienne', value: 'Mauritanienne' },
+  { label: 'Mexicaine', value: 'Mexicaine' },
+  { label: 'Micronésienne', value: 'Micronésienne' },
+  { label: 'Moldave', value: 'Moldave' },
+  { label: 'Monégasque', value: 'Monégasque' },
+  { label: 'Mongole', value: 'Mongole' },
+  { label: 'Monténégrine', value: 'Monténégrine' },
+  { label: 'Mozambicaine', value: 'Mozambicaine' },
+  { label: 'Namibienne', value: 'Namibienne' },
+  { label: 'Nauruane', value: 'Nauruane' },
+  { label: 'Néerlandaise', value: 'Néerlandaise' },
+  { label: 'Néo-zélandaise', value: 'Néo-zélandaise' },
+  { label: 'Népalaise', value: 'Népalaise' },
+  { label: 'Nicaraguayenne', value: 'Nicaraguayenne' },
+  { label: 'Nigériane', value: 'Nigériane' },
+  { label: 'Nigérienne', value: 'Nigérienne' },
+  { label: 'Norvégienne', value: 'Norvégienne' },
+  { label: 'Omanaise', value: 'Omanaise' },
+  { label: 'Ougandaise', value: 'Ougandaise' },
+  { label: 'Ouzbèke', value: 'Ouzbèke' },
+  { label: 'Pakistanaise', value: 'Pakistanaise' },
+  { label: 'Palaosienne', value: 'Palaosienne' },
+  { label: 'Palestinienne', value: 'Palestinienne' },
+  { label: 'Panaméenne', value: 'Panaméenne' },
+  { label: 'Papouane-Néo-Guinéenne', value: 'Papouane-Néo-Guinéenne' },
+  { label: 'Paraguayenne', value: 'Paraguayenne' },
+  { label: 'Péruvienne', value: 'Péruvienne' },
+  { label: 'Philippine', value: 'Philippine' },
+  { label: 'Polonaise', value: 'Polonaise' },
+  { label: 'Portugaise', value: 'Portugaise' },
+  { label: 'Qatarienne', value: 'Qatarienne' },
+  { label: 'Roumaine', value: 'Roumaine' },
+  { label: 'Russe', value: 'Russe' },
+  { label: 'Rwandaise', value: 'Rwandaise' },
+  { label: 'Saint-Lucienne', value: 'Saint-Lucienne' },
+  { label: 'Saint-Marinaise', value: 'Saint-Marinaise' },
+  { label: 'Saint-Vincentaise', value: 'Saint-Vincentaise' },
+  { label: 'Salomonaise', value: 'Salomonaise' },
+  { label: 'Salvadorienne', value: 'Salvadorienne' },
+  { label: 'Samoane', value: 'Samoane' },
+  { label: 'Santoméenne', value: 'Santoméenne' },
+  { label: 'Saoudienne', value: 'Saoudienne' },
+  { label: 'Sénégalaise', value: 'Sénégalaise' },
+  { label: 'Serbe', value: 'Serbe' },
+  { label: 'Seychelloise', value: 'Seychelloise' },
+  { label: 'Sierra-Léonaise', value: 'Sierra-Léonaise' },
+  { label: 'Singapourienne', value: 'Singapourienne' },
+  { label: 'Slovaque', value: 'Slovaque' },
+  { label: 'Slovène', value: 'Slovène' },
+  { label: 'Somalienne', value: 'Somalienne' },
+  { label: 'Soudanaise', value: 'Soudanaise' },
+  { label: 'Sri-Lankaise', value: 'Sri-Lankaise' },
+  { label: 'Sud-Africaine', value: 'Sud-Africaine' },
+  { label: 'Sud-Soudanaise', value: 'Sud-Soudanaise' },
+  { label: 'Suédoise', value: 'Suédoise' },
+  { label: 'Suisse', value: 'Suisse' },
+  { label: 'Surinamaise', value: 'Surinamaise' },
+  { label: 'Swazie', value: 'Swazie' },
+  { label: 'Syrienne', value: 'Syrienne' },
+  { label: 'Tadjike', value: 'Tadjike' },
+  { label: 'Tanzanienne', value: 'Tanzanienne' },
+  { label: 'Tchadienne', value: 'Tchadienne' },
+  { label: 'Tchèque', value: 'Tchèque' },
+  { label: 'Thaïlandaise', value: 'Thaïlandaise' },
+  { label: 'Timoraise', value: 'Timoraise' },
+  { label: 'Togolaise', value: 'Togolaise' },
+  { label: 'Tonguienne', value: 'Tonguienne' },
+  { label: 'Trinidadienne', value: 'Trinidadienne' },
+  { label: 'Tunisienne', value: 'Tunisienne' },
+  { label: 'Turkmène', value: 'Turkmène' },
+  { label: 'Turque', value: 'Turque' },
+  { label: 'Tuvaluane', value: 'Tuvaluane' },
+  { label: 'Ukrainienne', value: 'Ukrainienne' },
+  { label: 'Uruguayenne', value: 'Uruguayenne' },
+  { label: 'Vanuatuane', value: 'Vanuatuane' },
+  { label: 'Vaticane', value: 'Vaticane' },
+  { label: 'Vénézuélienne', value: 'Vénézuélienne' },
+  { label: 'Vietnamienne', value: 'Vietnamienne' },
+  { label: 'Yéménite', value: 'Yéménite' },
+  { label: 'Zambienne', value: 'Zambienne' },
+  { label: 'Zimbabwéenne', value: 'Zimbabwéenne' }
+];
+
+// Configuration des masques pour chaque type de pièce d'identité
+const idMasks = {
+  cni: {
+    pattern: /^[0-9]{4}-[0-9]{3}-[0-9]{4}$/,
+    display: 'XXXX-XXX-XXXX',
+    maxLength: 14,
+    format: value => {
+      const digits = value.replace(/\D/g, '').slice(0, 11);
+      const parts = [];
+      if (digits.length > 0) parts.push(digits.slice(0, 4));
+      if (digits.length > 4) parts.push(digits.slice(4, 7));
+      if (digits.length > 7) parts.push(digits.slice(7, 11));
+      return parts.join('-');
+    },
+    clean: value => value.replace(/\D/g, '')
+  },
+  passport: {
+    pattern: /^[A-Z0-9]{8}$/,
+    display: 'XXXXXXXX',
+    maxLength: 8,
+    format: value => {
+      return value.replace(/[^A-Z0-9]/g, '').toUpperCase().slice(0, 8);
+    },
+    clean: value => value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+  },
+  elector: {
+    pattern: /^[0-9]{2}-[0-9]{2}-[0-9]{3}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{5}$/,
+    display: 'XX-XX-XXX-XX-XX-XX-XX-XXXXX',
+    maxLength: 27,
+    format: value => {
+      const digits = value.replace(/\D/g, '').slice(0, 20);
+      const parts = [];
+      if (digits.length > 0) parts.push(digits.slice(0, 2));
+      if (digits.length > 2) parts.push(digits.slice(2, 4));
+      if (digits.length > 4) parts.push(digits.slice(4, 7));
+      if (digits.length > 7) parts.push(digits.slice(7, 9));
+      if (digits.length > 9) parts.push(digits.slice(9, 11));
+      if (digits.length > 11) parts.push(digits.slice(11, 13));
+      if (digits.length > 13) parts.push(digits.slice(13, 15));
+      if (digits.length > 15) parts.push(digits.slice(15, 20));
+      return parts.join('-');
+    },
+    clean: value => value.replace(/\D/g, '')
+  },
+  residence: {
+    pattern: /^[A-Z0-9]{1,20}$/,
+    display: 'Numéro de carte de séjour (max 20 caractères)',
+    maxLength: 20,
+    format: value => {
+      return value.replace(/[^A-Z0-9]/g, '').toUpperCase().slice(0, 20);
+    },
+    clean: value => value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+  },
+  driving_license: {
+    pattern: /^[A-Z0-9]{3} [A-Z0-9]{3} [A-Z0-9]{3}$/,
+    display: 'XXX XXX XXX',
+    maxLength: 11,
+    format: value => {
+      const chars = value.replace(/[^A-Z0-9]/g, '').toUpperCase().slice(0, 9);
+      const parts = [];
+      if (chars.length > 0) parts.push(chars.slice(0, 3));
+      if (chars.length > 3) parts.push(chars.slice(3, 6));
+      if (chars.length > 6) parts.push(chars.slice(6, 9));
+      return parts.join(' ');
+    },
+    clean: value => value.replace(/[^A-Z0-9]/g, '').toUpperCase()
+  },
+  anid_card: {
+    pattern: /^[0-9]{4} [0-9]{4} [0-9]{4}$/,
+    display: 'XXXX XXXX XXXX',
+    maxLength: 14,
+    format: value => {
+      const digits = value.replace(/\D/g, '').slice(0, 12);
+      const parts = [];
+      if (digits.length > 0) parts.push(digits.slice(0, 4));
+      if (digits.length > 4) parts.push(digits.slice(4, 8));
+      if (digits.length > 8) parts.push(digits.slice(8, 12));
+      return parts.join(' ');
+    },
+    clean: value => value.replace(/\D/g, '')
+  },
+  foreign_id: {
+    pattern: /^.+$/,
+    display: "Numéro carte d'identité étrangère (max 20 caractères)",
+    maxLength: 20,
+    format: value => {
+      return value.slice(0, 20);
+    },
+    clean: value => value
+  }
+};
+
+// Computed pour obtenir le placeholder et le masque du type de pièce sélectionné
+const currentIdMask = computed(() => {
+  const idType = formData.value.owner_id_type;
+  return idMasks[idType] || null;
+});
+
+// Computed pour obtenir le label du type de pièce d'identité
+const getIdTypeLabel = computed(() => {
+  const option = idTypeOptions.find(opt => opt.value === formData.value.owner_id_type);
+  return option ? option.label : formData.value.owner_id_type;
+});
 
 const regionOptions = [
   { label: 'Sélectionnez une région', value: '' },
@@ -806,19 +1163,53 @@ const cantonOptions = computed(() => {
   ];
 });
 
+// Suggestions pour les villes basées sur la commune sélectionnée
+const citySuggestions = computed(() => {
+  if (!formData.value.region || !formData.value.prefecture || !formData.value.commune) {
+    return [];
+  }
+  
+  const cities = getCitiesByCommune(
+    formData.value.region,
+    formData.value.prefecture,
+    formData.value.commune
+  );
+  
+  return cities || [];
+});
+
+// Suggestions pour les quartiers basées sur la ville sélectionnée
+const neighborhoodSuggestions = computed(() => {
+  if (!formData.value.region || !formData.value.prefecture || !formData.value.commune || !formData.value.city) {
+    return [];
+  }
+  
+  const neighborhoods = getNeighborhoodsByCity(
+    formData.value.region,
+    formData.value.prefecture,
+    formData.value.commune,
+    formData.value.city
+  );
+  
+  return neighborhoods || [];
+});
+
 const taxRegimeOptions = [
   { label: 'Sélectionnez', value: '' },
-  { label: 'Régime réel', value: 'Régime réel' },
-  { label: 'Régime simplifié', value: 'Régime simplifié' },
-  { label: 'Micro-entreprise', value: 'Micro-entreprise' }
+  { label: 'Réel sans TVA', value: 'Réel sans TVA' },
+  { label: 'Réel avec TVA', value: 'Réel avec TVA' },
+  { label: 'TPU', value: 'TPU' }
 ];
 
 const visibilitySupportOptions = [
   { label: 'Sélectionnez', value: '' },
-  { label: 'Enseigne', value: 'Enseigne' },
-  { label: 'Banderole', value: 'Banderole' },
-  { label: 'Panneau', value: 'Panneau' },
-  { label: 'Aucun', value: 'Aucun' }
+  { label: 'Autocollant', value: 'Autocollant' },
+  { label: 'Potence', value: 'Potence' },
+  { label: 'Chevalet', value: 'Chevalet' },
+  { label: 'Buget Flags', value: 'Buget Flags' },
+  { label: 'Parasols', value: 'Parasols' },
+  { label: 'Beach Flags', value: 'Beach Flags' },
+  { label: 'Enseignes Lumineuses', value: 'Enseignes Lumineuses' }
 ];
 
 const supportStateOptions = [
@@ -826,6 +1217,20 @@ const supportStateOptions = [
   { label: 'Bon', value: 'BON' },
   { label: 'Mauvais', value: 'MAUVAIS' }
 ];
+
+// Computed: Afficher le champ NIF si oui sélectionné OU si profil = DISTROWNIF ou BANKAGNT
+const shouldShowNifField = computed(() => {
+  // Si "Oui" est sélectionné dans le radio
+  if (formData.value.has_nif === 'oui') {
+    return true;
+  }
+  // Si le profil est DISTROWNIF ou BANKAGNT, cacher le NIF (pas obligatoire)
+  if (formData.value.profile === 'DISTROWNIF' || formData.value.profile === 'BANKAGNT') {
+    return false;
+  }
+  // Sinon, afficher si "Oui" est sélectionné
+  return formData.value.has_nif === 'oui';
+});
 
 const formData = ref({
   organization_id: authStore.organizationId || null,
@@ -854,6 +1259,7 @@ const formData = ref({
   location_description: '',
   latitude: '',
   longitude: '',
+  has_nif: '',
   nif: '',
   tax_regime: '',
   visibility_support: '',
@@ -893,15 +1299,24 @@ const onPrefectureChange = () => {
 };
 
 const onCommuneChange = () => {
-  // Réinitialiser le canton
+  // Réinitialiser le canton et la ville
   formData.value.canton = '';
+  formData.value.city = '';
+  formData.value.neighborhood = '';
 };
 
-const validateStep = () => {
+const onCityChange = () => {
+  // Réinitialiser le quartier
+  formData.value.neighborhood = '';
+};
+
+const validateStep = async () => {
   errors.value = {};
+  validating.value = true;
   const step = currentStep.value;
   
-  if (step === 1) {
+  try {
+    if (step === 1) {
     // Validation étape 1: Dealer
     if (authStore.isAdmin && !formData.value.organization_id) {
       errors.value.organization_id = 'Veuillez sélectionner une organisation';
@@ -915,10 +1330,32 @@ const validateStep = () => {
       errors.value.flooz_number = 'Le numéro Flooz est obligatoire';
     } else if (formData.value.flooz_number.length !== 11) {
       errors.value.flooz_number = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
+    } else {
+      // Vérifier l'unicité du numéro Flooz
+      try {
+        const result = await PointOfSaleService.checkUniqueness('numero_flooz', formData.value.flooz_number);
+        if (result.exists) {
+          errors.value.flooz_number = 'Ce numéro Flooz est déjà utilisé par un autre point de vente';
+        }
+      } catch (error) {
+        console.error('Error checking flooz number uniqueness:', error);
+      }
     }
     
-    if (formData.value.shortcode && formData.value.shortcode.length !== 7) {
+    if (!formData.value.shortcode) {
+      errors.value.shortcode = 'Le shortcode est obligatoire';
+    } else if (formData.value.shortcode.length !== 7) {
       errors.value.shortcode = 'Le shortcode doit contenir exactement 7 chiffres';
+    } else {
+      // Vérifier l'unicité du shortcode
+      try {
+        const result = await PointOfSaleService.checkUniqueness('shortcode', formData.value.shortcode);
+        if (result.exists) {
+          errors.value.shortcode = 'Ce shortcode est déjà utilisé par un autre point de vente';
+        }
+      } catch (error) {
+        console.error('Error checking shortcode uniqueness:', error);
+      }
     }
     
     if (!formData.value.profile) {
@@ -933,38 +1370,50 @@ const validateStep = () => {
   
   if (step === 2) {
     // Validation étape 2: Propriétaire
-    if (!formData.value.owner_first_name) {
-      errors.value.owner_first_name = 'Le prénom est obligatoire';
-    }
-    
-    if (!formData.value.owner_last_name) {
-      errors.value.owner_last_name = 'Le nom est obligatoire';
-    }
-    
-    if (!formData.value.owner_date_of_birth) {
-      errors.value.owner_date_of_birth = 'La date de naissance est obligatoire';
-    }
-    
-    if (!formData.value.owner_gender) {
-      errors.value.owner_gender = 'Le genre est obligatoire';
-    }
     
     if (!formData.value.owner_phone) {
-      errors.value.owner_phone = 'Le téléphone est obligatoire';
+      errors.value.owner_phone = 'Le numéro propriétaire est obligatoire';
     } else if (formData.value.owner_phone.length !== 11) {
       errors.value.owner_phone = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
     }
     
-    if (formData.value.alternative_contact && formData.value.alternative_contact.length !== 11) {
+    // Traiter '228' seul comme vide
+    if (formData.value.alternative_contact && formData.value.alternative_contact !== '228' && formData.value.alternative_contact.length !== 11) {
       errors.value.alternative_contact = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
     }
     
-    if (!formData.value.owner_id_type) {
-      errors.value.owner_id_type = 'Le type de pièce est obligatoire';
+    // Validation de la date de naissance (au moins 18 ans)
+    if (formData.value.owner_date_of_birth) {
+      const birthDate = new Date(formData.value.owner_date_of_birth);
+      const today = new Date();
+      const age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      const dayDiff = today.getDate() - birthDate.getDate();
+      
+      const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+      
+      if (actualAge < 18) {
+        errors.value.owner_date_of_birth = 'Le propriétaire doit avoir au moins 18 ans';
+      }
     }
     
-    if (!formData.value.owner_id_number) {
-      errors.value.owner_id_number = 'Le numéro de pièce est obligatoire';
+    // Validation de la date d'expiration de la pièce (ne doit pas être expirée)
+    if (formData.value.owner_id_expiry_date) {
+      const expiryDate = new Date(formData.value.owner_id_expiry_date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Réinitialiser l'heure pour comparer uniquement les dates
+      
+      if (expiryDate < today) {
+        errors.value.owner_id_expiry_date = 'La pièce d\'identité est expirée';
+      }
+    }
+    
+    // Validation du numéro de pièce d'identité
+    if (formData.value.owner_id_type && formData.value.owner_id_number) {
+      if (!validateIdNumber()) {
+        const mask = idMasks[formData.value.owner_id_type];
+        errors.value.owner_id_number = `Format invalide. Format attendu: ${mask?.display || 'invalide'}`;
+      }
     }
     
     if (Object.keys(errors.value).length > 0) {
@@ -996,6 +1445,12 @@ const validateStep = () => {
     }
     
     if (!formData.value.latitude || !formData.value.longitude) {
+      if (!formData.value.latitude) {
+        errors.value.latitude = 'La latitude est obligatoire';
+      }
+      if (!formData.value.longitude) {
+        errors.value.longitude = 'La longitude est obligatoire';
+      }
       toast.warning('Veuillez capturer la position GPS du point de vente', 'GPS requis');
       return false;
     }
@@ -1006,11 +1461,96 @@ const validateStep = () => {
     }
   }
   
+  if (step === 4) {
+    // Validation étape 4: Fiscalité & Documents
+    if (!formData.value.has_nif) {
+      errors.value.has_nif = 'Veuillez indiquer si le PDV a un NIF';
+      toast.error('Veuillez indiquer si le point de vente a un NIF', 'Validation échouée');
+      return false;
+    }
+    
+    // Si le NIF doit être affiché, il est obligatoire
+    if (shouldShowNifField.value && !formData.value.nif) {
+      errors.value.nif = 'Le NIF est obligatoire';
+    }
+    
+    // Si le NIF est oui, le régime fiscal est obligatoire
+    if (formData.value.has_nif === 'oui' && !formData.value.tax_regime) {
+      errors.value.tax_regime = 'Le régime fiscal est obligatoire si le PDV a un NIF';
+    }
+    
+    if (!formData.value.visibility_support) {
+      errors.value.visibility_support = 'Le support de visibilité est obligatoire';
+    }
+    
+    if (!formData.value.cagnt_number) {
+      errors.value.cagnt_number = 'Le numéro CAGNT est obligatoire';
+    } else if (formData.value.cagnt_number.length !== 11) {
+      errors.value.cagnt_number = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
+    }
+    
+    // Vérifier qu'il y a au moins une photo
+    if (uploadedPhotos.value.length === 0) {
+      toast.error('Vous devez ajouter au moins une photo du point de vente', 'Photos requises');
+      return false;
+    }
+    
+    if (Object.keys(errors.value).length > 0) {
+      toast.error('Veuillez corriger les erreurs avant de continuer', 'Validation échouée');
+      return false;
+    }
+  }
+  
   return true;
+} finally {
+    validating.value = false;
+  }
 };
 
-const nextStep = () => {
-  if (validateStep()) {
+// Gestion du formatage du numéro de pièce d'identité
+const handleIdNumberInput = (event) => {
+  if (!currentIdMask.value) return;
+  
+  const input = event.target;
+  const cursorPosition = input.selectionStart;
+  const oldValue = formData.value.owner_id_number;
+  const newValue = input.value;
+  
+  // Appliquer le formatage
+  const formatted = currentIdMask.value.format(newValue);
+  formData.value.owner_id_number = formatted;
+  
+  // Ajuster la position du curseur après formatage
+  nextTick(() => {
+    const lengthDiff = formatted.length - oldValue.length;
+    const newCursorPos = cursorPosition + lengthDiff;
+    input.setSelectionRange(newCursorPos, newCursorPos);
+  });
+};
+
+// Valider le format du numéro de pièce d'identité
+const validateIdNumber = () => {
+  if (!formData.value.owner_id_number || !formData.value.owner_id_type) {
+    return true; // Pas de validation si vide (géré par required)
+  }
+  
+  const mask = idMasks[formData.value.owner_id_type];
+  if (!mask) return true;
+  
+  // Nettoyer la valeur et vérifier le pattern
+  const cleanValue = mask.clean(formData.value.owner_id_number);
+  
+  // Pour foreign_id, on accepte n'importe quel format non vide
+  if (formData.value.owner_id_type === 'foreign_id') {
+    return cleanValue.length > 0 && cleanValue.length <= 20;
+  }
+  
+  // Pour les autres, vérifier le pattern
+  return mask.pattern.test(formData.value.owner_id_number);
+};
+
+const nextStep = async () => {
+  if (await validateStep()) {
     errors.value = {};
     currentStep.value++;
   }
@@ -1106,7 +1646,7 @@ const submitForm = async () => {
       nationality: formData.value.owner_nationality,
       profession: formData.value.owner_profession,
       numero_proprietaire: formData.value.owner_phone, // owner_phone -> numero_proprietaire
-      autre_contact: formData.value.alternative_contact, // alternative_contact -> autre_contact
+      autre_contact: formData.value.alternative_contact === '228' ? '' : formData.value.alternative_contact, // alternative_contact -> autre_contact
       
       // Location
       region: formData.value.region,
@@ -1267,6 +1807,22 @@ const handleFiscalUpload = (files) => {
   console.log('uploadedFiscalDocuments after push:', uploadedFiscalDocuments.value);
 };
 
+// Handlers de suppression
+const handleDeleteIDDocument = ({ file, index }) => {
+  console.log('Deleting ID document at index:', index);
+  uploadedIDDocument.value.splice(index, 1);
+};
+
+const handleDeletePhoto = ({ file, index }) => {
+  console.log('Deleting photo at index:', index);
+  uploadedPhotos.value.splice(index, 1);
+};
+
+const handleDeleteFiscalDocument = ({ file, index }) => {
+  console.log('Deleting fiscal document at index:', index);
+  uploadedFiscalDocuments.value.splice(index, 1);
+};
+
 // Sauvegarder les données du formulaire dans localStorage
 const saveFormToStorage = () => {
   try {
@@ -1349,6 +1905,56 @@ watch(currentStep, () => {
 watch([uploadedIDDocument, uploadedPhotos, uploadedFiscalDocuments], () => {
   saveFormToStorage();
 }, { deep: true });
+
+// Réinitialiser le numéro de pièce quand le type change
+watch(() => formData.value.owner_id_type, () => {
+  formData.value.owner_id_number = '';
+  if (errors.value.owner_id_number) {
+    delete errors.value.owner_id_number;
+  }
+});
+
+// Validation en temps réel pour le numéro Flooz
+let floozCheckTimeout = null;
+watch(() => formData.value.flooz_number, async (newValue) => {
+  if (floozCheckTimeout) clearTimeout(floozCheckTimeout);
+  
+  if (newValue && newValue.length === 11) {
+    floozCheckTimeout = setTimeout(async () => {
+      try {
+        const result = await PointOfSaleService.checkUniqueness('numero_flooz', newValue);
+        if (result.exists) {
+          errors.value.flooz_number = 'Ce numéro Flooz est déjà utilisé par un autre point de vente';
+        } else if (errors.value.flooz_number === 'Ce numéro Flooz est déjà utilisé par un autre point de vente') {
+          delete errors.value.flooz_number;
+        }
+      } catch (error) {
+        console.error('Error checking flooz number:', error);
+      }
+    }, 500);
+  }
+});
+
+// Validation en temps réel pour le shortcode
+let shortcodeCheckTimeout = null;
+watch(() => formData.value.shortcode, async (newValue) => {
+  if (shortcodeCheckTimeout) clearTimeout(shortcodeCheckTimeout);
+  
+  if (newValue && newValue.length === 7) {
+    shortcodeCheckTimeout = setTimeout(async () => {
+      try {
+        const result = await PointOfSaleService.checkUniqueness('shortcode', newValue);
+        if (result.exists) {
+          errors.value.shortcode = 'Ce shortcode est déjà utilisé par un autre point de vente';
+        } else if (errors.value.shortcode === 'Ce shortcode est déjà utilisé par un autre point de vente') {
+          delete errors.value.shortcode;
+        }
+      } catch (error) {
+        console.error('Error checking shortcode:', error);
+      }
+    }, 500);
+  }
+});
 
 onMounted(async () => {
   // Pré-remplir l'organisation pour les non-admins AVANT de charger le brouillon

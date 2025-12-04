@@ -11,7 +11,7 @@ echo "Correction des champs vides dans les PDV...\n\n";
 
 $prenoms = ['Kossi', 'Akossiwa', 'Koffi', 'Afi', 'Kodjo', 'Adjoa', 'Kokou', 'Akoua', 'Yao', 'Ama', 'Kwami', 'Abla', 'Komlan', 'Edem', 'Amavi'];
 $noms_famille = ['KEZIE', 'MENSAH', 'AGBEKO', 'DOSSOU', 'KOFFI', 'AMEGAH', 'BAWA', 'TEKO', 'AMOUZOU', 'AHETO', 'DOGBE', 'KOKU', 'ATSU', 'AYEVA', 'GBENOU'];
-$profils = ['DSTROWNTF', 'DSTROWNTF+', 'DSTROWNTF-LIGHT', 'PREMIUM', 'STANDARD', 'BASIC'];
+$profils = ['DISTROWNIF', 'DISTROWNIF+', 'DISTROWNIF-LIGHT', 'DISTROTC', 'PREMIUM', 'STANDARD', 'BASIC'];
 $etats_support = ['BON', 'MAUVAIS'];
 
 $pdvs = PointOfSale::all();

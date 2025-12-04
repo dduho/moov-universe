@@ -167,25 +167,24 @@ const isPDF = (file) => {
 const getFileUrl = (file) => {
   if (!file) return '';
   
-  // If it's a File object (local preview)
-  if (file instanceof File) return URL.createObjectURL(file);
-  
-  // If URL is provided and is absolute
-  if (file.url) {
-    if (file.url.startsWith('http')) return file.url;
-    // Convert relative URL to absolute
-    const baseUrl = (import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000').replace(/\/$/, ''); // Remove trailing slash
-    const cleanUrl = file.url.replace(/\/+/g, '/'); // Replace multiple slashes with single slash
-    const fullUrl = cleanUrl.startsWith('/') ? `${baseUrl}${cleanUrl}` : `${baseUrl}/${cleanUrl}`;
-    console.log('Generated URL from file.url:', fullUrl);
-    return fullUrl;
+  // If it's a File object (local preview before upload)
+  if (file instanceof File) {
+    const url = URL.createObjectURL(file);
+    console.log('Created local URL for File object:', url);
+    return url;
   }
   
-  // Use path with UploadService helper
+  // If it's an uploaded file with path
   if (file.path) {
     const pathUrl = UploadService.getFileUrl(file.path);
-    console.log('Generated URL from file.path:', pathUrl);
+    console.log('Generated URL from file.path:', pathUrl, 'for file:', file);
     return pathUrl;
+  }
+  
+  // If URL is provided
+  if (file.url) {
+    console.log('Using file.url:', file.url);
+    return file.url;
   }
   
   console.warn('Unable to generate URL for file:', file);

@@ -10,9 +10,14 @@ export const useAuthStore = defineStore('auth', {
 
   getters: {
     isAdmin: (state) => state.user?.role?.name === 'admin',
-    isDealer: (state) => state.user?.role?.name === 'dealer',
-    isCommercial: (state) => state.user?.role?.name === 'commercial',
+    isDealerOwner: (state) => state.user?.role?.name === 'dealer_owner',
+    isDealerAgent: (state) => state.user?.role?.name === 'dealer_agent',
+    isDealer: (state) => {
+      const roleName = state.user?.role?.name;
+      return roleName === 'dealer_owner' || roleName === 'dealer_agent';
+    },
     organizationId: (state) => state.user?.organization_id,
+    userRole: (state) => state.user?.role?.name,
   },
 
   actions: {

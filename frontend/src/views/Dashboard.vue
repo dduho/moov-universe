@@ -21,6 +21,61 @@
 
       <main>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <!-- Loading Skeleton -->
+          <div v-if="loading">
+            <!-- Stats Cards Skeleton -->
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+              <div v-for="i in 4" :key="i" class="glass-card p-6 rounded-2xl animate-pulse">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="h-4 bg-gray-300 rounded w-24 mb-3"></div>
+                    <div class="h-8 bg-gray-300 rounded w-16"></div>
+                  </div>
+                  <div class="w-12 h-12 bg-gray-300 rounded-xl"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Time Stats Skeleton -->
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-8">
+              <div v-for="i in 3" :key="i" class="glass-card p-6 rounded-2xl animate-pulse">
+                <div class="flex items-center gap-4">
+                  <div class="w-12 h-12 bg-gray-300 rounded-xl"></div>
+                  <div class="flex-1">
+                    <div class="h-3 bg-gray-300 rounded w-32 mb-2"></div>
+                    <div class="h-6 bg-gray-300 rounded w-16"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Actions & Recent PDV Skeleton -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <div class="glass-card p-6 rounded-2xl animate-pulse">
+                <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
+                <div class="space-y-4">
+                  <div v-for="i in 3" :key="i" class="h-12 bg-gray-300 rounded-xl"></div>
+                </div>
+              </div>
+              <div class="glass-card p-6 rounded-2xl animate-pulse">
+                <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
+                <div class="space-y-3">
+                  <div v-for="i in 5" :key="i" class="h-16 bg-gray-300 rounded-xl"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Regions Skeleton -->
+            <div class="glass-card p-6 rounded-2xl animate-pulse mb-8">
+              <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div v-for="i in 6" :key="i" class="h-32 bg-gray-300 rounded-xl"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Actual Content -->
+          <div v-else>
           <!-- Stats Cards -->
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatsCard 
@@ -28,14 +83,14 @@
               :value="stats.total || 0"
               :icon="HomeIcon"
               color="orange"
-              :trend="5.2"
+              :trend="stats.total_trend || null"
             />
             <StatsCard 
               label="En attente"
               :value="stats.pending || 0"
               :icon="ClockIcon"
               color="yellow"
-              :trend="-2.1"
+              :trend="stats.pending_trend || null"
               :clickable="authStore.isAdmin"
               @click="authStore.isAdmin && $router.push('/validation')"
             />
@@ -44,15 +99,60 @@
               :value="stats.validated || 0"
               :icon="CheckIcon"
               color="green"
-              :trend="8.3"
+              :trend="stats.validated_trend || null"
             />
             <StatsCard 
               label="Rejetés"
               :value="stats.rejected || 0"
               :icon="XIcon"
               color="red"
-              :trend="1.5"
+              :trend="stats.rejected_trend || null"
             />
+          </div>
+
+          <!-- Statistiques supplémentaires -->
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-8">
+            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm text-gray-600 font-semibold">Validés aujourd'hui</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ stats.validated_today || 0 }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-purple-100/30 border border-purple-200">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm text-gray-600 font-semibold">Ce mois-ci</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ stats.created_this_month || 0 }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-green-50/50 to-green-100/30 border border-green-200">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                  </svg>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm text-gray-600 font-semibold">Cette semaine</p>
+                  <p class="text-2xl font-bold text-gray-900">{{ stats.created_this_week || 0 }}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Pending Validation Alert (Admin Only) -->
@@ -154,15 +254,15 @@
                           class="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm"
                           :style="{ backgroundColor: getRegionColor(index) }"
                         >
-                          {{ region.name.substring(0, 2).toUpperCase() }}
+                          {{ (region.region || '').substring(0, 2).toUpperCase() }}
                         </div>
                         <div>
-                          <h4 class="font-bold text-gray-900">{{ region.name }}</h4>
-                          <p class="text-xs text-gray-500">{{ region.cities?.length || 0 }} villes</p>
+                          <h4 class="font-bold text-gray-900">{{ region.region }}</h4>
+                          <p class="text-xs text-gray-500">Région</p>
                         </div>
                       </div>
                       <div class="text-right">
-                        <p class="text-2xl font-bold text-gray-900">{{ region.count }}</p>
+                        <p class="text-2xl font-bold text-gray-900">{{ region.total || region.count }}</p>
                         <p class="text-xs text-gray-500">PDV</p>
                       </div>
                     </div>
@@ -172,7 +272,7 @@
                       <div
                         class="absolute top-0 left-0 h-full rounded-full transition-all duration-500"
                         :style="{ 
-                          width: `${getPercentage(region.count)}%`,
+                          width: `${getPercentage(region.total || region.count)}%`,
                           backgroundColor: getRegionColor(index)
                         }"
                       ></div>
@@ -192,6 +292,51 @@
                         <div class="w-2 h-2 rounded-full bg-red-500"></div>
                         <span class="text-xs text-gray-600">{{ region.rejected || 0 }} rejetés</span>
                       </div>
+                    </div>
+
+                    <!-- Accordion pour les dealers -->
+                    <div v-if="region.dealers && region.dealers.length > 0" class="mt-3 pt-3 border-t border-gray-200">
+                      <button
+                        @click.stop="toggleRegionDealers(region.region)"
+                        class="w-full flex items-center justify-between text-xs font-semibold text-gray-600 hover:text-moov-orange transition-colors"
+                      >
+                        <span>Dealers ({{ region.dealers.length }})</span>
+                        <svg 
+                          class="w-4 h-4 transition-transform duration-200"
+                          :class="{ 'rotate-180': expandedRegions[region.region] }"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                      </button>
+                      
+                      <transition
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="max-h-0 opacity-0"
+                        enter-to-class="max-h-96 opacity-100"
+                        leave-active-class="transition-all duration-300 ease-in"
+                        leave-from-class="max-h-96 opacity-100"
+                        leave-to-class="max-h-0 opacity-0"
+                      >
+                        <div v-show="expandedRegions[region.region]" class="overflow-hidden">
+                          <div class="flex flex-wrap gap-2 mt-2">
+                            <div 
+                              v-for="dealer in region.dealers" 
+                              :key="dealer.id"
+                              class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-gray-200 hover:border-moov-orange transition-colors cursor-pointer"
+                              @click.stop="$router.push(`/dealers/${dealer.id}`)"
+                            >
+                              <div class="w-5 h-5 rounded bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center">
+                                <span class="text-white text-[10px] font-bold">{{ dealer.code?.substring(0, 2) || 'XX' }}</span>
+                              </div>
+                              <span class="text-xs font-medium text-gray-700 truncate max-w-[80px]">{{ dealer.name }}</span>
+                              <span class="text-xs font-bold text-moov-orange">{{ dealer.count }}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </transition>
                     </div>
                   </div>
                   
@@ -407,6 +552,7 @@
               </div>
             </div>
           </div>
+          </div>
         </div>
       </main>
     </div>
@@ -434,6 +580,8 @@ const stats = ref({
 const recentPdvs = ref([]);
 const byOrganization = ref([]);
 const byRegion = ref([]);
+const loading = ref(true);
+const expandedRegions = ref({});
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('fr-FR', { 
@@ -480,8 +628,13 @@ const filterByRegion = (regionName) => {
   });
 };
 
+const toggleRegionDealers = (regionName) => {
+  expandedRegions.value[regionName] = !expandedRegions.value[regionName];
+};
+
 const fetchDashboardData = async () => {
   try {
+    loading.value = true;
     const data = await StatisticsService.getDashboard();
     stats.value = data.stats;
     recentPdvs.value = data.recent_pdvs || [];
@@ -495,6 +648,8 @@ const fetchDashboardData = async () => {
     ];
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error);
+  } finally {
+    loading.value = false;
   }
 };
 

@@ -68,7 +68,7 @@
           option-value="id"
           :disabled="formData.role === 'admin'"
           :required="formData.role !== 'admin'"
-          :help-text="formData.role === 'admin' ? 'Les administrateurs ne sont pas liés à une organisation' : ''"
+          :help-text="getRoleHelpText(formData.role)"
         />
 
         <!-- Password (only for new users) -->
@@ -150,7 +150,8 @@ const submitting = ref(false);
 
 const roleOptions = [
   { value: 'admin', label: 'Administrateur' },
-  { value: 'dealer', label: 'Dealer' }
+  { value: 'dealer_owner', label: 'Propriétaire Dealer' },
+  { value: 'dealer_agent', label: 'Commercial Dealer' }
 ];
 
 const organizationOptions = computed(() => props.organizations);
@@ -184,6 +185,19 @@ watch(() => formData.value.role, (newRole) => {
     formData.value.organization_id = '';
   }
 });
+
+const getRoleHelpText = (role) => {
+  switch (role) {
+    case 'admin':
+      return 'Les administrateurs ne sont pas liés à une organisation';
+    case 'dealer_owner':
+      return 'Le propriétaire peut voir et gérer tous les PDV de son organisation';
+    case 'dealer_agent':
+      return 'Le commercial ne peut voir que les PDV qu\'il a créés lui-même';
+    default:
+      return '';
+  }
+};
 
 const handleSubmit = async () => {
   // Validate passwords match for new users

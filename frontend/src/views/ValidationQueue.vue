@@ -146,7 +146,7 @@
               <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p class="text-xs font-semibold text-gray-500 mb-1">Numéro Flooz</p>
-                  <p class="text-sm font-bold text-gray-900">{{ pos.numero_flooz || 'N/A' }}</p>
+                  <p class="text-sm font-bold text-gray-900">{{ formatPhone(pos.numero_flooz) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-gray-500 mb-1">Shortcode</p>
@@ -162,7 +162,7 @@
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-gray-500 mb-1">Téléphone</p>
-                  <p class="text-sm font-bold text-gray-900">{{ pos.numero_proprietaire || 'N/A' }}</p>
+                  <p class="text-sm font-bold text-gray-900">{{ formatPhone(pos.numero_proprietaire) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-xs font-semibold text-gray-500 mb-1">Localisation</p>
@@ -175,7 +175,7 @@
                 <p class="text-sm font-bold text-red-800 mb-2">⚠️ PDV à proximité détectés :</p>
                 <ul class="space-y-1">
                   <li v-for="nearby in pos.nearby_pos" :key="nearby.id" class="text-sm text-red-700">
-                    • <strong>{{ nearby.point_name }}</strong> - {{ nearby.distance }}m - {{ nearby.flooz_number }}
+                    • <strong>{{ nearby.point_name }}</strong> - {{ nearby.distance }}m - {{ formatPhone(nearby.flooz_number) }}
                   </li>
                 </ul>
               </div>
@@ -263,6 +263,7 @@ import DetailsModal from '../components/DetailsModal.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
 import { useValidationStore } from '../stores/validation';
+import { formatPhone, formatShortcode } from '../utils/formatters';
 import { useOrganizationStore } from '../stores/organization';
 
 const router = useRouter();
@@ -379,18 +380,6 @@ const formatDate = (dateString) => {
   if (diffDays < 7) return `Il y a ${diffDays}j`;
   
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-const formatShortcode = (shortcode) => {
-  if (!shortcode) return 'N/A';
-  // Si déjà formaté, retourner tel quel
-  if (shortcode.includes(' ')) return shortcode;
-  // Sinon formater : enlever les * et # et ajouter un espace au milieu
-  const clean = shortcode.replace(/[\*\#]/g, '');
-  if (clean.length >= 3) {
-    return clean.substring(0, 3) + ' ' + clean.substring(3);
-  }
-  return shortcode;
 };
 
 const openRejectModal = (pos) => {

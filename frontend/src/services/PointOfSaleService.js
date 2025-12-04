@@ -44,4 +44,12 @@ export default {
     });
     return response.data;
   },
+
+  async checkUniqueness(field, value) {
+    const response = await api.post('/point-of-sales/check-uniqueness', {
+      field,
+      value,
+    });
+    return response.data;
+  },
 };

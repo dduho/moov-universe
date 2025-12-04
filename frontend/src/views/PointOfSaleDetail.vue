@@ -37,7 +37,7 @@
             </button>
             <div>
               <h1 class="text-3xl font-bold text-gray-900">{{ pos.nom_point || pos.point_name }}</h1>
-              <p class="text-gray-600">{{ pos.numero_flooz || pos.flooz_number }}</p>
+              <p class="text-gray-600">{{ formatPhone(pos.numero_flooz || pos.flooz_number) }}</p>
             </div>
           </div>
           <span
@@ -105,11 +105,11 @@
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Numéro Flooz</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.numero_flooz || pos.flooz_number || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatPhone(pos.numero_flooz || pos.flooz_number) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Shortcode</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.shortcode || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatShortcode(pos.shortcode) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Profil</p>
@@ -229,11 +229,11 @@
               <div class="grid grid-cols-2 gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Téléphone principal</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.numero_proprietaire || pos.owner_phone || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatPhone(pos.numero_proprietaire || pos.owner_phone) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Contact alternatif</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.autre_contact || pos.alternative_contact || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatPhone(pos.autre_contact || pos.alternative_contact) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">NIF</p>
@@ -241,7 +241,7 @@
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Numéro CAGNT</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.numero_cagnt || pos.cagnt_number || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatPhone(pos.numero_cagnt || pos.cagnt_number) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Régime fiscal</p>
@@ -563,6 +563,7 @@ import Navbar from '../components/Navbar.vue';
 import RejectionModal from '../components/RejectionModal.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import { useAuthStore } from '../stores/auth';
+import { formatPhone, formatShortcode } from '../utils/formatters';
 
 // Fix Leaflet default marker icon
 delete L.Icon.Default.prototype._getIconUrl;

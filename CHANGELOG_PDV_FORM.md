@@ -10,7 +10,7 @@ Implémenter tous les champs du formulaire PDV selon les spécifications du fich
 ## ✨ Nouveaux Champs Ajoutés
 
 ### **Étape 1 : Dealer**
-- ✅ **Profil** (obligatoire) - Sélection parmi : DISTRO, AGNT, DSTROWNIF, BANKAGNT, FTAGNT
+- ✅ **Profil** (obligatoire) - Sélection parmi : DISTRO, AGNT, DISTROWNIF, BANKAGNT, FTAGNT
 - ✅ **Type d'activité** - Champ texte libre
 
 ### **Étape 2 : Propriétaire**

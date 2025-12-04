@@ -48,7 +48,7 @@
 
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Date de début</label>
+              <label class="block text-sm font-semibold text-orange-600 mb-2">Date de début</label>
               <input
                 v-model="localStartDate"
                 type="date"
@@ -58,7 +58,7 @@
             </div>
 
             <div>
-              <label class="block text-sm font-semibold text-gray-700 mb-2">Date de fin</label>
+              <label class="block text-sm font-semibold text-orange-600 mb-2">Date de fin</label>
               <input
                 v-model="localEndDate"
                 type="date"
@@ -70,7 +70,7 @@
 
             <!-- Quick presets -->
             <div v-if="presets" class="border-t border-gray-200 pt-4">
-              <p class="text-sm font-semibold text-gray-700 mb-2">Périodes prédéfinies</p>
+              <p class="text-sm font-semibold text-orange-600 mb-2">Périodes prédéfinies</p>
               <div class="grid grid-cols-2 gap-2">
                 <button
                   v-for="preset in quickPresets"

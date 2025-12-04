@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [PointOfSaleController::class, 'update']);
         Route::delete('/{id}', [PointOfSaleController::class, 'destroy']);
         Route::post('/check-proximity', [PointOfSaleController::class, 'checkProximity']);
+        Route::post('/check-uniqueness', [PointOfSaleController::class, 'checkUniqueness']);
         
         // Admin only routes
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {

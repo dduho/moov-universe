@@ -89,25 +89,25 @@
             <StatsCard 
               label="Total PDV"
               :value="stats.total || 0"
-              icon="HomeIcon"
+              :icon="HomeIcon"
               color="orange"
             />
             <StatsCard 
               label="En attente"
               :value="stats.pending || 0"
-              icon="ClockIcon"
+              :icon="ClockIcon"
               color="yellow"
             />
             <StatsCard 
               label="Validés"
               :value="stats.validated || 0"
-              icon="CheckIcon"
+              :icon="CheckIcon"
               color="green"
             />
             <StatsCard 
               label="Utilisateurs"
               :value="organization.users_count || 0"
-              icon="UserIcon"
+              :icon="UserIcon"
               color="blue"
             />
           </div>
@@ -187,10 +187,10 @@
                     class="border-b border-gray-100 hover:bg-white/50 transition-colors cursor-pointer"
                     @click="goToPOSDetail(pos.id)"
                   >
-                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ pos.point_name }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-700">{{ pos.flooz_number }}</td>
+                    <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ pos.nom_point }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ formatPhone(pos.numero_flooz) }}</td>
                     <td class="px-4 py-3 text-sm text-gray-700">{{ pos.region }}</td>
-                    <td class="px-4 py-3 text-sm text-gray-700">{{ pos.city }}</td>
+                    <td class="px-4 py-3 text-sm text-gray-700">{{ pos.ville }}</td>
                     <td class="px-4 py-3">
                       <span
                         class="px-3 py-1 rounded-lg text-xs font-bold"
@@ -271,7 +271,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, h } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrganizationStore } from '../stores/organization';
 import Navbar from '../components/Navbar.vue';
@@ -280,6 +280,7 @@ import DealerModal from '../components/DealerModal.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
+import { formatPhone } from '../utils/formatters';
 
 const route = useRoute();
 const router = useRouter();
@@ -314,9 +315,9 @@ const filteredPOS = computed(() => {
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(pos =>
-      pos.point_name.toLowerCase().includes(query) ||
-      pos.flooz_number.toLowerCase().includes(query) ||
-      pos.city?.toLowerCase().includes(query)
+      pos.nom_point?.toLowerCase().includes(query) ||
+      pos.numero_flooz?.toLowerCase().includes(query) ||
+      pos.ville?.toLowerCase().includes(query)
     );
   }
 
@@ -374,10 +375,16 @@ const goToPOSDetail = (posId) => {
 const loadPointsOfSale = async () => {
   loadingPOS.value = true;
   try {
-    const data = await PointOfSaleService.getAll({ organization_id: route.params.id });
-    pointsOfSale.value = data;
+    const response = await PointOfSaleService.getAll({ 
+      organization_id: route.params.id,
+      per_page: 100  // Charger tous les PDV du dealer
+    });
+    // Le backend retourne un objet paginé : { data: [...], total: 20, ... }
+    pointsOfSale.value = response.data || [];
+    console.log('PDV chargés:', pointsOfSale.value.length);
   } catch (error) {
     console.error('Error loading points of sale:', error);
+    pointsOfSale.value = [];
   } finally {
     loadingPOS.value = false;
   }
@@ -401,34 +408,34 @@ onMounted(async () => {
 
 // Icon components
 const HomeIcon = {
-  template: `
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-    </svg>
-  `
+  render() {
+    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' })
+    ]);
+  }
 };
 
 const ClockIcon = {
-  template: `
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-    </svg>
-  `
+  render() {
+    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
+    ]);
+  }
 };
 
 const CheckIcon = {
-  template: `
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-    </svg>
-  `
+  render() {
+    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 13l4 4L19 7' })
+    ]);
+  }
 };
 
 const UserIcon = {
-  template: `
-    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-    </svg>
-  `
+  render() {
+    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' })
+    ]);
+  }
 };
 </script>

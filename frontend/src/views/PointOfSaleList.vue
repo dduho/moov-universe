@@ -7,7 +7,7 @@
       <div class="flex items-center justify-between mb-8">
         <div>
           <h1 class="text-3xl font-bold text-gray-900 mb-2">Points de Vente</h1>
-          <p class="text-gray-600">{{ filteredPOS.length }} PDV trouvé(s)</p>
+          <p class="text-gray-600">{{ total }} PDV au total - {{ filteredPOS.length }} affichés</p>
         </div>
         <div class="flex items-center gap-3">
           <ExportButton
@@ -149,7 +149,6 @@
 
           <div class="flex items-center gap-3">
             <div>
-              <label class="block text-sm font-bold text-gray-700 mb-2">&nbsp;</label>
               <button
                 @click="clearFilters"
                 class="px-4 py-3 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 whitespace-nowrap"
@@ -209,7 +208,7 @@
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                   </svg>
-                  <span class="font-semibold">{{ pos.numero_flooz || pos.flooz_number }}</span>
+                  <span class="font-semibold">{{ formatPhone(pos.numero_flooz || pos.flooz_number) }}</span>
                 </div>
               </div>
               <span
@@ -246,7 +245,7 @@
               <div class="flex-1 min-w-0">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Gérant</p>
                 <p class="text-sm font-bold text-gray-900 truncate">{{ pos.firstname }} {{ pos.lastname }}</p>
-                <p class="text-xs text-gray-600 truncate">{{ pos.numero_proprietaire || 'N/A' }}</p>
+                <p class="text-xs text-gray-600 truncate">{{ formatPhone(pos.numero_proprietaire) || 'N/A' }}</p>
               </div>
             </div>
 
@@ -336,7 +335,7 @@
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                     </svg>
-                    {{ pos.numero_flooz || pos.flooz_number }}
+                    {{ formatPhone(pos.numero_flooz || pos.flooz_number) }}
                   </div>
                 </div>
               </td>
@@ -345,7 +344,7 @@
               </td>
               <td class="px-6 py-4">
                 <div class="text-sm font-semibold text-gray-900">{{ pos.firstname }} {{ pos.lastname }}</div>
-                <div class="text-xs text-gray-500 mt-1">{{ pos.numero_proprietaire || 'N/A' }}</div>
+                <div class="text-xs text-gray-500 mt-1">{{ formatPhone(pos.numero_proprietaire) || 'N/A' }}</div>
               </td>
               <td class="px-6 py-4">
                 <div class="text-sm font-semibold text-gray-900">{{ pos.ville || pos.city }}{{ pos.quartier ? ', ' + pos.quartier : '' }}</div>
@@ -381,54 +380,28 @@
         </table>
       </div>
 
-      <!-- Pagination -->
-      <div v-if="!loading && filteredPOS.length > 0" class="mt-8 flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="text-sm text-gray-600 font-semibold">
-            Affichage de {{ (currentPage - 1) * perPage + 1 }} à {{ Math.min(currentPage * perPage, filteredPOS.length) }} sur {{ filteredPOS.length }} résultats
-          </div>
-          <FormSelect
-            v-model="perPage"
-            :options="[
-              { label: '12 par page', value: 12 },
-              { label: '24 par page', value: 24 },
-              { label: '48 par page', value: 48 },
-              { label: '60 par page', value: 60 },
-              { label: '120 par page', value: 120 }
-            ]"
-            option-label="label"
-            option-value="value"
-            class="w-40"
-          />
-        </div>
-        <div v-if="totalPages > 1" class="flex items-center gap-2">
-          <button
-            @click="currentPage--"
-            :disabled="currentPage === 1"
-            class="px-4 py-2 rounded-xl bg-white/50 text-gray-700 font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            ← Précédent
-          </button>
-          <div class="flex items-center gap-1">
-            <button
-              v-for="page in visiblePages"
-              :key="page"
-              @click="currentPage = page"
-              class="w-10 h-10 rounded-xl font-bold transition-all duration-200"
-              :class="currentPage === page
-                ? 'bg-moov-orange text-white'
-                : 'bg-white/50 text-gray-700 hover:bg-white'"
-            >
-              {{ page }}
-            </button>
-          </div>
-          <button
-            @click="currentPage++"
-            :disabled="currentPage === totalPages"
-            class="px-4 py-2 rounded-xl bg-white/50 text-gray-700 font-bold hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-          >
-            Suivant →
-          </button>
+      <!-- Load More Button -->
+      <div v-if="!loading && currentPage < lastPage" class="mt-8 flex justify-center">
+        <button
+          @click="loadMore"
+          :disabled="loadingMore"
+          class="px-8 py-4 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-3"
+        >
+          <span v-if="!loadingMore">Charger plus de PDV</span>
+          <span v-else class="flex items-center gap-2">
+            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Chargement...
+          </span>
+        </button>
+      </div>
+
+      <!-- Pagination Info -->
+      <div v-if="!loading && filteredPOS.length > 0" class="mt-4 text-center">
+        <div class="text-sm text-gray-600 font-semibold">
+          Page {{ currentPage }} sur {{ lastPage }} - {{ filteredPOS.length }} PDV affichés sur {{ total }} au total
         </div>
       </div>
     </div>
@@ -454,16 +427,20 @@ import PointOfSaleService from '../services/PointOfSaleService';
 import ExportService from '../services/ExportService';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
+import { formatPhone, formatShortcode } from '../utils/formatters';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 
 const loading = ref(true);
+const loadingMore = ref(false);
 const pointsOfSale = ref([]);
 const viewMode = ref('grid');
 const currentPage = ref(1);
-const perPage = ref(12);
+const lastPage = ref(1);
+const total = ref(0);
+const perPage = ref(12); // Pagination par multiple de 12
 const showImportModal = ref(false);
 
 const filters = ref({
@@ -510,35 +487,11 @@ const communes = computed(() => {
   return Array.from(uniqueCommunes).sort();
 });
 
+// Les PDV sont déjà filtrés côté serveur
 const filteredPOS = computed(() => {
   let filtered = pointsOfSale.value;
 
-  // Search filter
-  if (filters.value.search) {
-    const searchLower = filters.value.search.toLowerCase();
-    filtered = filtered.filter(pos =>
-      pos.point_name?.toLowerCase().includes(searchLower) ||
-      pos.flooz_number?.toLowerCase().includes(searchLower) ||
-      pos.organization?.name?.toLowerCase().includes(searchLower)
-    );
-  }
-
-  // Status filter
-  if (filters.value.status) {
-    filtered = filtered.filter(pos => pos.status === filters.value.status);
-  }
-
-  // Region filter
-  if (filters.value.region) {
-    filtered = filtered.filter(pos => pos.region === filters.value.region);
-  }
-
-  // Prefecture filter
-  if (filters.value.prefecture) {
-    filtered = filtered.filter(pos => pos.prefecture === filters.value.prefecture);
-  }
-
-  // Commune filter
+  // Filtres locaux supplémentaires (non gérés par le serveur)
   if (filters.value.commune) {
     filtered = filtered.filter(pos => {
       const formatted = pos.commune?.replace(/_/g, ' ');
@@ -546,65 +499,24 @@ const filteredPOS = computed(() => {
     });
   }
 
-  // Ville filter
   if (filters.value.ville) {
     const villeLower = filters.value.ville.toLowerCase();
     filtered = filtered.filter(pos => pos.ville?.toLowerCase().includes(villeLower));
   }
 
-  // Quartier filter
   if (filters.value.quartier) {
     const quartierLower = filters.value.quartier.toLowerCase();
     filtered = filtered.filter(pos => pos.quartier?.toLowerCase().includes(quartierLower));
   }
 
-  // Dealer filter
-  if (filters.value.dealer) {
-    filtered = filtered.filter(pos => pos.organization_id === parseInt(filters.value.dealer));
-  }
-
-  // Convert to array if needed
-  if (!Array.isArray(filtered)) {
-    filtered = [];
-  }
-
-  // Sort
-  if (filters.value.sortBy === 'created_at') {
-    filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  } else if (filters.value.sortBy === 'point_name') {
-    filtered.sort((a, b) => (a.point_name || '').localeCompare(b.point_name || ''));
-  } else if (filters.value.sortBy === 'status') {
-    filtered.sort((a, b) => (a.status || '').localeCompare(b.status || ''));
-  } else if (filters.value.sortBy === 'region') {
-    filtered.sort((a, b) => (a.region || '').localeCompare(b.region || ''));
-  }
-
   return filtered;
 });
 
-const totalPages = computed(() => Math.ceil(filteredPOS.value.length / perPage.value));
+const totalPages = computed(() => lastPage.value);
 
 const paginatedPOS = computed(() => {
-  const start = (currentPage.value - 1) * perPage.value;
-  const end = start + perPage.value;
-  return filteredPOS.value.slice(start, end);
-});
-
-const visiblePages = computed(() => {
-  const pages = [];
-  const maxVisible = 5;
-  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2));
-  let end = Math.min(totalPages.value, start + maxVisible - 1);
-  
-  if (end - start < maxVisible - 1) {
-    start = Math.max(1, end - maxVisible + 1);
-  }
-  
-  for (let i = start; i <= end; i++) {
-    pages.push(i);
-  }
-  
-  return pages;
+  // Pas besoin de pagination côté client, déjà fait côté serveur
+  return filteredPOS.value;
 });
 
 const getStatusClass = (status) => {
@@ -655,37 +567,76 @@ const handleImportSuccess = async (importedData) => {
   showImportModal.value = false;
   
   // Reload PDV list
-  loading.value = true;
-  try {
-    const data = await PointOfSaleService.getAll();
-    pointsOfSale.value = data;
-  } catch (error) {
-    console.error('Error reloading points of sale:', error);
-  } finally {
-    loading.value = false;
-  }
+  currentPage.value = 1;
+  await fetchPointsOfSale();
 };
 
-// Reset to page 1 when changing perPage
-watch(perPage, (newValue) => {
-  // Ensure perPage is a number
-  if (typeof newValue === 'string') {
-    perPage.value = parseInt(newValue);
+// Fonction pour charger les PDV avec pagination
+const fetchPointsOfSale = async (append = false) => {
+  if (append) {
+    loadingMore.value = true;
+  } else {
+    loading.value = true;
   }
-  currentPage.value = 1;
-});
-
-onMounted(async () => {
-  loading.value = true;
+  
   try {
-    const response = await PointOfSaleService.getAll();
-    // Handle paginated response from Laravel
-    pointsOfSale.value = response.data || response;
-    await organizationStore.fetchOrganizations();
+    const params = {
+      page: currentPage.value,
+      per_page: perPage.value,
+      sort_by: filters.value.sortBy,
+      sort_order: 'desc'
+    };
+    
+    // Ajouter les filtres actifs
+    if (filters.value.status) params.status = filters.value.status;
+    if (filters.value.region) params.region = filters.value.region.toUpperCase();
+    if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
+    if (filters.value.search) params.search = filters.value.search;
+    if (filters.value.dealer) params.organization_id = filters.value.dealer;
+    
+    const response = await PointOfSaleService.getAll(params);
+    
+    if (append) {
+      // Ajouter à la liste existante (infinite scroll)
+      pointsOfSale.value = [...pointsOfSale.value, ...(response.data || [])];
+    } else {
+      // Remplacer la liste (nouveau chargement)
+      pointsOfSale.value = response.data || [];
+    }
+    
+    lastPage.value = response.last_page || 1;
+    total.value = response.total || 0;
+    currentPage.value = response.current_page || 1;
+    
   } catch (error) {
     console.error('Error loading points of sale:', error);
   } finally {
     loading.value = false;
+    loadingMore.value = false;
   }
+};
+
+// Charger plus de résultats (infinite scroll)
+const loadMore = async () => {
+  if (currentPage.value < lastPage.value && !loadingMore.value) {
+    currentPage.value++;
+    await fetchPointsOfSale(true);
+  }
+};
+
+// Rafraîchir la liste (reset)
+const refreshList = async () => {
+  currentPage.value = 1;
+  await fetchPointsOfSale(false);
+};
+
+// Reset to page 1 when changing filters
+watch([() => filters.value.search, () => filters.value.status, () => filters.value.region, () => filters.value.prefecture, () => filters.value.dealer, () => filters.value.sortBy], () => {
+  refreshList();
+}, { deep: true });
+
+onMounted(async () => {
+  await fetchPointsOfSale();
+  await organizationStore.fetchOrganizations();
 });
 </script>

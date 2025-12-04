@@ -18,11 +18,29 @@ class PointOfSaleController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = PointOfSale::with(['organization', 'creator', 'validator', 'uploads']);
+        
+        // Ne charger que les colonnes nécessaires et relations essentielles
+        $query = PointOfSale::select([
+            'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
+            'profil', 'region', 'prefecture', 'commune', 'ville', 'quartier',
+            'status', 'created_by', 'validated_by', 'created_at', 'updated_at',
+            'latitude', 'longitude', 'dealer_name'
+        ])->with(['organization:id,name', 'creator:id,name']);
+        
+        // Ne pas charger validator et uploads dans la liste (trop lourd)
 
         // Filter based on user role
-        if (!$user->isAdmin()) {
+        if ($user->isAdmin()) {
+            // Admins see all PDV
+        } elseif ($user->isDealerOwner()) {
+            // Dealer owners see all PDV in their organization
             $query->where('organization_id', $user->organization_id);
+        } elseif ($user->isDealerAgent()) {
+            // Dealer agents see only their own PDV
+            $query->where('created_by', $user->id);
+        } else {
+            // No access for other roles
+            $query->whereRaw('1 = 0');
         }
 
         // Apply filters
@@ -51,8 +69,17 @@ class PointOfSaleController extends Controller
             });
         }
 
-        $perPage = $request->get('per_page', 1000); // Default to 1000 to get all
-        return response()->json($query->orderBy('created_at', 'desc')->paginate($perPage));
+        // Pagination with performance optimization
+        $perPage = $request->get('per_page', 50); // Default to 50 for better performance
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        
+        // Limiter le per_page max à 100 pour éviter les surcharges
+        if ($perPage > 100) {
+            $perPage = 100;
+        }
+        
+        return response()->json($query->orderBy($sortBy, $sortOrder)->paginate($perPage));
     }
 
     public function store(Request $request)
@@ -60,13 +87,13 @@ class PointOfSaleController extends Controller
         $validated = $request->validate([
             'organization_id' => 'required|exists:organizations,id',
             'dealer_name' => 'required|string',
-            'numero_flooz' => 'required|string',
-            'shortcode' => 'nullable|string',
+            'numero_flooz' => 'required|string|unique:point_of_sales,numero_flooz',
+            'shortcode' => 'required|string|unique:point_of_sales,shortcode',
             'nom_point' => 'required|string',
-            'profil' => 'nullable|string',
+            'profil' => 'required|string',
             'type_activite' => 'nullable|string',
-            'firstname' => 'required|string',
-            'lastname' => 'required|string',
+            'firstname' => 'nullable|string',
+            'lastname' => 'nullable|string',
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|in:M,F',
             'id_description' => 'nullable|string',
@@ -77,21 +104,46 @@ class PointOfSaleController extends Controller
             'sexe_gerant' => 'nullable|in:M,F',
             'region' => 'required|in:MARITIME,PLATEAUX,CENTRALE,KARA,SAVANES',
             'prefecture' => 'required|string',
-            'commune' => 'nullable|string',
+            'commune' => 'required|string',
             'canton' => 'nullable|string',
-            'ville' => 'nullable|string',
-            'quartier' => 'nullable|string',
+            'ville' => 'required|string',
+            'quartier' => 'required|string',
             'localisation' => 'nullable|string',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
             'gps_accuracy' => 'nullable|numeric',
-            'numero_proprietaire' => 'nullable|string',
+            'numero_proprietaire' => 'required|string',
             'autre_contact' => 'nullable|string',
             'nif' => 'nullable|string',
             'regime_fiscal' => 'nullable|string',
-            'support_visibilite' => 'nullable|string',
+            'support_visibilite' => 'required|string',
             'etat_support' => 'nullable|in:BON,MAUVAIS',
-            'numero_cagnt' => 'nullable|string',
+            'numero_cagnt' => 'required|string',
+        ], [
+            'numero_flooz.unique' => 'Ce numéro Flooz est déjà utilisé par un autre point de vente.',
+            'shortcode.unique' => 'Ce shortcode est déjà utilisé par un autre point de vente.',
+            'organization_id.required' => 'L\'organisation est obligatoire.',
+            'organization_id.exists' => 'L\'organisation sélectionnée n\'existe pas.',
+            'dealer_name.required' => 'Le nom du dealer est obligatoire.',
+            'numero_flooz.required' => 'Le numéro Flooz est obligatoire.',
+            'shortcode.required' => 'Le shortcode est obligatoire.',
+            'nom_point.required' => 'Le nom du point de vente est obligatoire.',
+            'profil.required' => 'Le profil est obligatoire.',
+            'region.required' => 'La région est obligatoire.',
+            'region.in' => 'La région sélectionnée n\'est pas valide.',
+            'prefecture.required' => 'La préfecture est obligatoire.',
+            'commune.required' => 'La commune est obligatoire.',
+            'ville.required' => 'La ville est obligatoire.',
+            'quartier.required' => 'Le quartier est obligatoire.',
+            'latitude.required' => 'La latitude est obligatoire.',
+            'latitude.numeric' => 'La latitude doit être un nombre.',
+            'latitude.between' => 'La latitude doit être comprise entre -90 et 90.',
+            'longitude.required' => 'La longitude est obligatoire.',
+            'longitude.numeric' => 'La longitude doit être un nombre.',
+            'longitude.between' => 'La longitude doit être comprise entre -180 et 180.',
+            'numero_proprietaire.required' => 'Le numéro du propriétaire est obligatoire.',
+            'support_visibilite.required' => 'Le support de visibilité est obligatoire.',
+            'numero_cagnt.required' => 'Le numéro CAGNT est obligatoire.',
         ]);
 
         $user = $request->user();
@@ -151,11 +203,12 @@ class PointOfSaleController extends Controller
         $user = $request->user();
         $query = PointOfSale::with(['organization', 'creator', 'validator', 'idDocuments', 'photos', 'fiscalDocuments']);
 
-        if (!$user->isAdmin()) {
-            $query->where('organization_id', $user->organization_id);
-        }
-
         $pdv = $query->findOrFail($id);
+
+        // Check access permissions
+        if (!$user->canAccessPointOfSale($pdv)) {
+            return response()->json(['message' => 'Forbidden - You do not have access to this PDV'], 403);
+        }
 
         // Check proximity if PDV has coordinates
         $proximityCheck = null;
@@ -178,9 +231,9 @@ class PointOfSaleController extends Controller
         $user = $request->user();
         $pdv = PointOfSale::findOrFail($id);
 
-        // Check access
-        if (!$user->isAdmin() && $pdv->organization_id !== $user->organization_id) {
-            return response()->json(['message' => 'Forbidden'], 403);
+        // Check access permissions
+        if (!$user->canAccessPointOfSale($pdv)) {
+            return response()->json(['message' => 'Forbidden - You do not have access to this PDV'], 403);
         }
 
         // Only allow updates if pending
@@ -279,6 +332,21 @@ class PointOfSaleController extends Controller
         );
 
         return response()->json($result);
+    }
+
+    public function checkUniqueness(Request $request)
+    {
+        $request->validate([
+            'field' => 'required|in:numero_flooz,shortcode,profil',
+            'value' => 'required|string',
+        ]);
+
+        $exists = PointOfSale::where($request->field, $request->value)->exists();
+
+        return response()->json([
+            'exists' => $exists,
+            'message' => $exists ? 'Cette valeur est déjà utilisée' : 'Valeur disponible',
+        ]);
     }
 
     public function destroy($id, Request $request)

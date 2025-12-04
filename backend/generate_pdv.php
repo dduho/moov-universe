@@ -66,7 +66,7 @@ $quartiers = ['Adidogomé', 'Nyékonakpoé', 'Agoè', 'Tokoin', 'Bè', 'Amoutiv�
 $communes = ['Avé_1', 'Avé_2', 'Kpogan', 'Vakpossito', 'Gapé', 'Kloto_1', 'Kloto_2', 'Ogou_1', 'Ogou_2', 'Tchaoudjo_1', 'Kozah_1', 'Oti_1'];
 $cantons = ['Avé-Centre', 'Avé-Kpodji', 'Vakpossito', 'Gapé-Centre', 'Kloto-Nord', 'Kloto-Sud', 'Ogou-Est', 'Tchaoudjo-Centre', 'Kozah-Centre', 'Oti-Nord'];
 
-$profils = ['DSTROWNTF', 'DSTROWNTF+', 'DSTROWNTF-LIGHT', 'PREMIUM', 'STANDARD', 'BASIC'];
+$profils = ['DISTROWNIF', 'DISTROWNIF+', 'DISTROWNIF-LIGHT', 'DISTROTC', 'PREMIUM', 'STANDARD', 'BASIC'];
 $etats_support = ['BON', 'MAUVAIS'];
 
 echo "Génération de 50 PDV...\n\n";

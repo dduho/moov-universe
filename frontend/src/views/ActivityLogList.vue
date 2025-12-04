@@ -99,12 +99,14 @@
 
           <div v-if="authStore.isAdmin">
             <label class="block text-sm font-semibold text-gray-700 mb-2">Utilisateur</label>
-            <Dropdown
+            <FormSelect
               v-model="filters.user_id"
               :options="userOptions"
               placeholder="Tous les utilisateurs"
-              searchable
-              @change="applyFilters"
+              option-label="label"
+              option-value="value"
+              :searchable="true"
+              @update:modelValue="applyFilters"
             />
           </div>
 
@@ -304,7 +306,6 @@ import { useUserStore } from '../stores/user';
 import Navbar from '../components/Navbar.vue';
 import ExportButton from '../components/ExportButton.vue';
 import SearchBar from '../components/SearchBar.vue';
-import Dropdown from '../components/Dropdown.vue';
 import DateRangePicker from '../components/DateRangePicker.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import FormInput from '../components/FormInput.vue';

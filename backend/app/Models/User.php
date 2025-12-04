@@ -77,9 +77,19 @@ class User extends Authenticatable
         return $this->hasRole('admin');
     }
 
+    public function isDealerOwner()
+    {
+        return $this->hasRole('dealer_owner');
+    }
+
+    public function isDealerAgent()
+    {
+        return $this->hasRole('dealer_agent');
+    }
+
     public function isDealer()
     {
-        return $this->hasRole('dealer');
+        return $this->isDealerOwner() || $this->isDealerAgent();
     }
 
     /**
@@ -92,8 +102,31 @@ class User extends Authenticatable
             return true;
         }
 
-        // Dealers can only access their own organization
+        // Dealers (owner and agent) can only access their own organization
         return $this->organization_id == $organizationId;
+    }
+
+    /**
+     * Check if user can access a specific point of sale
+     */
+    public function canAccessPointOfSale($pointOfSale)
+    {
+        // Admins can access all
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        // Dealer owners can access all PDV in their organization
+        if ($this->isDealerOwner()) {
+            return $pointOfSale->organization_id == $this->organization_id;
+        }
+
+        // Dealer agents can only access PDV they created
+        if ($this->isDealerAgent()) {
+            return $pointOfSale->created_by == $this->id;
+        }
+
+        return false;
     }
 
     /**
