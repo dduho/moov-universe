@@ -48,6 +48,32 @@
           </span>
         </div>
 
+        <!-- GPS Missing Warning -->
+        <div v-if="!hasValidCoordinates" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-red-400 bg-red-50/50">
+          <h3 class="text-base sm:text-lg font-bold text-red-800 mb-2 sm:mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Coordonnées GPS manquantes
+          </h3>
+          <p class="text-xs sm:text-sm text-red-700 mb-2">
+            Ce point de vente n'a pas de coordonnées GPS valides. Il ne sera pas affiché sur la carte.
+          </p>
+          <p class="text-xs text-red-600">
+            <strong>Raison possible :</strong> Les coordonnées ont été supprimées car elles étaient identiques à celles d'un autre PDV (doublon détecté).
+          </p>
+          <router-link
+            :to="`/pdv/${pos.id}/edit`"
+            class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            Corriger les coordonnées
+          </router-link>
+        </div>
+
         <!-- Proximity Alert -->
         <div v-if="proximityAlert?.has_nearby" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-orange-300 bg-orange-50/50">
           <h3 class="text-base sm:text-lg font-bold text-orange-800 mb-2 sm:mb-3 flex items-center gap-2">
@@ -644,6 +670,14 @@ const gpsAccuracyWarning = computed(() => {
     message: `Précision GPS: ${Math.round(accuracy)}m`,
     isWarning: false
   };
+});
+
+// Computed pour vérifier si les coordonnées GPS sont valides
+const hasValidCoordinates = computed(() => {
+  if (!pos.value) return true;
+  const lat = parseFloat(pos.value.latitude);
+  const lng = parseFloat(pos.value.longitude);
+  return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && pos.value.latitude !== null && pos.value.longitude !== null;
 });
 
 const hasAnyDocuments = computed(() => {

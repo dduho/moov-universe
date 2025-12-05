@@ -238,7 +238,6 @@ const mapContainer = ref(null);
 let leafletMap = null;
 let markerClusterGroup = null;
 let allMarkersMap = new Map(); // Store marker references by PDV id
-let isInitialLoad = true; // Flag to prevent double loading
 
 const pointsOfSale = ref([]);
 const loading = ref(true);
@@ -402,30 +401,24 @@ const initMap = () => {
   
   // Create marker cluster group with optimized settings
   markerClusterGroup = L.markerClusterGroup({
-    chunkedLoading: true,
-    chunkDelay: 50,
-    chunkInterval: 200,
+    chunkedLoading: false, // Disable chunked loading to avoid double counting
     maxClusterRadius: 80,
     spiderfyOnMaxZoom: true,
     showCoverageOnHover: false,
     zoomToBoundsOnClick: true,
     disableClusteringAtZoom: 16,
-    animate: false, // Disable animation for better performance
+    animate: false,
     removeOutsideVisibleBounds: true,
     // Custom cluster icon
     iconCreateFunction: (cluster) => {
       const count = cluster.getChildCount();
-      let size = 'small';
       let c = ' marker-cluster-';
       
       if (count < 10) {
-        size = 'small';
         c += 'small';
       } else if (count < 100) {
-        size = 'medium';
         c += 'medium';
       } else {
-        size = 'large';
         c += 'large';
       }
       
@@ -437,7 +430,7 @@ const initMap = () => {
     }
   });
   
-  leafletMap.addLayer(markerClusterGroup);
+  // Don't add to map here - will be added in addMarkersToMap
   
   // Listen for popup button clicks
   window.addEventListener('pdv-detail', (e) => {
@@ -445,22 +438,26 @@ const initMap = () => {
   });
 };
 
-// Add markers to cluster group in chunks
+// Add markers to cluster group
 const addMarkersToMap = async (pdvList) => {
   if (!markerClusterGroup) return;
   
-  // Clear existing markers
+  // Remove cluster group from map, clear it, then re-add
+  if (leafletMap.hasLayer(markerClusterGroup)) {
+    leafletMap.removeLayer(markerClusterGroup);
+  }
   markerClusterGroup.clearLayers();
   allMarkersMap.clear();
   
-  if (pdvList.length === 0) return;
+  if (pdvList.length === 0) {
+    leafletMap.addLayer(markerClusterGroup);
+    return;
+  }
   
-  const CHUNK_SIZE = 500;
   const markers = [];
-  const seenIds = new Set(); // Track unique PDV IDs
-  const seenCoords = new Set(); // Track unique coordinates
+  const seenIds = new Set();
   
-  // Create all markers (with deduplication)
+  // Create all markers with strict deduplication
   for (let i = 0; i < pdvList.length; i++) {
     const pos = pdvList[i];
     if (!pos.latitude || !pos.longitude) continue;
@@ -473,11 +470,7 @@ const addMarkersToMap = async (pdvList) => {
     
     const lat = parseFloat(pos.latitude);
     const lng = parseFloat(pos.longitude);
-    if (isNaN(lat) || isNaN(lng)) continue;
-    
-    // Track coordinates (multiple PDVs can have same location - this is valid)
-    const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-    seenCoords.add(coordKey);
+    if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) continue;
     
     const marker = L.marker([lat, lng], {
       icon: createMarkerIcon(pos)
@@ -491,22 +484,20 @@ const addMarkersToMap = async (pdvList) => {
     markers.push(marker);
     allMarkersMap.set(pos.id, marker);
     
-    // Update progress
-    if (i % 1000 === 0) {
-      loadingProgress.value = Math.round((i / pdvList.length) * 100);
+    // Update progress every 500 markers
+    if (i % 500 === 0) {
+      loadingProgress.value = Math.round((i / pdvList.length) * 50);
       await nextTick();
     }
   }
   
-  // Add markers in chunks to avoid blocking UI
-  for (let i = 0; i < markers.length; i += CHUNK_SIZE) {
-    const chunk = markers.slice(i, i + CHUNK_SIZE);
-    markerClusterGroup.addLayers(chunk);
-    
-    // Allow UI to breathe
-    await new Promise(resolve => setTimeout(resolve, 10));
-    loadingProgress.value = Math.round(((i + chunk.length) / markers.length) * 100);
-  }
+  console.log(`Adding ${markers.length} markers to cluster group`);
+  
+  // Add ALL markers at once (this is the correct way to avoid double counting)
+  markerClusterGroup.addLayers(markers);
+  
+  // Re-add cluster group to map
+  leafletMap.addLayer(markerClusterGroup);
   
   loadingProgress.value = 100;
 };
@@ -541,13 +532,14 @@ const filteredPointsOfSale = computed(() => {
 });
 
 // Watch for filter changes and update markers
+let markersInitialized = false;
+
 watch(filteredPointsOfSale, async (newFiltered) => {
-  // Skip the initial trigger (markers already added in onMounted)
-  if (isInitialLoad) {
-    isInitialLoad = false;
+  // Skip if markers haven't been initialized yet
+  if (!markersInitialized) {
     return;
   }
-  if (markerClusterGroup) {
+  if (markerClusterGroup && leafletMap) {
     await addMarkersToMap(newFiltered);
   }
 }, { deep: true });
@@ -702,6 +694,52 @@ const focusOnAlert = (alert) => {
   }
 };
 
+// Detect and clear duplicate coordinates (admin only)
+const duplicatesCleared = ref(false);
+const duplicateClearingInProgress = ref(false);
+
+const detectAndClearDuplicates = async (pdvList) => {
+  if (!authStore.isAdmin || duplicatesCleared.value) return pdvList;
+  
+  // Detect duplicates locally
+  const coordMap = new Map();
+  const duplicateCoords = new Set();
+  
+  pdvList.forEach(pdv => {
+    if (!pdv.latitude || !pdv.longitude) return;
+    const coordKey = `${parseFloat(pdv.latitude).toFixed(6)},${parseFloat(pdv.longitude).toFixed(6)}`;
+    
+    if (coordMap.has(coordKey)) {
+      duplicateCoords.add(coordKey);
+    } else {
+      coordMap.set(coordKey, pdv.id);
+    }
+  });
+  
+  if (duplicateCoords.size > 0) {
+    console.log(`Found ${duplicateCoords.size} duplicate coordinate sets`);
+    
+    // Call backend to clear duplicates
+    try {
+      duplicateClearingInProgress.value = true;
+      const result = await PointOfSaleService.clearDuplicateCoordinates();
+      console.log(`Cleared coordinates for ${result.cleared_count} PDVs`);
+      
+      // Filter out affected PDVs from the local list
+      const affectedIds = new Set(result.affected_ids);
+      pdvList = pdvList.filter(p => !affectedIds.has(p.id));
+      
+      duplicatesCleared.value = true;
+    } catch (error) {
+      console.error('Error clearing duplicate coordinates:', error);
+    } finally {
+      duplicateClearingInProgress.value = false;
+    }
+  }
+  
+  return pdvList;
+};
+
 onMounted(async () => {
   try {
     loading.value = true;
@@ -720,11 +758,27 @@ onMounted(async () => {
     }
     
     // Load all PDVs
-    const data = await PointOfSaleService.getForMap();
-    pointsOfSale.value = (Array.isArray(data) ? data : [])
+    let data = await PointOfSaleService.getForMap();
+    let pdvList = (Array.isArray(data) ? data : [])
       .filter(p => p.latitude && p.longitude && p.status !== 'rejected');
     
-    console.log(`Loaded ${pointsOfSale.value.length} points of sale`);
+    // Detect and clear duplicates (admin only)
+    if (authStore.isAdmin) {
+      pdvList = await detectAndClearDuplicates(pdvList);
+    }
+    
+    // Deduplicate by ID before setting to state
+    const uniquePdvMap = new Map();
+    pdvList.forEach(p => {
+      if (!uniquePdvMap.has(p.id)) {
+        uniquePdvMap.set(p.id, p);
+      }
+    });
+    pdvList = Array.from(uniquePdvMap.values());
+    
+    pointsOfSale.value = pdvList;
+    
+    console.log(`Loaded ${pointsOfSale.value.length} unique points of sale`);
     
     if (authStore.isAdmin) {
       await organizationStore.fetchOrganizations();
@@ -733,11 +787,11 @@ onMounted(async () => {
     // Detect proximity alerts (with optimization)
     detectProximityAlerts();
 
-    // Add markers to map
+    // Add markers to map (only once!)
     await addMarkersToMap(filteredPointsOfSale.value);
     
-    // Mark initial load as complete
-    isInitialLoad = false;
+    // Now enable watch to react to filter changes
+    markersInitialized = true;
 
     // Center map on first point if available
     if (pointsOfSale.value.length > 0 && leafletMap) {

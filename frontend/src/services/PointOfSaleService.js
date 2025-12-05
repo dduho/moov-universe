@@ -57,4 +57,24 @@ export default {
     });
     return response.data;
   },
+
+  async getGpsStats() {
+    const response = await api.get('/point-of-sales/gps-stats');
+    return response.data;
+  },
+
+  async clearDuplicateCoordinates() {
+    const response = await api.post('/point-of-sales/clear-duplicate-coordinates');
+    return response.data;
+  },
+
+  async getWithoutCoordinates(params = {}) {
+    const response = await api.get('/point-of-sales/without-coordinates', { params });
+    return response.data;
+  },
+
+  async getWithoutCoordinatesStats() {
+    const response = await api.get('/point-of-sales/without-coordinates-stats');
+    return response.data;
+  },
 };

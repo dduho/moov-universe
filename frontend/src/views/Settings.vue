@@ -11,7 +11,7 @@
 
       <!-- Loading state -->
       <div v-if="loading" class="glass-card p-6 sm:p-8 text-center">
-        <div class="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <div class="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-moov-orange mx-auto"></div>
         <p class="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600">Chargement des paramètres...</p>
       </div>
 
@@ -39,7 +39,7 @@
                     min="50"
                     max="5000"
                     step="10"
-                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-moov-orange focus:ring-2 focus:ring-moov-orange/20 transition-all"
                     :disabled="saving"
                   />
                   <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">mètres</span>
@@ -52,9 +52,9 @@
                 class="px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap"
                 :class="[
                   proximityValue === proximitySetting?.value 
-                    ? 'bg-gray-200 text-gray-700' 
-                    : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg hover:shadow-xl',
-                  (saving || proximityValue === proximitySetting?.value) && 'opacity-50 cursor-not-allowed'
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                    : 'bg-moov-orange text-white hover:bg-moov-orange-dark shadow-lg hover:shadow-xl',
+                  saving && 'opacity-50 cursor-not-allowed'
                 ]"
               >
                 <span v-if="saving" class="flex items-center gap-2">
@@ -76,7 +76,7 @@
           <!-- Visual indicator -->
           <div class="mt-6 p-4 bg-gray-50 rounded-lg">
             <div class="flex items-center gap-3 mb-3">
-              <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
               <span class="text-sm font-bold text-gray-900">Impact de ce paramètre</span>
@@ -126,7 +126,7 @@
                     min="5"
                     max="100"
                     step="5"
-                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-moov-orange focus:ring-2 focus:ring-moov-orange/20 transition-all"
                     :disabled="savingGpsAccuracy"
                   />
                   <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">mètres</span>
@@ -139,9 +139,9 @@
                 class="px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap"
                 :class="[
                   gpsAccuracyValue === parseInt(gpsAccuracySetting?.value)
-                    ? 'bg-gray-200 text-gray-700' 
-                    : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg hover:shadow-xl',
-                  (savingGpsAccuracy || gpsAccuracyValue === parseInt(gpsAccuracySetting?.value)) && 'opacity-50 cursor-not-allowed'
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                    : 'bg-moov-orange text-white hover:bg-moov-orange-dark shadow-lg hover:shadow-xl',
+                  savingGpsAccuracy && 'opacity-50 cursor-not-allowed'
                 ]"
               >
                 <span v-if="savingGpsAccuracy" class="flex items-center gap-2">

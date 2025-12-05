@@ -204,6 +204,117 @@
             </div>
           </div>
 
+          <!-- GPS Missing Alert -->
+          <div v-if="gpsStats.without_gps > 0" class="mb-8">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-red-300 bg-red-50/50">
+              <div class="flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-6 h-6 sm:w-7 sm:h-7 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                        {{ gpsStats.without_gps }} PDV sans coordonnées GPS
+                      </h3>
+                      <p class="text-xs sm:text-sm text-gray-600">
+                        {{ gpsStats.percentage_without_gps }}% de vos PDV n'ont pas de position GPS valide et n'apparaîtront pas sur la carte
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    @click="showGpsDetails = !showGpsDetails"
+                    class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    {{ showGpsDetails ? 'Masquer' : 'Voir les détails' }}
+                    <svg 
+                      class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" 
+                      :class="{ 'rotate-180': showGpsDetails }"
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- GPS Stats Summary -->
+                <div class="grid grid-cols-3 gap-3 sm:gap-4">
+                  <div class="p-3 rounded-xl bg-white/80">
+                    <p class="text-xs text-gray-500 mb-1">Total PDV</p>
+                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ gpsStats.total_pdv }}</p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-green-50">
+                    <p class="text-xs text-green-600 mb-1">Avec GPS</p>
+                    <p class="text-xl sm:text-2xl font-bold text-green-700">{{ gpsStats.with_gps }}</p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-red-100">
+                    <p class="text-xs text-red-600 mb-1">Sans GPS</p>
+                    <p class="text-xl sm:text-2xl font-bold text-red-700">{{ gpsStats.without_gps }}</p>
+                  </div>
+                </div>
+                
+                <!-- Detailed list (expandable) -->
+                <transition
+                  enter-active-class="transition-all duration-300 ease-out"
+                  enter-from-class="max-h-0 opacity-0"
+                  enter-to-class="max-h-[500px] opacity-100"
+                  leave-active-class="transition-all duration-300 ease-in"
+                  leave-from-class="max-h-[500px] opacity-100"
+                  leave-to-class="max-h-0 opacity-0"
+                >
+                  <div v-show="showGpsDetails" class="overflow-hidden">
+                    <div class="mt-4 max-h-80 overflow-y-auto rounded-xl bg-white/80 border border-red-200">
+                      <table class="min-w-full divide-y divide-red-100">
+                        <thead class="bg-red-50 sticky top-0">
+                          <tr>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-red-700">Nom</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-red-700 hidden sm:table-cell">N° Flooz</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-red-700">Région</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-red-700 hidden md:table-cell">Créé par</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-red-700">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-red-50">
+                          <tr 
+                            v-for="pdv in gpsStats.pdvs_without_gps.slice(0, 20)" 
+                            :key="pdv.id"
+                            class="hover:bg-red-25 transition-colors"
+                          >
+                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ pdv.nom_point }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600 hidden sm:table-cell">{{ pdv.numero_flooz }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600">{{ pdv.region }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600 hidden md:table-cell">{{ pdv.creator?.name || 'N/A' }}</td>
+                            <td class="px-4 py-2 text-center">
+                              <router-link 
+                                :to="`/pdv/${pdv.id}/edit`"
+                                class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-red-500 hover:bg-red-600 transition-colors"
+                              >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                </svg>
+                                <span class="hidden sm:inline">Modifier</span>
+                              </router-link>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div v-if="gpsStats.pdvs_without_gps.length > 20" class="px-4 py-3 bg-red-50 text-center">
+                        <p class="text-xs text-red-600">
+                          Et {{ gpsStats.pdvs_without_gps.length - 20 }} autres PDV sans GPS...
+                          <router-link to="/pdv/list?gps=missing" class="font-bold hover:underline">Voir tout</router-link>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+
           <!-- Quick Actions -->
           <div class="mb-8">
             <div class="glass-card p-4 sm:p-6 rounded-2xl">
@@ -581,6 +692,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import StatisticsService from '../services/StatisticsService';
+import PointOfSaleService from '../services/PointOfSaleService';
 import Navbar from '../components/Navbar.vue';
 import StatsCard from '../components/StatsCard.vue';
 
@@ -599,6 +711,14 @@ const byOrganization = ref([]);
 const byRegion = ref([]);
 const loading = ref(true);
 const expandedRegions = ref({});
+const gpsStats = ref({
+  total_pdv: 0,
+  without_gps: 0,
+  with_gps: 0,
+  percentage_without_gps: 0,
+  pdvs_without_gps: []
+});
+const showGpsDetails = ref(false);
 
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('fr-FR', { 
@@ -663,6 +783,14 @@ const fetchDashboardData = async () => {
       { name: 'Kara', count: 25, validated: 20, pending: 4, rejected: 1, cities: ['Kara', 'Bassar'] },
       { name: 'Savanes', count: 18, validated: 15, pending: 2, rejected: 1, cities: ['Dapaong', 'Mango'] },
     ];
+    
+    // Fetch GPS stats
+    try {
+      const gpsData = await PointOfSaleService.getGpsStats();
+      gpsStats.value = gpsData;
+    } catch (gpsError) {
+      console.error('Failed to fetch GPS stats:', gpsError);
+    }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error);
   } finally {

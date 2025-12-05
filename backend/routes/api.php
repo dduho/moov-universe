@@ -60,6 +60,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('point-of-sales')->group(function () {
         Route::get('/', [PointOfSaleController::class, 'index']);
         Route::get('/for-map', [PointOfSaleController::class, 'forMap']);
+        Route::get('/gps-stats', [PointOfSaleController::class, 'getGpsStats']);
         Route::post('/', [PointOfSaleController::class, 'store']);
         Route::get('/{id}', [PointOfSaleController::class, 'show']);
         Route::put('/{id}', [PointOfSaleController::class, 'update']);
@@ -72,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/import/preview', [PointOfSaleImportController::class, 'preview']);
             Route::post('/import', [PointOfSaleImportController::class, 'import']);
             Route::get('/import/template', [PointOfSaleImportController::class, 'downloadTemplate']);
+            Route::post('/clear-duplicate-coordinates', [PointOfSaleController::class, 'clearDuplicateCoordinates']);
         });
         
         // Admin only routes

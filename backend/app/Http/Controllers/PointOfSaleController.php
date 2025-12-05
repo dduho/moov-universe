@@ -433,6 +433,121 @@ class PointOfSaleController extends Controller
         ]);
     }
 
+    /**
+     * Clear duplicate GPS coordinates
+     * When two PDVs have the same coordinates, we can't know which one is correct
+     * So we set both to null
+     */
+    public function clearDuplicateCoordinates(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->isAdmin()) {
+            return response()->json(['message' => 'Unauthorized'], 403);
+        }
+        
+        // Find all coordinates that appear more than once
+        $duplicates = PointOfSale::selectRaw('ROUND(latitude, 6) as lat, ROUND(longitude, 6) as lng')
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->where('latitude', '!=', 0)
+            ->where('longitude', '!=', 0)
+            ->groupByRaw('ROUND(latitude, 6), ROUND(longitude, 6)')
+            ->havingRaw('COUNT(*) > 1')
+            ->get();
+        
+        $clearedCount = 0;
+        $affectedIds = [];
+        
+        foreach ($duplicates as $dup) {
+            // Get all PDVs with these coordinates
+            $pdvs = PointOfSale::whereRaw('ROUND(latitude, 6) = ?', [$dup->lat])
+                ->whereRaw('ROUND(longitude, 6) = ?', [$dup->lng])
+                ->get();
+            
+            foreach ($pdvs as $pdv) {
+                $pdv->latitude = null;
+                $pdv->longitude = null;
+                $pdv->save();
+                $clearedCount++;
+                $affectedIds[] = $pdv->id;
+            }
+        }
+        
+        return response()->json([
+            'message' => "Cleared coordinates for {$clearedCount} PDVs with duplicate GPS positions",
+            'cleared_count' => $clearedCount,
+            'affected_ids' => $affectedIds
+        ]);
+    }
+
+    /**
+     * Get statistics about PDVs without valid GPS coordinates
+     */
+    public function getGpsStats(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
+        // Base query based on role
+        $baseQuery = PointOfSale::query();
+        
+        if ($user->isAdmin()) {
+            // Admin sees all
+        } elseif ($user->isDealerOwner()) {
+            $baseQuery->where('organization_id', $user->organization_id);
+        } elseif ($user->isCommercial()) {
+            $baseQuery->where(function($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
+                      $taskQuery->where('assigned_to', $user->id);
+                  });
+            });
+        } elseif ($user->isDealerAgent()) {
+            $baseQuery->where('created_by', $user->id);
+        } else {
+            $baseQuery->whereRaw('1 = 0');
+        }
+        
+        // Total PDVs
+        $total = (clone $baseQuery)->count();
+        
+        // PDVs without GPS
+        $withoutGps = (clone $baseQuery)
+            ->where(function($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            })
+            ->count();
+        
+        // Get the list of PDVs without GPS (limited for performance)
+        $pdvsWithoutGps = (clone $baseQuery)
+            ->select(['id', 'nom_point', 'numero_flooz', 'region', 'ville', 'quartier', 'status', 'organization_id', 'created_by'])
+            ->with(['organization:id,name', 'creator:id,name'])
+            ->where(function($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            })
+            ->orderBy('created_at', 'desc')
+            ->limit(100)
+            ->get();
+        
+        return response()->json([
+            'total_pdv' => $total,
+            'without_gps' => $withoutGps,
+            'with_gps' => $total - $withoutGps,
+            'percentage_without_gps' => $total > 0 ? round(($withoutGps / $total) * 100, 1) : 0,
+            'pdvs_without_gps' => $pdvsWithoutGps
+        ]);
+    }
+
     public function destroy($id, Request $request)
     {
         $user = $request->user();
@@ -453,4 +568,3 @@ class PointOfSaleController extends Controller
         return response()->json(['message' => 'PDV deleted successfully']);
     }
 }
-
