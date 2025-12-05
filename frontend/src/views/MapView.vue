@@ -122,89 +122,8 @@
       <!-- Map Container -->
       <div class="glass-card p-6">
         <div class="relative rounded-xl overflow-hidden" style="height: 700px;">
-          <l-map
-            ref="map"
-            v-model:zoom="zoom"
-            v-model:center="center"
-            :use-global-leaflet="false"
-            class="h-full w-full rounded-xl"
-          >
-            <l-tile-layer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-              layer-type="base"
-              name="OpenStreetMap"
-            />
-
-            <!-- Markers for each point of sale -->
-            <l-marker
-              v-for="pos in filteredPointsOfSale"
-              :key="pos.id"
-              :lat-lng="[parseFloat(pos.latitude), parseFloat(pos.longitude)]"
-              @click="showPopup(pos)"
-            >
-              <l-icon
-                :icon-size="[40, 50]"
-                :icon-anchor="[20, 50]"
-                :popup-anchor="[0, -50]"
-              >
-                <div class="relative">
-                  <!-- Modern pin icon -->
-                  <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Shadow -->
-                    <ellipse cx="20" cy="47" rx="8" ry="3" fill="rgba(0,0,0,0.2)"/>
-                    <!-- Pin body -->
-                    <path
-                      d="M20 2C11.716 2 5 8.716 5 17c0 8.5 15 29 15 29s15-20.5 15-29c0-8.284-6.716-15-15-15z"
-                      :fill="getDealerColor(pos.organization_id)"
-                      stroke="none"
-                      filter="drop-shadow(0 2px 4px rgba(0,0,0,0.3))"
-                    />
-                    <!-- Inner circle -->
-                    <circle cx="20" cy="17" r="6" fill="white" opacity="0.9"/>
-                    <!-- Status dot -->
-                    <circle cx="20" cy="17" r="4" :fill="getStatusDotColor(pos.status)"/>
-                  </svg>
-                  <!-- Proximity alert badge -->
-                  <div
-                    v-if="pos.has_proximity_alert"
-                    class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center"
-                  >
-                    <span class="text-white text-xs font-bold">⚠</span>
-                  </div>
-                </div>
-              </l-icon>
-
-              <l-popup>
-                <div class="p-2 min-w-[250px]">
-                  <h3 class="text-lg font-bold text-gray-900 mb-2">{{ pos.point_name }}</h3>
-                  <div class="space-y-1 text-sm">
-                    <p><span class="font-semibold">Flooz:</span> {{ pos.flooz_number }}</p>
-                    <p><span class="font-semibold">Région:</span> {{ pos.region }}</p>
-                    <p><span class="font-semibold">Ville:</span> {{ pos.city }}</p>
-                    <p>
-                      <span class="font-semibold">Statut:</span>
-                      <span
-                        class="inline-block px-2 py-0.5 rounded-full text-xs font-bold ml-1"
-                        :class="getStatusClass(pos.status)"
-                      >
-                        {{ getStatusLabel(pos.status) }}
-                      </span>
-                    </p>
-                    <p v-if="authStore.isAdmin">
-                      <span class="font-semibold">Dealer:</span> {{ pos.organization?.name }}
-                    </p>
-                  </div>
-                  <button
-                    @click="goToDetail(pos.id)"
-                    class="mt-3 w-full px-3 py-2 rounded-lg bg-moov-orange text-white text-sm font-bold hover:bg-moov-orange-dark transition-colors"
-                  >
-                    Voir les détails
-                  </button>
-                </div>
-              </l-popup>
-            </l-marker>
-          </l-map>
+          <!-- Native Leaflet Map Container -->
+          <div ref="mapContainer" class="h-full w-full rounded-xl"></div>
 
           <!-- Loading overlay -->
           <div
@@ -214,6 +133,7 @@
             <div class="text-center">
               <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-moov-orange mb-4"></div>
               <p class="text-gray-600 font-semibold">Chargement de la carte...</p>
+              <p v-if="loadingProgress > 0" class="text-sm text-gray-500 mt-2">{{ loadingProgress }}% des points chargés</p>
             </div>
           </div>
         </div>
@@ -294,8 +214,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet.markercluster';
+import 'leaflet.markercluster/dist/MarkerCluster.css';
+import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Navbar from '../components/Navbar.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
@@ -303,16 +228,21 @@ import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
-import { LMap, LTileLayer, LMarker, LPopup, LIcon } from '@vue-leaflet/vue-leaflet';
-import 'leaflet/dist/leaflet.css';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 
-const map = ref(null);
+// Map refs
+const mapContainer = ref(null);
+let leafletMap = null;
+let markerClusterGroup = null;
+let allMarkersMap = new Map(); // Store marker references by PDV id
+let isInitialLoad = true; // Flag to prevent double loading
+
 const pointsOfSale = ref([]);
 const loading = ref(true);
+const loadingProgress = ref(0);
 const zoom = ref(7);
 const center = ref([8.6195, 0.8248]); // Togo center coordinates
 
@@ -332,72 +262,6 @@ const regions = ref([
 ]);
 
 const dealers = computed(() => organizationStore.organizations);
-
-const clusterOptions = {
-  chunkedLoading: true,
-  maxClusterRadius: 60,
-  spiderfyOnMaxZoom: true,
-  showCoverageOnHover: false,
-  zoomToBoundsOnClick: true
-};
-
-// Computed filtered points of sale
-const filteredPointsOfSale = computed(() => {
-  let filtered = pointsOfSale.value;
-
-  if (filters.value.search) {
-    const searchLower = filters.value.search.toLowerCase();
-    filtered = filtered.filter(p => 
-      (p.nom_point && p.nom_point.toLowerCase().includes(searchLower)) ||
-      (p.point_name && p.point_name.toLowerCase().includes(searchLower)) ||
-      (p.numero_flooz && p.numero_flooz.toLowerCase().includes(searchLower)) ||
-      (p.flooz_number && p.flooz_number.toLowerCase().includes(searchLower))
-    );
-  }
-
-  if (filters.value.status) {
-    filtered = filtered.filter(p => p.status === filters.value.status);
-  }
-
-  if (filters.value.region) {
-    filtered = filtered.filter(p => p.region === filters.value.region);
-  }
-
-  if (filters.value.dealer) {
-    filtered = filtered.filter(p => p.organization_id === parseInt(filters.value.dealer));
-  }
-
-  return filtered;
-});
-
-const stats = computed(() => {
-  const total = filteredPointsOfSale.value.length;
-  const validated = filteredPointsOfSale.value.filter(p => p.status === 'validated').length;
-  const pending = filteredPointsOfSale.value.filter(p => p.status === 'pending').length;
-  const rejected = filteredPointsOfSale.value.filter(p => p.status === 'rejected').length;
-  
-  return { total, validated, pending, rejected };
-});
-
-const dealerStats = computed(() => {
-  const dealerMap = new Map();
-  
-  filteredPointsOfSale.value.forEach(pdv => {
-    const orgId = pdv.organization_id;
-    const orgName = pdv.organization?.name || pdv.dealer_name || 'Sans dealer';
-    
-    if (!dealerMap.has(orgId)) {
-      dealerMap.set(orgId, {
-        id: orgId,
-        name: orgName,
-        count: 0
-      });
-    }
-    dealerMap.get(orgId).count++;
-  });
-  
-  return Array.from(dealerMap.values()).sort((a, b) => b.count - a.count);
-});
 
 // Palette de couleurs pour les dealers
 const dealerColors = [
@@ -429,15 +293,6 @@ const getStatusDotColor = (status) => {
   return colors[status] || '#6B7280';
 };
 
-const getMarkerColor = (status) => {
-  const colors = {
-    validated: '#10B981', // green
-    pending: '#FBBF24',   // yellow
-    rejected: '#EF4444'   // red
-  };
-  return colors[status] || '#6B7280'; // gray as default
-};
-
 const getStatusClass = (status) => {
   const classes = {
     validated: 'bg-green-100 text-green-700',
@@ -456,16 +311,249 @@ const getStatusLabel = (status) => {
   return labels[status] || status;
 };
 
-const showPopup = (pos) => {
-  console.log('Showing popup for:', pos.point_name);
-};
-
 const goToDetail = (id) => {
   router.push(`/pdv/${id}`);
 };
 
+// Create custom SVG icon for a marker
+const createMarkerIcon = (pos) => {
+  const dealerColor = getDealerColor(pos.organization_id);
+  const statusColor = getStatusDotColor(pos.status);
+  const hasAlert = pos.has_proximity_alert;
+  
+  const alertBadge = hasAlert ? `
+    <circle cx="35" cy="5" r="8" fill="#F97316" stroke="white" stroke-width="2"/>
+    <text x="35" y="9" text-anchor="middle" font-size="10" fill="white" font-weight="bold">!</text>
+  ` : '';
+  
+  const svgIcon = `
+    <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="20" cy="47" rx="8" ry="3" fill="rgba(0,0,0,0.2)"/>
+      <path d="M20 2C11.716 2 5 8.716 5 17c0 8.5 15 29 15 29s15-20.5 15-29c0-8.284-6.716-15-15-15z" fill="${dealerColor}"/>
+      <circle cx="20" cy="17" r="6" fill="white" opacity="0.9"/>
+      <circle cx="20" cy="17" r="4" fill="${statusColor}"/>
+      ${alertBadge}
+    </svg>
+  `;
+  
+  return L.divIcon({
+    html: svgIcon,
+    className: 'custom-marker-icon',
+    iconSize: [40, 50],
+    iconAnchor: [20, 50],
+    popupAnchor: [0, -50]
+  });
+};
+
+// Create popup content for a marker
+const createPopupContent = (pos) => {
+  const statusClassMap = {
+    validated: 'background-color: #D1FAE5; color: #047857;',
+    pending: 'background-color: #FEF3C7; color: #B45309;',
+    rejected: 'background-color: #FEE2E2; color: #DC2626;'
+  };
+  const statusStyle = statusClassMap[pos.status] || 'background-color: #F3F4F6; color: #4B5563;';
+  
+  const dealerInfo = authStore.isAdmin && pos.organization 
+    ? `<p><span style="font-weight: 600;">Dealer:</span> ${pos.organization.name || 'N/A'}</p>` 
+    : '';
+  
+  return `
+    <div style="padding: 8px; min-width: 250px;">
+      <h3 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 8px;">${pos.nom_point || pos.point_name || 'Sans nom'}</h3>
+      <div style="font-size: 14px; line-height: 1.6;">
+        <p><span style="font-weight: 600;">Flooz:</span> ${pos.numero_flooz || pos.flooz_number || 'N/A'}</p>
+        <p><span style="font-weight: 600;">Région:</span> ${pos.region || 'N/A'}</p>
+        <p><span style="font-weight: 600;">Ville:</span> ${pos.ville || pos.city || 'N/A'}</p>
+        <p>
+          <span style="font-weight: 600;">Statut:</span>
+          <span style="${statusStyle} display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 12px; font-weight: bold; margin-left: 4px;">
+            ${getStatusLabel(pos.status)}
+          </span>
+        </p>
+        ${dealerInfo}
+      </div>
+      <button 
+        onclick="window.dispatchEvent(new CustomEvent('pdv-detail', { detail: ${pos.id} }))"
+        style="margin-top: 12px; width: 100%; padding: 8px 12px; border-radius: 8px; background-color: #FF6B00; color: white; font-size: 14px; font-weight: bold; border: none; cursor: pointer;"
+        onmouseover="this.style.backgroundColor='#E65C00'"
+        onmouseout="this.style.backgroundColor='#FF6B00'"
+      >
+        Voir les détails
+      </button>
+    </div>
+  `;
+};
+
+// Initialize the map
+const initMap = () => {
+  if (!mapContainer.value || leafletMap) return;
+  
+  leafletMap = L.map(mapContainer.value, {
+    center: center.value,
+    zoom: zoom.value,
+    preferCanvas: true // Use canvas renderer for better performance
+  });
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19
+  }).addTo(leafletMap);
+  
+  // Create marker cluster group with optimized settings
+  markerClusterGroup = L.markerClusterGroup({
+    chunkedLoading: true,
+    chunkDelay: 50,
+    chunkInterval: 200,
+    maxClusterRadius: 80,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    disableClusteringAtZoom: 16,
+    animate: false, // Disable animation for better performance
+    removeOutsideVisibleBounds: true,
+    // Custom cluster icon
+    iconCreateFunction: (cluster) => {
+      const count = cluster.getChildCount();
+      let size = 'small';
+      let c = ' marker-cluster-';
+      
+      if (count < 10) {
+        size = 'small';
+        c += 'small';
+      } else if (count < 100) {
+        size = 'medium';
+        c += 'medium';
+      } else {
+        size = 'large';
+        c += 'large';
+      }
+      
+      return L.divIcon({
+        html: `<div><span>${count}</span></div>`,
+        className: 'marker-cluster' + c,
+        iconSize: L.point(40, 40)
+      });
+    }
+  });
+  
+  leafletMap.addLayer(markerClusterGroup);
+  
+  // Listen for popup button clicks
+  window.addEventListener('pdv-detail', (e) => {
+    goToDetail(e.detail);
+  });
+};
+
+// Add markers to cluster group in chunks
+const addMarkersToMap = async (pdvList) => {
+  if (!markerClusterGroup) return;
+  
+  // Clear existing markers
+  markerClusterGroup.clearLayers();
+  allMarkersMap.clear();
+  
+  if (pdvList.length === 0) return;
+  
+  const CHUNK_SIZE = 500;
+  const markers = [];
+  const seenIds = new Set(); // Track unique PDV IDs
+  const seenCoords = new Set(); // Track unique coordinates
+  
+  // Create all markers (with deduplication)
+  for (let i = 0; i < pdvList.length; i++) {
+    const pos = pdvList[i];
+    if (!pos.latitude || !pos.longitude) continue;
+    
+    // Skip duplicates by ID
+    if (seenIds.has(pos.id)) {
+      continue;
+    }
+    seenIds.add(pos.id);
+    
+    const lat = parseFloat(pos.latitude);
+    const lng = parseFloat(pos.longitude);
+    if (isNaN(lat) || isNaN(lng)) continue;
+    
+    // Track coordinates (multiple PDVs can have same location - this is valid)
+    const coordKey = `${lat.toFixed(6)},${lng.toFixed(6)}`;
+    seenCoords.add(coordKey);
+    
+    const marker = L.marker([lat, lng], {
+      icon: createMarkerIcon(pos)
+    });
+    
+    marker.bindPopup(createPopupContent(pos), {
+      maxWidth: 300,
+      className: 'custom-popup'
+    });
+    
+    markers.push(marker);
+    allMarkersMap.set(pos.id, marker);
+    
+    // Update progress
+    if (i % 1000 === 0) {
+      loadingProgress.value = Math.round((i / pdvList.length) * 100);
+      await nextTick();
+    }
+  }
+  
+  // Add markers in chunks to avoid blocking UI
+  for (let i = 0; i < markers.length; i += CHUNK_SIZE) {
+    const chunk = markers.slice(i, i + CHUNK_SIZE);
+    markerClusterGroup.addLayers(chunk);
+    
+    // Allow UI to breathe
+    await new Promise(resolve => setTimeout(resolve, 10));
+    loadingProgress.value = Math.round(((i + chunk.length) / markers.length) * 100);
+  }
+  
+  loadingProgress.value = 100;
+};
+
+// Computed filtered points of sale
+const filteredPointsOfSale = computed(() => {
+  let filtered = pointsOfSale.value;
+
+  if (filters.value.search) {
+    const searchLower = filters.value.search.toLowerCase();
+    filtered = filtered.filter(p => 
+      (p.nom_point && p.nom_point.toLowerCase().includes(searchLower)) ||
+      (p.point_name && p.point_name.toLowerCase().includes(searchLower)) ||
+      (p.numero_flooz && p.numero_flooz.toLowerCase().includes(searchLower)) ||
+      (p.flooz_number && p.flooz_number.toLowerCase().includes(searchLower))
+    );
+  }
+
+  if (filters.value.status) {
+    filtered = filtered.filter(p => p.status === filters.value.status);
+  }
+
+  if (filters.value.region) {
+    filtered = filtered.filter(p => p.region === filters.value.region);
+  }
+
+  if (filters.value.dealer) {
+    filtered = filtered.filter(p => p.organization_id === parseInt(filters.value.dealer));
+  }
+
+  return filtered;
+});
+
+// Watch for filter changes and update markers
+watch(filteredPointsOfSale, async (newFiltered) => {
+  // Skip the initial trigger (markers already added in onMounted)
+  if (isInitialLoad) {
+    isInitialLoad = false;
+    return;
+  }
+  if (markerClusterGroup) {
+    await addMarkersToMap(newFiltered);
+  }
+}, { deep: true });
+
 const filterMarkers = () => {
-  // Filters are applied via computed property
+  // Filters are applied via computed property and watch
   console.log('Filters applied:', filters.value);
 };
 
@@ -478,12 +566,41 @@ const resetFilters = () => {
   };
 };
 
-const proximityThreshold = ref(300); // 300m par défaut
+const stats = computed(() => {
+  const total = filteredPointsOfSale.value.length;
+  const validated = filteredPointsOfSale.value.filter(p => p.status === 'validated').length;
+  const pending = filteredPointsOfSale.value.filter(p => p.status === 'pending').length;
+  const rejected = filteredPointsOfSale.value.filter(p => p.status === 'rejected').length;
+  
+  return { total, validated, pending, rejected };
+});
+
+const dealerStats = computed(() => {
+  const dealerMap = new Map();
+  
+  filteredPointsOfSale.value.forEach(pdv => {
+    const orgId = pdv.organization_id;
+    const orgName = pdv.organization?.name || pdv.dealer_name || 'Sans dealer';
+    
+    if (!dealerMap.has(orgId)) {
+      dealerMap.set(orgId, {
+        id: orgId,
+        name: orgName,
+        count: 0
+      });
+    }
+    dealerMap.get(orgId).count++;
+  });
+  
+  return Array.from(dealerMap.values()).sort((a, b) => b.count - a.count);
+});
+
+const proximityThreshold = ref(300);
 const proximityAlerts = ref([]);
 
 // Calculer la distance entre deux points GPS (formule de Haversine)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Rayon de la Terre en mètres
+  const R = 6371e3;
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
@@ -494,39 +611,80 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
             Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return R * c; // Distance en mètres
+  return R * c;
 };
 
-// Détecter les PDV trop proches
+// Optimized proximity detection using spatial grid
 const detectProximityAlerts = () => {
   const alerts = [];
   const pdvs = pointsOfSale.value;
   const pdvIdsWithAlert = new Set();
-
-  for (let i = 0; i < pdvs.length; i++) {
-    for (let j = i + 1; j < pdvs.length; j++) {
-      const distance = calculateDistance(
-        parseFloat(pdvs[i].latitude),
-        parseFloat(pdvs[i].longitude),
-        parseFloat(pdvs[j].latitude),
-        parseFloat(pdvs[j].longitude)
-      );
-
-      if (distance < proximityThreshold.value) {
-        alerts.push({
-          pdv1: pdvs[i],
-          pdv2: pdvs[j],
-          distance: distance
-        });
+  
+  // Skip if too many points (would be too slow)
+  if (pdvs.length > 5000) {
+    console.log('Skipping proximity detection for performance (> 5000 points)');
+    proximityAlerts.value = [];
+    return;
+  }
+  
+  // Create spatial grid for O(n) average complexity instead of O(n²)
+  const gridSize = proximityThreshold.value / 111000; // Convert meters to approximate degrees
+  const grid = new Map();
+  
+  // Place PDVs in grid cells
+  pdvs.forEach((pdv, index) => {
+    const lat = parseFloat(pdv.latitude);
+    const lng = parseFloat(pdv.longitude);
+    if (isNaN(lat) || isNaN(lng)) return;
+    
+    const cellX = Math.floor(lng / gridSize);
+    const cellY = Math.floor(lat / gridSize);
+    const cellKey = `${cellX},${cellY}`;
+    
+    if (!grid.has(cellKey)) {
+      grid.set(cellKey, []);
+    }
+    grid.get(cellKey).push({ pdv, index, lat, lng });
+  });
+  
+  // Check only neighboring cells
+  const checked = new Set();
+  grid.forEach((cellPdvs, cellKey) => {
+    const [cellX, cellY] = cellKey.split(',').map(Number);
+    
+    // Check current cell and 8 neighbors
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const neighborKey = `${cellX + dx},${cellY + dy}`;
+        const neighborPdvs = grid.get(neighborKey);
+        if (!neighborPdvs) continue;
         
-        // Marquer les deux PDV comme ayant une alerte
-        pdvIdsWithAlert.add(pdvs[i].id);
-        pdvIdsWithAlert.add(pdvs[j].id);
+        cellPdvs.forEach(p1 => {
+          neighborPdvs.forEach(p2 => {
+            if (p1.index >= p2.index) return; // Avoid duplicates
+            
+            const pairKey = `${p1.index}-${p2.index}`;
+            if (checked.has(pairKey)) return;
+            checked.add(pairKey);
+            
+            const distance = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+            
+            if (distance < proximityThreshold.value) {
+              alerts.push({
+                pdv1: p1.pdv,
+                pdv2: p2.pdv,
+                distance: distance
+              });
+              pdvIdsWithAlert.add(p1.pdv.id);
+              pdvIdsWithAlert.add(p2.pdv.id);
+            }
+          });
+        });
       }
     }
-  }
+  });
 
-  // Ajouter la propriété has_proximity_alert à tous les PDV concernés
+  // Mark PDVs with proximity alerts
   pointsOfSale.value.forEach(pdv => {
     pdv.has_proximity_alert = pdvIdsWithAlert.has(pdv.id);
   });
@@ -538,13 +696,20 @@ const detectProximityAlerts = () => {
 const focusOnAlert = (alert) => {
   const lat = (parseFloat(alert.pdv1.latitude) + parseFloat(alert.pdv2.latitude)) / 2;
   const lng = (parseFloat(alert.pdv1.longitude) + parseFloat(alert.pdv2.longitude)) / 2;
-  center.value = [lat, lng];
-  zoom.value = 16;
+  
+  if (leafletMap) {
+    leafletMap.setView([lat, lng], 16);
+  }
 };
 
 onMounted(async () => {
   try {
     loading.value = true;
+    loadingProgress.value = 0;
+    
+    // Initialize map first
+    await nextTick();
+    initMap();
     
     // Load proximity threshold from system settings
     try {
@@ -554,22 +719,30 @@ onMounted(async () => {
       console.warn('Could not load proximity threshold, using default:', error);
     }
     
-    // Utiliser la route optimisée pour la carte (tous les PDV, champs essentiels seulement)
+    // Load all PDVs
     const data = await PointOfSaleService.getForMap();
     pointsOfSale.value = (Array.isArray(data) ? data : [])
       .filter(p => p.latitude && p.longitude && p.status !== 'rejected');
+    
+    console.log(`Loaded ${pointsOfSale.value.length} points of sale`);
     
     if (authStore.isAdmin) {
       await organizationStore.fetchOrganizations();
     }
 
-    // Detect proximity alerts
+    // Detect proximity alerts (with optimization)
     detectProximityAlerts();
 
+    // Add markers to map
+    await addMarkersToMap(filteredPointsOfSale.value);
+    
+    // Mark initial load as complete
+    isInitialLoad = false;
+
     // Center map on first point if available
-    if (pointsOfSale.value.length > 0) {
+    if (pointsOfSale.value.length > 0 && leafletMap) {
       const firstPoint = pointsOfSale.value[0];
-      center.value = [parseFloat(firstPoint.latitude), parseFloat(firstPoint.longitude)];
+      leafletMap.setView([parseFloat(firstPoint.latitude), parseFloat(firstPoint.longitude)], zoom.value);
     }
   } catch (error) {
     console.error('Error loading points of sale:', error);
@@ -577,17 +750,92 @@ onMounted(async () => {
     loading.value = false;
   }
 });
+
+onUnmounted(() => {
+  // Cleanup
+  window.removeEventListener('pdv-detail', (e) => goToDetail(e.detail));
+  
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+    markerClusterGroup = null;
+  }
+  
+  if (leafletMap) {
+    leafletMap.remove();
+    leafletMap = null;
+  }
+  
+  allMarkersMap.clear();
+});
 </script>
 
 <style scoped>
-/* Remove default Leaflet marker outline */
-:deep(.leaflet-marker-icon) {
-  border: none !important;
-  outline: none !important;
+/* Custom marker icon styles */
+:deep(.custom-marker-icon) {
   background: transparent !important;
+  border: none !important;
 }
 
-:deep(.leaflet-marker-icon):focus {
-  outline: none !important;
+/* Marker cluster styles */
+:deep(.marker-cluster) {
+  background-clip: padding-box;
+  border-radius: 20px;
+}
+
+:deep(.marker-cluster div) {
+  width: 30px;
+  height: 30px;
+  margin-left: 5px;
+  margin-top: 5px;
+  text-align: center;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 12px;
+  line-height: 30px;
+  color: white;
+}
+
+:deep(.marker-cluster-small) {
+  background-color: rgba(255, 107, 0, 0.6);
+}
+
+:deep(.marker-cluster-small div) {
+  background-color: rgba(255, 107, 0, 0.9);
+}
+
+:deep(.marker-cluster-medium) {
+  background-color: rgba(241, 128, 23, 0.6);
+}
+
+:deep(.marker-cluster-medium div) {
+  background-color: rgba(241, 128, 23, 0.9);
+}
+
+:deep(.marker-cluster-large) {
+  background-color: rgba(229, 92, 0, 0.6);
+}
+
+:deep(.marker-cluster-large div) {
+  background-color: rgba(229, 92, 0, 0.9);
+}
+
+/* Custom popup styles */
+:deep(.custom-popup .leaflet-popup-content-wrapper) {
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+:deep(.custom-popup .leaflet-popup-content) {
+  margin: 0;
+}
+
+:deep(.custom-popup .leaflet-popup-tip) {
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Leaflet container fix */
+:deep(.leaflet-container) {
+  font-family: inherit;
+  z-index: 1;
 }
 </style>
