@@ -6,6 +6,7 @@ import { useToast } from './composables/useToast';
 import Toast from './components/Toast.vue';
 import GlobalSearch from './components/GlobalSearch.vue';
 import ConfirmModal from './components/ConfirmModal.vue';
+import PWAInstallPrompt from './components/PWAInstallPrompt.vue';
 
 const authStore = useAuthStore();
 const { setToastComponent } = useToast();
@@ -32,6 +33,7 @@ onMounted(() => {
     <Toast ref="toastRef" />
     <GlobalSearch v-if="authStore.isAuthenticated" />
     <ConfirmModal />
+    <PWAInstallPrompt />
   </div>
 </template>
 

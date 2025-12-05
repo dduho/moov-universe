@@ -6,6 +6,11 @@ export default {
     return response.data;
   },
 
+  async getForMap(params = {}) {
+    const response = await api.get('/point-of-sales/for-map', { params });
+    return response.data;
+  },
+
   async getById(id) {
     const response = await api.get(`/point-of-sales/${id}`);
     return response.data;

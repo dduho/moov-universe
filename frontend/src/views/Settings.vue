@@ -104,6 +104,94 @@
           </div>
         </div>
 
+        <!-- GPS Accuracy Threshold Setting -->
+        <div class="glass-card p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Seuil de Précision GPS</h3>
+              <p class="text-xs sm:text-sm text-gray-600">{{ gpsAccuracySetting?.description || 'Précision GPS maximale acceptée en mètres' }}</p>
+            </div>
+            <span class="self-start px-3 py-1 rounded-full text-xs font-bold bg-orange-100 text-orange-700">
+              Qualité GPS
+            </span>
+          </div>
+
+          <div class="space-y-3 sm:space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+              <div class="flex-1">
+                <div class="relative">
+                  <input
+                    v-model.number="gpsAccuracyValue"
+                    type="number"
+                    min="5"
+                    max="100"
+                    step="5"
+                    class="w-full px-4 py-3 rounded-lg border-2 border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-500/20 transition-all"
+                    :disabled="savingGpsAccuracy"
+                  />
+                  <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">mètres</span>
+                </div>
+              </div>
+
+              <button
+                @click="saveGpsAccuracy"
+                :disabled="savingGpsAccuracy || gpsAccuracyValue === parseInt(gpsAccuracySetting?.value)"
+                class="px-6 py-3 rounded-lg font-bold transition-all whitespace-nowrap"
+                :class="[
+                  gpsAccuracyValue === parseInt(gpsAccuracySetting?.value)
+                    ? 'bg-gray-200 text-gray-700' 
+                    : 'bg-primary-600 text-white hover:bg-primary-700 shadow-lg hover:shadow-xl',
+                  (savingGpsAccuracy || gpsAccuracyValue === parseInt(gpsAccuracySetting?.value)) && 'opacity-50 cursor-not-allowed'
+                ]"
+              >
+                <span v-if="savingGpsAccuracy" class="flex items-center gap-2">
+                  <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Enregistrement...
+                </span>
+                <span v-else>Enregistrer</span>
+              </button>
+            </div>
+            
+            <p class="text-xs text-gray-500">
+              Valeur recommandée : entre 20m et 50m. Une valeur plus basse exige une meilleure précision GPS.
+            </p>
+          </div>
+
+          <!-- Visual indicator -->
+          <div class="mt-6 p-4 bg-gray-50 rounded-lg">
+            <div class="flex items-center gap-3 mb-3">
+              <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+              </svg>
+              <span class="text-sm font-bold text-gray-900">Impact de ce paramètre</span>
+            </div>
+            <ul class="space-y-2 text-sm text-gray-600">
+              <li class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-orange-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                Alerte visuelle sur la fiche PDV si la précision dépasse ce seuil
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-orange-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                </svg>
+                Indicateur lors de la capture GPS si la précision est insuffisante
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-green-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+                Assure la qualité des données de géolocalisation
+              </li>
+            </ul>
+          </div>
+        </div>
+
         <!-- Future settings placeholder -->
         <div class="glass-card p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
@@ -147,13 +235,21 @@ const saving = ref(false);
 const showSuccess = ref(false);
 const proximitySetting = ref(null);
 const proximityValue = ref(300);
+const gpsAccuracySetting = ref(null);
+const gpsAccuracyValue = ref(30);
+const savingGpsAccuracy = ref(false);
 
 const loadSettings = async () => {
   try {
     loading.value = true;
-    const setting = await SystemSettingService.getSetting('pdv_proximity_threshold');
-    proximitySetting.value = setting;
-    proximityValue.value = setting.value;
+    const [proximitySett, gpsAccuracySett] = await Promise.all([
+      SystemSettingService.getSetting('pdv_proximity_threshold'),
+      SystemSettingService.getSetting('gps_accuracy_max').catch(() => ({ value: 30, description: 'Précision GPS maximale acceptée en mètres' }))
+    ]);
+    proximitySetting.value = proximitySett;
+    proximityValue.value = proximitySett.value;
+    gpsAccuracySetting.value = gpsAccuracySett;
+    gpsAccuracyValue.value = parseInt(gpsAccuracySett.value) || 30;
   } catch (error) {
     console.error('Error loading settings:', error);
   } finally {
@@ -177,6 +273,25 @@ const saveProximityThreshold = async () => {
     toast.error('Erreur lors de la sauvegarde du paramètre');
   } finally {
     saving.value = false;
+  }
+};
+
+const saveGpsAccuracy = async () => {
+  try {
+    savingGpsAccuracy.value = true;
+    await SystemSettingService.updateSetting('gps_accuracy_max', gpsAccuracyValue.value);
+    gpsAccuracySetting.value.value = gpsAccuracyValue.value;
+    
+    // Show success message
+    showSuccess.value = true;
+    setTimeout(() => {
+      showSuccess.value = false;
+    }, 3000);
+  } catch (error) {
+    console.error('Error saving GPS accuracy setting:', error);
+    toast.error('Erreur lors de la sauvegarde du paramètre');
+  } finally {
+    savingGpsAccuracy.value = false;
   }
 };
 

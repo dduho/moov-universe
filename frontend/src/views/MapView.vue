@@ -554,9 +554,8 @@ onMounted(async () => {
       console.warn('Could not load proximity threshold, using default:', error);
     }
     
-    const response = await PointOfSaleService.getAll();
-    // Handle both paginated and non-paginated responses
-    const data = response.data || response;
+    // Utiliser la route optimisée pour la carte (tous les PDV, champs essentiels seulement)
+    const data = await PointOfSaleService.getForMap();
     pointsOfSale.value = (Array.isArray(data) ? data : [])
       .filter(p => p.latitude && p.longitude && p.status !== 'rejected');
     

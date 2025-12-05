@@ -247,7 +247,7 @@
         <div v-if="currentStep === 3">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Localisation</h2>
           <div class="space-y-6">
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormSelect
                 v-model="formData.region"
                 label="Région"
@@ -273,7 +273,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormSelect
                 v-model="formData.commune"
                 label="Commune"
@@ -298,7 +298,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <AutocompleteInput
                 v-model="formData.city"
                 label="Ville"
@@ -335,7 +335,7 @@
                 </svg>
                 Coordonnées GPS
               </h3>
-              <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
                 <FormInput
                   v-model="formData.latitude"
                   label="Latitude"
@@ -431,7 +431,7 @@
                 </div>
 
                 <!-- Champ NIF (conditionnel) -->
-                <div v-if="shouldShowNifField" class="grid grid-cols-2 gap-6">
+                <div v-if="shouldShowNifField" class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <FormInput
                     v-model="formData.nif"
                     label="NIF"
@@ -463,7 +463,7 @@
                 </svg>
                 Support de visibilité
               </h3>
-              <div class="grid grid-cols-2 gap-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <FormSelect
                   v-model="formData.visibility_support"
                   label="Support de visibilité"
@@ -571,7 +571,7 @@
             <!-- Dealer Info Summary -->
             <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Informations du dealer</h3>
-              <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">Organisation:</span> {{ getOrganizationName() }}</div>
                 <div><span class="font-semibold text-gray-600">Nom du PDV:</span> {{ formData.point_name }}</div>
                 <div><span class="font-semibold text-gray-600">Numéro Flooz:</span> {{ formatPhone(formData.flooz_number) }}</div>
@@ -584,7 +584,7 @@
             <!-- Owner Info Summary -->
             <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Informations du propriétaire</h3>
-              <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">Nom complet:</span> {{ formData.owner_first_name }} {{ formData.owner_last_name }}</div>
                 <div><span class="font-semibold text-gray-600">Date de naissance:</span> {{ formData.owner_date_of_birth }}</div>
                 <div><span class="font-semibold text-gray-600">Genre:</span> {{ formData.owner_gender === 'M' ? 'Masculin' : 'Féminin' }}</div>
@@ -600,7 +600,7 @@
             <!-- Location Summary -->
             <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Localisation</h3>
-              <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">Région:</span> {{ formData.region }}</div>
                 <div><span class="font-semibold text-gray-600">Préfecture:</span> {{ formData.prefecture ? formData.prefecture.replace(/_/g, ' ') : 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Commune:</span> {{ formData.commune ? formData.commune.replace(/_/g, ' ') : 'N/A' }}</div>
@@ -614,7 +614,7 @@
             <!-- Fiscal Summary -->
             <div class="p-6 rounded-xl bg-gray-50 border border-gray-200">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Fiscalité & Visibilité</h3>
-              <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">NIF:</span> {{ formData.nif || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Régime fiscal:</span> {{ formData.tax_regime || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Support de visibilité:</span> {{ formData.visibility_support || 'N/A' }}</div>
@@ -1297,6 +1297,7 @@ const formData = ref({
   location_description: '',
   latitude: '',
   longitude: '',
+  gps_accuracy: null,
   has_nif: '',
   nif: '',
   tax_regime: '',
@@ -1613,6 +1614,7 @@ const captureGPS = async () => {
     
     formData.value.latitude = position.latitude.toFixed(6);
     formData.value.longitude = position.longitude.toFixed(6);
+    formData.value.gps_accuracy = geoAccuracy.value ? Math.round(geoAccuracy.value) : null;
     
     // Afficher un message selon la précision
     if (geoIsApproximate.value) {
@@ -1697,6 +1699,7 @@ const submitForm = async () => {
       localisation: formData.value.location_description, // location_description -> localisation
       latitude: formData.value.latitude,
       longitude: formData.value.longitude,
+      gps_accuracy: formData.value.gps_accuracy || null, // Précision GPS en mètres
       
       // Fiscal
       nif: formData.value.nif,

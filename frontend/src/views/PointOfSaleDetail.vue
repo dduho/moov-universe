@@ -130,7 +130,7 @@
                 </svg>
                 Informations Propriétaire
               </h2>
-              <div class="grid grid-cols-2 gap-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Nom complet</p>
                   <p class="text-lg font-bold text-gray-900">{{ pos.firstname || pos.owner_first_name }} {{ pos.lastname || pos.owner_last_name }}</p>
@@ -175,7 +175,7 @@
                 </svg>
                 Localisation
               </h2>
-              <div class="grid grid-cols-2 gap-6 mb-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Région</p>
                   <p class="text-lg font-bold text-gray-900">{{ pos.region || 'N/A' }}</p>
@@ -212,6 +212,35 @@
                   <p class="text-sm font-semibold text-gray-500 mb-1">Longitude</p>
                   <p class="text-lg font-bold text-gray-900">{{ pos.longitude || 'N/A' }}</p>
                 </div>
+                
+                <!-- Indicateur de précision GPS -->
+                <div v-if="gpsAccuracyWarning?.show" class="col-span-2">
+                  <div 
+                    class="flex items-center gap-2 px-4 py-3 rounded-lg"
+                    :class="gpsAccuracyWarning.isWarning 
+                      ? 'bg-orange-100 border-2 border-orange-300 text-orange-800' 
+                      : 'bg-green-100 border-2 border-green-300 text-green-800'"
+                  >
+                    <svg v-if="gpsAccuracyWarning.isWarning" class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <svg v-else class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    <span class="font-semibold text-sm">{{ gpsAccuracyWarning.message }}</span>
+                    <span v-if="gpsAccuracyWarning.isWarning" class="text-xs ml-auto">
+                      La précision lors de la capture était inférieure au seuil requis
+                    </span>
+                  </div>
+                </div>
+                <div v-else-if="!pos.gps_accuracy" class="col-span-2">
+                  <div class="flex items-center gap-2 px-4 py-3 rounded-lg bg-gray-100 border-2 border-gray-200 text-gray-600">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span class="text-sm">Aucune donnée de précision GPS disponible</span>
+                  </div>
+                </div>
               </div>
 
               <!-- Leaflet Map -->
@@ -226,7 +255,7 @@
                 </svg>
                 Contacts & Fiscalité
               </h2>
-              <div class="grid grid-cols-2 gap-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Téléphone principal</p>
                   <p class="text-lg font-bold text-gray-900">{{ formatPhone(pos.numero_proprietaire || pos.owner_phone) || 'N/A' }}</p>
@@ -568,6 +597,7 @@ import Navbar from '../components/Navbar.vue';
 import RejectionModal from '../components/RejectionModal.vue';
 import TaskList from '../components/TaskList.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
+import SystemSettingService from '../services/systemSettingService';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 import { useConfirm } from '../composables/useConfirm';
@@ -596,6 +626,25 @@ const mapInstance = ref(null);
 const showFileModal = ref(false);
 const selectedFile = ref(null);
 const fileLoading = ref(true);
+const gpsAccuracyThreshold = ref(30); // Valeur par défaut 30m
+
+// Computed pour vérifier si la précision GPS dépasse le seuil
+const gpsAccuracyWarning = computed(() => {
+  if (!pos.value?.gps_accuracy) return null;
+  const accuracy = parseFloat(pos.value.gps_accuracy);
+  if (accuracy > gpsAccuracyThreshold.value) {
+    return {
+      show: true,
+      message: `Précision GPS: ${Math.round(accuracy)}m (seuil: ${gpsAccuracyThreshold.value}m)`,
+      isWarning: true
+    };
+  }
+  return {
+    show: true,
+    message: `Précision GPS: ${Math.round(accuracy)}m`,
+    isWarning: false
+  };
+});
 
 const hasAnyDocuments = computed(() => {
   return (pos.value?.idDocuments?.length || 
@@ -769,10 +818,26 @@ const fetchPOSData = async () => {
   }
 };
 
+// Charger le seuil de précision GPS
+const loadGpsAccuracyThreshold = async () => {
+  try {
+    const setting = await SystemSettingService.getSetting('gps_accuracy_max');
+    if (setting?.value) {
+      gpsAccuracyThreshold.value = parseInt(setting.value) || 30;
+    }
+  } catch (err) {
+    console.error('Error loading GPS accuracy threshold:', err);
+  }
+};
+
 onMounted(async () => {
   loading.value = true;
   try {
-    const data = await PointOfSaleService.getById(route.params.id);
+    // Charger les données en parallèle
+    const [data] = await Promise.all([
+      PointOfSaleService.getById(route.params.id),
+      loadGpsAccuracyThreshold()
+    ]);
     // Backend returns { pdv, proximity_alert }
     if (data.pdv) {
       pos.value = data.pdv;

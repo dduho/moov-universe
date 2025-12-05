@@ -59,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Point of Sale routes
     Route::prefix('point-of-sales')->group(function () {
         Route::get('/', [PointOfSaleController::class, 'index']);
+        Route::get('/for-map', [PointOfSaleController::class, 'forMap']);
         Route::post('/', [PointOfSaleController::class, 'store']);
         Route::get('/{id}', [PointOfSaleController::class, 'show']);
         Route::put('/{id}', [PointOfSaleController::class, 'update']);

@@ -19,6 +19,11 @@ class PointOfSaleController extends Controller
     {
         $user = $request->user();
         
+        // S'assurer que la relation role est chargée
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
         // Ne charger que les colonnes nécessaires et relations essentielles
         $query = PointOfSale::select([
             'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
@@ -98,6 +103,67 @@ class PointOfSaleController extends Controller
         }
         
         return response()->json($query->orderBy($sortBy, $sortOrder)->paginate($perPage));
+    }
+
+    /**
+     * Get all points of sale for map view (optimized, no pagination)
+     * Returns only essential fields for markers
+     */
+    public function forMap(Request $request)
+    {
+        $user = $request->user();
+        
+        // S'assurer que la relation role est chargée
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
+        // Sélectionner uniquement les champs nécessaires pour la carte
+        $query = PointOfSale::select([
+            'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
+            'profil', 'region', 'prefecture', 'ville', 'quartier',
+            'status', 'latitude', 'longitude', 'dealer_name'
+        ])->with(['organization:id,name']);
+
+        // Filter based on user role
+        if ($user->isAdmin()) {
+            // Admins see all PDV
+        } elseif ($user->isDealerOwner()) {
+            $query->where('organization_id', $user->organization_id);
+        } elseif ($user->isCommercial()) {
+            $query->where(function($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
+                      $taskQuery->where('assigned_to', $user->id);
+                  });
+            });
+        } elseif ($user->isDealerAgent()) {
+            $query->where('created_by', $user->id);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        // Apply filters
+        if ($request->has('status') && $request->status) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->has('region') && $request->region) {
+            $query->where('region', $request->region);
+        }
+
+        if ($request->has('organization_id') && $request->organization_id) {
+            $query->where('organization_id', $request->organization_id);
+        }
+
+        // Exclure les PDV sans coordonnées GPS valides
+        $query->whereNotNull('latitude')
+              ->whereNotNull('longitude')
+              ->where('latitude', '!=', 0)
+              ->where('longitude', '!=', 0);
+
+        // Retourner tous les résultats sans pagination
+        return response()->json($query->get());
     }
 
     public function store(Request $request)
