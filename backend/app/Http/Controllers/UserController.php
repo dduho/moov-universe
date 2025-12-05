@@ -51,11 +51,20 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8',
-            'role_id' => 'required|exists:roles,id',
+            'password' => 'required|string|min:6|confirmed',
+            'role' => 'required|string|in:admin,dealer_owner,dealer_agent',
             'organization_id' => 'nullable|exists:organizations,id',
             'is_active' => 'boolean',
         ]);
+
+        // Convert role name to role_id
+        $role = \App\Models\Role::where('name', $validated['role'])->first();
+        if (!$role) {
+            return response()->json(['error' => 'Rôle invalide'], 422);
+        }
+
+        $validated['role_id'] = $role->id;
+        unset($validated['role']);
 
         $validated['password'] = Hash::make($validated['password']);
 

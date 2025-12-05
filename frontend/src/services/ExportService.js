@@ -51,26 +51,39 @@ const ExportService = {
    * @param {string} format - 'excel' or 'csv'
    */
   exportPDV(pdvList, format = 'excel') {
-    // Transform data for export
+    // Transform data for export - matching import template headers exactly
     const exportData = pdvList.map(pdv => ({
-      'ID': pdv.id,
-      'Nom du PDV': pdv.point_name,
-      'Numéro Flooz': pdv.flooz_number,
-      'Shortcode': pdv.shortcode || '',
-      'Propriétaire': `${pdv.owner_first_name} ${pdv.owner_last_name}`,
-      'Téléphone': pdv.owner_phone,
-      'Région': pdv.region,
-      'Préfecture': pdv.prefecture || '',
-      'Commune': pdv.commune || '',
-      'Ville': pdv.city,
-      'Quartier': pdv.neighborhood,
-      'Latitude': pdv.latitude,
-      'Longitude': pdv.longitude,
-      'Statut': pdv.status === 'validated' ? 'Validé' : pdv.status === 'pending' ? 'En attente' : 'Rejeté',
-      'Dealer': pdv.organization?.name || '',
-      'Date de création': new Date(pdv.created_at).toLocaleDateString('fr-FR'),
+      'DEALER_NAME': pdv.dealer_name || '',
+      'NUMERO_FLOOZ': pdv.numero_flooz || '',
+      'SHORTCODE': pdv.shortcode || '',
+      'NOM DU POINT': pdv.nom_point || '',
+      'PROFIL': pdv.profil || '',
+      'FIRSTNAME': pdv.firstname || '',
+      'LASTNAME': pdv.lastname || '',
+      'GENDER': pdv.gender || '',
+      'IDDESCRIPTION': pdv.id_description || '',
+      'IDNUMBER': pdv.id_number || '',
+      'IDEXPIRYDATE': pdv.id_expiry_date || '',
+      'NATIONALITY': pdv.nationality || '',
+      'PROFESSION': pdv.profession || '',
+      "TYPE D'ACTIVITE": pdv.type_activite || '',
+      'LOCALISATION': pdv.localisation || '',
+      'REGION': pdv.region || '',
+      'PREFECTURE': pdv.prefecture || '',
+      'COMMUNE': pdv.commune || '',
+      'CANTON': pdv.canton || '',
+      'QUARTIER': pdv.quartier || '',
+      'VILLE': pdv.ville || '',
+      'LATITUDE': pdv.latitude || '',
+      'LONGITUDE': pdv.longitude || '',
+      'PROPRIETAIRE': pdv.numero_proprietaire || '',
+      'AUTRE CONTACT': pdv.autre_contact || '',
+      'SEXE DU GERANT': pdv.sexe_gerant || '',
       'NIF': pdv.nif || '',
-      'Régime fiscal': pdv.tax_regime || ''
+      'REGIME FISCAL': pdv.regime_fiscal || '',
+      'SUPPORT DE VISIBILITE': pdv.support_visibilite || '',
+      'ETAT DU SUPPORT DE VISIBILITE': pdv.etat_support || '',
+      'NUMERO_CAGNT': pdv.numero_cagnt || ''
     }));
 
     const filename = `pdv_export_${new Date().toISOString().split('T')[0]}`;

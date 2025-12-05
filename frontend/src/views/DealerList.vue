@@ -2,34 +2,36 @@
   <div class="min-h-screen">
     <Navbar />
 
-    <div class="py-8">
+    <div class="py-4 sm:py-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
-        <div class="mb-8 flex items-center justify-between">
+        <div class="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div>
-            <h1 class="text-4xl font-bold text-gray-900">Gestion des Dealers</h1>
-            <p class="mt-2 text-gray-600">Gérez les organisations partenaires</p>
+            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Gestion des Dealers</h1>
+            <p class="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Gérez les organisations partenaires</p>
           </div>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 sm:gap-3">
             <ExportButton
               @export="handleExport"
               label="Exporter"
+              class="flex-1 sm:flex-none"
             />
             <button
               @click="showCreateModal = true"
-              class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200 cursor-pointer"
+              class="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200 cursor-pointer text-sm sm:text-base"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
               </svg>
-              Nouveau Dealer
+              <span class="hidden sm:inline">Nouveau Dealer</span>
+              <span class="sm:hidden">Nouveau</span>
             </button>
           </div>
         </div>
 
         <!-- Search and Filters -->
-        <div class="glass-card p-6 rounded-2xl mb-6">
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="glass-card p-4 sm:p-6 rounded-2xl mb-4 sm:mb-6">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <FormInput
               v-model="searchQuery"
               label="Rechercher"
@@ -54,11 +56,11 @@
         </div>
 
         <!-- Organizations Grid -->
-        <div v-if="!loading && organizations.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div v-if="!loading && organizations.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <div
             v-for="org in organizations"
             :key="org.id"
-            class="glass-card p-6 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer group"
+            class="glass-card p-4 sm:p-6 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer group"
             @click="viewOrganization(org.id)"
           >
             <!-- Header -->

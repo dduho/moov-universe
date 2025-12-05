@@ -24,7 +24,17 @@ class PointOfSaleController extends Controller
             'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
             'profil', 'region', 'prefecture', 'commune', 'ville', 'quartier',
             'status', 'created_by', 'validated_by', 'created_at', 'updated_at',
-            'latitude', 'longitude', 'dealer_name'
+            'latitude', 'longitude', 'dealer_name', 'canton',
+            // Informations gérant
+            'firstname', 'lastname', 'gender', 'sexe_gerant', 'date_of_birth',
+            // Documents
+            'id_description', 'id_number', 'id_expiry_date', 'nationality', 'profession',
+            // Fiscalité
+            'nif', 'regime_fiscal',
+            // Contacts
+            'numero_proprietaire', 'autre_contact',
+            // Visibilité et autres
+            'support_visibilite', 'etat_support', 'numero_cagnt', 'type_activite', 'localisation'
         ])->with(['organization:id,name', 'creator:id,name']);
         
         // Ne pas charger validator et uploads dans la liste (trop lourd)
@@ -35,6 +45,14 @@ class PointOfSaleController extends Controller
         } elseif ($user->isDealerOwner()) {
             // Dealer owners see all PDV in their organization
             $query->where('organization_id', $user->organization_id);
+        } elseif ($user->isCommercial()) {
+            // Commercials see only their own PDV + PDV with tasks assigned to them
+            $query->where(function($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
+                      $taskQuery->where('assigned_to', $user->id);
+                  });
+            });
         } elseif ($user->isDealerAgent()) {
             // Dealer agents see only their own PDV
             $query->where('created_by', $user->id);

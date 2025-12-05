@@ -27,7 +27,7 @@ Cette application permet de créer et gérer une base de données des Points de 
 - Git
 
 OU pour installation locale:
-- PHP 8.2+
+- PHP 8.2+ avec l'extension GD activée
 - Composer
 - Node.js 20+
 - npm
@@ -82,6 +82,9 @@ cd backend
 
 # Installer les dépendances
 composer install
+
+# Note: Assurez-vous que l'extension PHP GD est activée
+# Dans php.ini, décommentez: extension=gd
 
 # Configurer l'environnement
 cp .env.example .env
@@ -197,16 +200,25 @@ moov-universe/
 - Validation/Rejet avec motif
 - Notifications
 
-### 4. Statistiques
 - Dashboard avec KPIs
 - Graphiques par région
 - Graphiques par dealer (admin uniquement)
 - Timeline des créations
+- Tendances mensuelles (comparaison vs mois précédent)
 
-### 5. Export
-- Export XML pour intégration système
-- Export CSV pour analyse
+### 4. Import/Export de PDV
+- **Import en masse** via Excel/CSV:
+  - Téléchargement de modèle Excel pré-formaté
+  - Validation en deux phases (dry-run puis import)
+  - Détection des doublons
+  - Rapport détaillé des erreurs par ligne
+  - Attribution automatique au dealer sélectionné
+  - Validation automatique des PDV importés
+- **Export** XML pour intégration système
+- **Export** CSV pour analyse
 - Filtres personnalisables
+
+### 5. Statistiques
 
 ## API Endpoints
 
@@ -223,6 +235,9 @@ moov-universe/
 - `POST /api/point-of-sales/{id}/validate` - Valider (admin)
 - `POST /api/point-of-sales/{id}/reject` - Rejeter (admin)
 - `POST /api/point-of-sales/check-proximity` - Vérifier proximité
+- `POST /api/point-of-sales/import/preview` - Prévisualiser import Excel/CSV (admin)
+- `POST /api/point-of-sales/import` - Importer PDV depuis Excel/CSV (admin)
+- `GET /api/point-of-sales/import/template` - Télécharger modèle Excel (admin)
 
 ### Géographie
 - `GET /api/geography/regions` - Liste des régions

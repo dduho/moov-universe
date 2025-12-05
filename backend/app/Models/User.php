@@ -67,6 +67,21 @@ class User extends Authenticatable
         return $this->hasMany(PointOfSale::class, 'validated_by');
     }
 
+    public function assignedTasks()
+    {
+        return $this->hasMany(Task::class, 'assigned_to');
+    }
+
+    public function createdTasks()
+    {
+        return $this->hasMany(Task::class, 'created_by');
+    }
+
+    public function validatedTasks()
+    {
+        return $this->hasMany(Task::class, 'validated_by');
+    }
+
     public function hasRole($roleName)
     {
         return $this->role && $this->role->name === $roleName;
@@ -83,6 +98,11 @@ class User extends Authenticatable
     }
 
     public function isDealerAgent()
+    {
+        return $this->hasRole('dealer_agent');
+    }
+
+    public function isCommercial()
     {
         return $this->hasRole('dealer_agent');
     }
@@ -119,6 +139,12 @@ class User extends Authenticatable
         // Dealer owners can access all PDV in their organization
         if ($this->isDealerOwner()) {
             return $pointOfSale->organization_id == $this->organization_id;
+        }
+
+        // Commercials can access PDV they created OR PDV with tasks assigned to them
+        if ($this->isCommercial()) {
+            return $pointOfSale->created_by == $this->id || 
+                   $pointOfSale->tasks()->where('assigned_to', $this->id)->exists();
         }
 
         // Dealer agents can only access PDV they created

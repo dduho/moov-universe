@@ -25,6 +25,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/pdv/import',
+    name: 'ImportPDV',
+    component: () => import('../views/ImportPDV.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/pdv/list',
     name: 'PdvList',
     component: () => import('../views/PointOfSaleList.vue'),
@@ -34,6 +40,12 @@ const routes = [
     path: '/pdv/:id',
     name: 'PdvDetail',
     component: () => import('../views/PointOfSaleDetail.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/tasks',
+    name: 'TaskList',
+    component: () => import('../views/TaskListView.vue'),
     meta: { requiresAuth: true },
   },
   {

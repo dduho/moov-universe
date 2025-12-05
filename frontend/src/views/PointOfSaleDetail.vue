@@ -25,23 +25,23 @@
       <!-- Content -->
       <div v-else-if="pos">
         <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
-          <div class="flex items-center gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div class="flex items-center gap-3 sm:gap-4">
             <button
               @click="$router.push('/pdv/list')"
-              class="w-12 h-12 rounded-xl bg-white/50 hover:bg-white flex items-center justify-center transition-all duration-200"
+              class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/50 hover:bg-white flex items-center justify-center transition-all duration-200 flex-shrink-0"
             >
-              <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
               </svg>
             </button>
-            <div>
-              <h1 class="text-3xl font-bold text-gray-900">{{ pos.nom_point || pos.point_name }}</h1>
-              <p class="text-gray-600">{{ formatPhone(pos.numero_flooz || pos.flooz_number) }}</p>
+            <div class="min-w-0">
+              <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 truncate">{{ pos.nom_point || pos.point_name }}</h1>
+              <p class="text-sm sm:text-base text-gray-600">{{ formatPhone(pos.numero_flooz || pos.flooz_number) }}</p>
             </div>
           </div>
           <span
-            class="px-6 py-3 rounded-xl text-sm font-bold"
+            class="self-start sm:self-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold"
             :class="getStatusClass(pos.status)"
           >
             {{ getStatusLabel(pos.status) }}
@@ -49,35 +49,35 @@
         </div>
 
         <!-- Proximity Alert -->
-        <div v-if="proximityAlert?.has_nearby" class="glass-card p-6 mb-8 border-2 border-orange-300 bg-orange-50/50">
-          <h3 class="text-lg font-bold text-orange-800 mb-3 flex items-center gap-2">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="proximityAlert?.has_nearby" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-orange-300 bg-orange-50/50">
+          <h3 class="text-base sm:text-lg font-bold text-orange-800 mb-2 sm:mb-3 flex items-center gap-2">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
             </svg>
             Alerte de proximité
           </h3>
-          <p class="text-sm text-orange-700 mb-1">
+          <p class="text-xs sm:text-sm text-orange-700 mb-1">
             <span class="font-bold">{{ proximityAlert.count }}</span> PDV {{ proximityAlert.count > 1 ? 'se trouvent' : 'se trouve' }} à moins de <span class="font-bold">{{ proximityAlert.alert_distance }}m</span> de ce point :
           </p>
-          <p class="text-xs text-orange-600 mb-3">Seuil de distance configuré dans les paramètres système</p>
+          <p class="text-xs text-orange-600 mb-2 sm:mb-3">Seuil de distance configuré dans les paramètres système</p>
           <div class="space-y-2">
             <div
               v-for="nearby in proximityAlert.nearby_pdvs"
               :key="nearby.id"
-              class="p-3 rounded-xl bg-white border border-orange-200 flex items-center justify-between hover:shadow-md transition-shadow"
+              class="p-2 sm:p-3 rounded-xl bg-white border border-orange-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 hover:shadow-md transition-shadow"
             >
-              <div class="flex-1">
-                <p class="font-bold text-gray-900">{{ nearby.nom_point }}</p>
-                <p class="text-sm text-gray-600">{{ nearby.numero_flooz }}</p>
+              <div class="flex-1 min-w-0">
+                <p class="font-bold text-gray-900 text-sm sm:text-base truncate">{{ nearby.nom_point }}</p>
+                <p class="text-xs sm:text-sm text-gray-600">{{ nearby.numero_flooz }}</p>
                 <p class="text-xs text-gray-500 mt-1">{{ nearby.ville }}, {{ nearby.quartier }}</p>
               </div>
-              <div class="text-right">
-                <span class="px-3 py-1 rounded-lg bg-orange-100 text-orange-700 text-sm font-bold block">
+              <div class="flex items-center justify-between sm:block sm:text-right">
+                <span class="px-2 sm:px-3 py-1 rounded-lg bg-orange-100 text-orange-700 text-xs sm:text-sm font-bold">
                   {{ nearby.distance }}m
                 </span>
                 <router-link
                   :to="`/pdv/${nearby.id}`"
-                  class="text-xs text-moov-orange hover:text-moov-orange-dark font-semibold mt-1 inline-block"
+                  class="text-xs text-moov-orange hover:text-moov-orange-dark font-semibold sm:mt-1 sm:block"
                 >
                   Voir détails →
                 </router-link>
@@ -87,18 +87,18 @@
         </div>
 
         <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           <!-- Left Column -->
-          <div class="lg:col-span-2 space-y-8">
+          <div class="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
             <!-- Flooz Info -->
-            <div class="glass-card p-6">
-              <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="glass-card p-4 sm:p-6">
+              <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 Informations Flooz
               </h2>
-              <div class="grid grid-cols-2 gap-6">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Dealer</p>
                   <p class="text-lg font-bold text-gray-900">{{ pos.dealer_name || pos.organization?.name || 'N/A' }}</p>
@@ -149,7 +149,7 @@
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Type de pièce</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.id_description || pos.owner_id_type || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ getIdTypeLabel(pos.id_description || pos.owner_id_type) }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Numéro de pièce</p>
@@ -347,6 +347,11 @@
                   Rejeter
                 </button>
               </div>
+            </div>
+
+            <!-- Tâches -->
+            <div class="glass-card p-6">
+              <TaskList :pdv="pos" @tasks-updated="fetchPOSData" />
             </div>
 
             <!-- Documents -->
@@ -561,8 +566,11 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Navbar from '../components/Navbar.vue';
 import RejectionModal from '../components/RejectionModal.vue';
+import TaskList from '../components/TaskList.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import { useAuthStore } from '../stores/auth';
+import { useToast } from '../composables/useToast';
+import { useConfirm } from '../composables/useConfirm';
 import { formatPhone, formatShortcode } from '../utils/formatters';
 
 // Fix Leaflet default marker icon
@@ -576,6 +584,8 @@ L.Icon.Default.mergeOptions({
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { toast } = useToast();
+const { confirm } = useConfirm();
 
 const loading = ref(true);
 const error = ref(null);
@@ -619,6 +629,22 @@ const formatDate = (dateString) => {
     month: 'long', 
     year: 'numeric'
   });
+};
+
+const getIdTypeLabel = (code) => {
+  if (!code) return 'N/A';
+  
+  const idTypes = {
+    'cni': "Carte Nationale d'Identité",
+    'passport': 'Passeport',
+    'residence': 'Carte de séjour',
+    'elector': "Carte d'électeur",
+    'driving_license': 'Permis de conduire',
+    'foreign_id': "Carte d'identité étrangère",
+    'anid_card': 'Carte ANID'
+  };
+  
+  return idTypes[code] || code;
 };
 
 const formatCommune = (commune) => {
@@ -701,14 +727,20 @@ const viewFile = (file) => {
 };
 
 const validatePOS = async () => {
-  if (confirm(`Êtes-vous sûr de vouloir valider le PDV "${pos.value.point_name}" ?`)) {
-    try {
-      await PointOfSaleService.validate(pos.value.id);
-      router.push('/validation');
-    } catch (err) {
-      console.error('Error validating POS:', err);
-      alert('Erreur lors de la validation du PDV');
-    }
+  const confirmed = await confirm({
+    title: 'Valider le PDV',
+    message: `Êtes-vous sûr de vouloir valider le PDV "${pos.value.point_name}" ?`,
+    confirmText: 'Valider',
+    type: 'info'
+  });
+  if (!confirmed) return;
+  
+  try {
+    await PointOfSaleService.validate(pos.value.id);
+    router.push('/validation');
+  } catch (err) {
+    console.error('Error validating POS:', err);
+    toast.error('Erreur lors de la validation du PDV');
   }
 };
 
@@ -719,7 +751,21 @@ const handleReject = async ({ id, reason }) => {
     router.push('/validation');
   } catch (err) {
     console.error('Error rejecting POS:', err);
-    alert('Erreur lors du rejet du PDV');
+    toast.error('Erreur lors du rejet du PDV');
+  }
+};
+
+const fetchPOSData = async () => {
+  try {
+    const data = await PointOfSaleService.getById(route.params.id);
+    if (data.pdv) {
+      pos.value = data.pdv;
+      proximityAlert.value = data.proximity_alert;
+    } else {
+      pos.value = data;
+    }
+  } catch (err) {
+    console.error('Error loading POS:', err);
   }
 };
 

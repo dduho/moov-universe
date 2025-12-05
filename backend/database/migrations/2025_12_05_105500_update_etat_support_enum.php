@@ -1,0 +1,25 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        DB::statement("ALTER TABLE point_of_sales MODIFY COLUMN etat_support ENUM('BON', 'MAUVAIS', 'DEFRAICHI') NULL");
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        DB::statement("ALTER TABLE point_of_sales MODIFY COLUMN etat_support ENUM('BON', 'MAUVAIS') NULL");
+    }
+};

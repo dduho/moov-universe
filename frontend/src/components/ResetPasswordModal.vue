@@ -91,6 +91,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
+import { useToast } from '../composables/useToast';
 
 const props = defineProps({
   user: {
@@ -100,6 +101,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'reset']);
+const { toast } = useToast();
 
 const isOpen = ref(true);
 const submitting = ref(false);
@@ -155,13 +157,13 @@ const passwordStrengthColor = computed(() => {
 const handleSubmit = async () => {
   // Validate passwords match
   if (formData.value.password !== formData.value.password_confirmation) {
-    alert('Les mots de passe ne correspondent pas');
+    toast.warning('Les mots de passe ne correspondent pas');
     return;
   }
 
   // Validate password length
   if (formData.value.password.length < 8) {
-    alert('Le mot de passe doit contenir au moins 8 caractères');
+    toast.warning('Le mot de passe doit contenir au moins 8 caractères');
     return;
   }
 

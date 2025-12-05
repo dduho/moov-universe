@@ -310,6 +310,14 @@ const SettingsIcon = {
   }
 };
 
+const ImportIcon = {
+  render() {
+    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12' })
+    ]);
+  }
+};
+
 // Main navigation (always visible)
 const mainNavigation = [
   {
@@ -327,6 +335,11 @@ const mainNavigation = [
     path: '/map',
     icon: MapIcon,
   },
+  {
+    name: 'Mes tâches',
+    path: '/tasks',
+    icon: CheckIcon,
+  },
 ];
 
 // Admin navigation (in dropdown)
@@ -335,6 +348,11 @@ const adminNavigation = [
     name: 'Validation',
     path: '/validation',
     icon: CheckIcon,
+  },
+  {
+    name: 'Importer PDV',
+    path: '/pdv/import',
+    icon: ImportIcon,
   },
   {
     name: 'Dealers',

@@ -60,7 +60,8 @@
             @change="handleFilterChange"
           />
           
-          <div class="flex items-end">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">&nbsp;</label>
             <button
               @click="handleRefresh"
               :disabled="loading"
@@ -199,10 +200,14 @@ import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import FormSelect from '../components/FormSelect.vue';
 import { useNotificationStore } from '../stores/notification';
+import { useToast } from '../composables/useToast';
+import { useConfirm } from '../composables/useConfirm';
 import NotificationService from '../services/NotificationService';
 
 const router = useRouter();
 const notificationStore = useNotificationStore();
+const { toast } = useToast();
+const { confirm } = useConfirm();
 
 // Filters
 const selectedType = ref('');
@@ -223,6 +228,10 @@ const getIconComponent = (type) => {
     pdv_rejected: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
     user_created: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
     proximity_alert: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z',
+    task_assigned: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4',
+    task_completed: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01',
+    task_validated: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+    task_revision_requested: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
     system: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'
   };
 
@@ -304,29 +313,41 @@ const handleMarkAllAsRead = async () => {
     await notificationStore.markAllAsRead();
   } catch (error) {
     console.error('Error marking all as read:', error);
-    alert('Erreur lors du marquage des notifications');
+    toast.error('Erreur lors du marquage des notifications');
   }
 };
 
 const handleDeleteAllRead = async () => {
-  if (confirm('Êtes-vous sûr de vouloir supprimer toutes les notifications lues ?')) {
-    try {
-      await notificationStore.deleteAllRead();
-    } catch (error) {
-      console.error('Error deleting read notifications:', error);
-      alert('Erreur lors de la suppression des notifications');
-    }
+  const confirmed = await confirm({
+    title: 'Supprimer les notifications',
+    message: 'Êtes-vous sûr de vouloir supprimer toutes les notifications lues ?',
+    confirmText: 'Supprimer',
+    type: 'danger'
+  });
+  if (!confirmed) return;
+  
+  try {
+    await notificationStore.deleteAllRead();
+  } catch (error) {
+    console.error('Error deleting read notifications:', error);
+    toast.error('Erreur lors de la suppression des notifications');
   }
 };
 
 const handleDelete = async (id) => {
-  if (confirm('Supprimer cette notification ?')) {
-    try {
-      await notificationStore.deleteNotification(id);
-    } catch (error) {
-      console.error('Error deleting notification:', error);
-      alert('Erreur lors de la suppression');
-    }
+  const confirmed = await confirm({
+    title: 'Supprimer la notification',
+    message: 'Supprimer cette notification ?',
+    confirmText: 'Supprimer',
+    type: 'danger'
+  });
+  if (!confirmed) return;
+  
+  try {
+    await notificationStore.deleteNotification(id);
+  } catch (error) {
+    console.error('Error deleting notification:', error);
+    toast.error('Erreur lors de la suppression');
   }
 };
 

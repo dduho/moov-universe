@@ -117,4 +117,46 @@ class PointOfSale extends Model
     {
         return $query->where('organization_id', $organizationId);
     }
+
+    public function tasks()
+    {
+        return $this->hasMany(Task::class);
+    }
+
+    public function tags()
+    {
+        return $this->hasMany(PointOfSaleTag::class);
+    }
+
+    /**
+     * Ajouter un tag au PDV
+     */
+    public function addTag($tag)
+    {
+        return $this->tags()->firstOrCreate(['tag' => $tag]);
+    }
+
+    /**
+     * Retirer un tag du PDV
+     */
+    public function removeTag($tag)
+    {
+        return $this->tags()->where('tag', $tag)->delete();
+    }
+
+    /**
+     * Retirer tous les tags du PDV
+     */
+    public function removeAllTags()
+    {
+        return $this->tags()->delete();
+    }
+
+    /**
+     * Vérifier si le PDV a un tag
+     */
+    public function hasTag($tag)
+    {
+        return $this->tags()->where('tag', $tag)->exists();
+    }
 }

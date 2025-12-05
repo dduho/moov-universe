@@ -2,30 +2,32 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Gestion des utilisateurs</h1>
-        <div class="flex items-center gap-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Gestion des utilisateurs</h1>
+        <div class="flex items-center gap-2 sm:gap-3">
           <ExportButton
             @export="handleExport"
             label="Exporter"
+            class="flex-1 sm:flex-none"
           />
           <button
             @click="showCreateModal = true"
-            class="px-6 py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
+            class="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
-            Nouvel utilisateur
+            <span class="hidden sm:inline">Nouvel utilisateur</span>
+            <span class="sm:hidden">Nouveau</span>
           </button>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-6 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <FormInput
             v-model="filters.search"
             label="Rechercher"
@@ -73,29 +75,29 @@
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="glass-card p-6">
+      <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8">
+        <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-gray-600">Total</p>
-              <p class="text-3xl font-bold text-gray-900">{{ stats.total }}</p>
+              <p class="text-xs sm:text-sm font-semibold text-gray-600">Total</p>
+              <p class="text-2xl sm:text-3xl font-bold text-gray-900">{{ stats.total }}</p>
             </div>
-            <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-              <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
               </svg>
             </div>
           </div>
         </div>
 
-        <div class="glass-card p-6">
+        <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm font-semibold text-gray-600">Actifs</p>
-              <p class="text-3xl font-bold text-green-600">{{ stats.active }}</p>
+              <p class="text-xs sm:text-sm font-semibold text-gray-600">Actifs</p>
+              <p class="text-2xl sm:text-3xl font-bold text-green-600">{{ stats.active }}</p>
             </div>
-            <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-              <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-100 flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
               </svg>
             </div>
@@ -277,11 +279,15 @@ import FormSelect from '../components/FormSelect.vue';
 import { useUserStore } from '../stores/user';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
+import { useToast } from '../composables/useToast';
+import { useConfirm } from '../composables/useConfirm';
 import ExportService from '../services/ExportService';
 
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
+const { toast } = useToast();
+const { confirm } = useConfirm();
 
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
@@ -383,13 +389,19 @@ const showResetPasswordModal = (user) => {
 };
 
 const confirmDeleteUser = async (user) => {
-  if (confirm(`Êtes-vous sûr de vouloir supprimer l'utilisateur "${user.name}" ?`)) {
-    try {
-      await userStore.deleteUser(user.id);
-      alert('Utilisateur supprimé avec succès');
-    } catch (error) {
-      alert('Erreur lors de la suppression');
-    }
+  const confirmed = await confirm({
+    title: 'Supprimer l\'utilisateur',
+    message: `Êtes-vous sûr de vouloir supprimer l'utilisateur "${user.name}" ?`,
+    confirmText: 'Supprimer',
+    type: 'danger'
+  });
+  if (!confirmed) return;
+  
+  try {
+    await userStore.deleteUser(user.id);
+    toast.success('Utilisateur supprimé avec succès');
+  } catch (error) {
+    toast.error('Erreur lors de la suppression');
   }
 };
 
@@ -397,7 +409,7 @@ const toggleUserStatus = async (user) => {
   try {
     await userStore.toggleStatus(user.id);
   } catch (error) {
-    alert('Erreur lors du changement de statut');
+    toast.error('Erreur lors du changement de statut');
   }
 };
 
@@ -411,25 +423,25 @@ const handleSaveUser = async (userData) => {
   try {
     if (selectedUser.value?.id) {
       await userStore.updateUser(selectedUser.value.id, userData);
-      alert('Utilisateur mis à jour avec succès');
+      toast.success('Utilisateur mis à jour avec succès');
     } else {
       await userStore.createUser(userData);
-      alert('Utilisateur créé avec succès');
+      toast.success('Utilisateur créé avec succès');
     }
     closeModals();
   } catch (error) {
-    alert('Erreur lors de l\'enregistrement');
+    toast.error('Erreur lors de l\'enregistrement');
   }
 };
 
 const handleResetPassword = async ({ userId, password }) => {
   try {
     await userStore.resetPassword(userId, password);
-    alert('Mot de passe réinitialisé avec succès');
+    toast.success('Mot de passe réinitialisé avec succès');
     showPasswordModal.value = false;
     selectedUser.value = null;
   } catch (error) {
-    alert('Erreur lors de la réinitialisation du mot de passe');
+    toast.error('Erreur lors de la réinitialisation du mot de passe');
   }
 };
 

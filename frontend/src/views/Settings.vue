@@ -2,35 +2,35 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Paramètres Système</h1>
-        <p class="text-gray-600">Configurer les paramètres globaux de l'application</p>
+      <div class="mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Paramètres Système</h1>
+        <p class="text-sm sm:text-base text-gray-600">Configurer les paramètres globaux de l'application</p>
       </div>
 
       <!-- Loading state -->
-      <div v-if="loading" class="glass-card p-8 text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-        <p class="mt-4 text-gray-600">Chargement des paramètres...</p>
+      <div v-if="loading" class="glass-card p-6 sm:p-8 text-center">
+        <div class="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-primary-600 mx-auto"></div>
+        <p class="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600">Chargement des paramètres...</p>
       </div>
 
       <!-- Settings list -->
-      <div v-else class="space-y-6">
+      <div v-else class="space-y-4 sm:space-y-6">
         <!-- Proximity Threshold Setting -->
-        <div class="glass-card p-6">
-          <div class="flex items-start justify-between mb-4">
+        <div class="glass-card p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
             <div class="flex-1">
-              <h3 class="text-lg font-bold text-gray-900 mb-1">Distance Minimale entre PDV</h3>
-              <p class="text-sm text-gray-600">{{ proximitySetting?.description }}</p>
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Distance Minimale entre PDV</h3>
+              <p class="text-xs sm:text-sm text-gray-600">{{ proximitySetting?.description }}</p>
             </div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
+            <span class="self-start px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-700">
               Obligatoire
             </span>
           </div>
 
-          <div class="space-y-4">
-            <div class="flex items-start gap-4">
+          <div class="space-y-3 sm:space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
               <div class="flex-1">
                 <div class="relative">
                   <input
@@ -137,9 +137,11 @@ import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import SystemSettingService from '../services/systemSettingService';
 import { useAuthStore } from '../stores/auth';
+import { useToast } from '../composables/useToast';
 
 const router = useRouter();
 const authStore = useAuthStore();
+const { toast } = useToast();
 const loading = ref(true);
 const saving = ref(false);
 const showSuccess = ref(false);
@@ -172,7 +174,7 @@ const saveProximityThreshold = async () => {
     }, 3000);
   } catch (error) {
     console.error('Error saving setting:', error);
-    alert('Erreur lors de la sauvegarde du paramètre');
+    toast.error('Erreur lors de la sauvegarde du paramètre');
   } finally {
     saving.value = false;
   }

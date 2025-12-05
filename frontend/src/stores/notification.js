@@ -58,7 +58,8 @@ export const useNotificationStore = defineStore('notification', {
           ...params
         });
         
-        this.notifications = response.data || [];
+        // response est déjà le tableau, pas response.data
+        this.notifications = Array.isArray(response) ? response : (response.data || []);
         this.currentPage = response.current_page || 1;
         this.totalPages = response.last_page || 1;
         

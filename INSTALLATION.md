@@ -21,7 +21,7 @@ Ce guide vous accompagne dans l'installation et la configuration de la plateform
 - 10GB d'espace disque
 
 ### Pour installation locale
-- PHP 8.2 ou supérieur
+- PHP 8.2 ou supérieur avec extension GD activée
 - Composer 2.0+
 - Node.js 20+ et npm
 - MySQL 8.0+
@@ -117,21 +117,41 @@ Utilisez les identifiants par défaut:
 
 ### Backend Laravel
 
-#### 1. Installation des dépendances
+#### 1. Vérifier les prérequis PHP
+
+Assurez-vous que l'extension GD est activée:
+
+```bash
+php -m | grep gd
+```
+
+Si GD n'apparaît pas, éditez votre fichier `php.ini` et décommentez:
+
+```ini
+extension=gd
+```
+
+Localisez votre php.ini avec:
+
+```bash
+php --ini
+```
+
+#### 2. Installation des dépendances
 
 ```bash
 cd backend
 composer install
 ```
 
-#### 2. Configuration de l'environnement
+#### 3. Configuration de l'environnement
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-#### 3. Configuration de la base de données
+#### 4. Configuration de la base de données
 
 Créez la base de données MySQL:
 
@@ -160,7 +180,7 @@ DB_USERNAME=moov_user
 DB_PASSWORD=moov_password
 ```
 
-#### 4. Exécuter les migrations
+#### 5. Exécuter les migrations
 
 ```bash
 php artisan migrate:fresh --seed
@@ -173,7 +193,7 @@ Cette commande va:
 - Insérer la hiérarchie géographique du Togo
 - Configurer les paramètres système
 
-#### 5. Démarrer le serveur
+#### 6. Démarrer le serveur
 
 ```bash
 php artisan serve
@@ -289,14 +309,26 @@ Les organisations représentent les dealers:
 1. Créez une organisation
 2. Créez un utilisateur avec le rôle "dealer" lié à cette organisation
 
-### 4. Créer un PDV
+### 4. Importer des PDV en masse (Admin uniquement)
+
+1. Connectez-vous en tant qu'admin
+2. Allez dans le menu Administration > Importer PDV
+3. Téléchargez le modèle Excel
+4. Remplissez le fichier avec vos données
+5. Sélectionnez le dealer auquel attribuer les PDV
+6. Glissez-déposez le fichier ou cliquez pour le sélectionner
+7. Vérifiez la prévisualisation (valides/invalides/doublons)
+8. Confirmez l'import
+9. Tous les PDV importés seront automatiquement validés
+
+### 5. Créer un PDV manuellement
 
 1. Connectez-vous en tant que dealer ou commercial
 2. Cliquez sur "Créer un PDV"
 3. Remplissez le formulaire en 5 étapes
 4. Le PDV sera créé avec le statut "pending"
 
-### 5. Valider un PDV (Admin)
+### 6. Valider un PDV (Admin)
 
 1. Connectez-vous en tant qu'admin
 2. Allez dans "Validation"

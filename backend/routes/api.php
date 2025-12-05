@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PointOfSaleController;
+use App\Http\Controllers\PointOfSaleImportController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\GeographyController;
@@ -11,6 +12,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -63,6 +65,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [PointOfSaleController::class, 'destroy']);
         Route::post('/check-proximity', [PointOfSaleController::class, 'checkProximity']);
         Route::post('/check-uniqueness', [PointOfSaleController::class, 'checkUniqueness']);
+        
+        // Import routes (Admin only)
+        Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
+            Route::post('/import/preview', [PointOfSaleImportController::class, 'preview']);
+            Route::post('/import', [PointOfSaleImportController::class, 'import']);
+            Route::get('/import/template', [PointOfSaleImportController::class, 'downloadTemplate']);
+        });
         
         // Admin only routes
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
@@ -123,6 +132,24 @@ Route::middleware('auth:sanctum')->group(function () {
     // Activity Log routes (Admin only)
     Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
         Route::get('/activity-logs', [ActivityLogController::class, 'index']);
+    });
+
+    // Task routes
+    Route::prefix('tasks')->group(function () {
+        Route::get('/', [TaskController::class, 'index']);
+        Route::get('/{id}', [TaskController::class, 'show']);
+        
+        // Commercial can complete their tasks
+        Route::post('/{id}/complete', [TaskController::class, 'complete']);
+        
+        // Admin only routes
+        Route::middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+            Route::post('/', [TaskController::class, 'store']);
+            Route::post('/{id}/validate', [TaskController::class, 'validateTask']);
+            Route::post('/{id}/request-revision', [TaskController::class, 'requestRevision']);
+            Route::delete('/{id}', [TaskController::class, 'destroy']);
+            Route::get('/commercials/{pointOfSaleId}', [TaskController::class, 'getCommercialsByDealer']);
+        });
     });
 });
 

@@ -2,15 +2,15 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Validation des PDV</h1>
-        <p class="text-gray-600">Gérez les demandes de création de points de vente en attente</p>
+      <div class="mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Validation des PDV</h1>
+        <p class="text-sm sm:text-base text-gray-600">Gérez les demandes de création de points de vente en attente</p>
       </div>
 
       <!-- Stats Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8">
         <StatsCard
           label="En attente"
           :value="stats.pending"
@@ -38,8 +38,8 @@
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-6 mb-8">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <FormInput
             v-model="filters.search"
             label="Recherche"
@@ -265,10 +265,12 @@ import FormSelect from '../components/FormSelect.vue';
 import { useValidationStore } from '../stores/validation';
 import { formatPhone, formatShortcode } from '../utils/formatters';
 import { useOrganizationStore } from '../stores/organization';
+import { useConfirm } from '../composables/useConfirm';
 
 const router = useRouter();
 const validationStore = useValidationStore();
 const organizationStore = useOrganizationStore();
+const { confirm } = useConfirm();
 
 const loading = ref(true);
 const showRejectModal = ref(false);
@@ -402,7 +404,13 @@ const closeDetailsModal = () => {
 };
 
 const validatePOS = async (pos) => {
-  if (confirm(`Êtes-vous sûr de vouloir valider le PDV "${pos.point_name}" ?`)) {
+  const confirmed = await confirm({
+    title: 'Valider le PDV',
+    message: `Êtes-vous sûr de vouloir valider le PDV "${pos.point_name}" ?`,
+    confirmText: 'Valider',
+    type: 'info'
+  });
+  if (confirmed) {
     await validationStore.validatePOS(pos.id);
   }
 };

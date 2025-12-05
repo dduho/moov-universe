@@ -2,23 +2,23 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">Carte Interactive</h1>
-        <p class="text-gray-600">Visualisez tous les points de vente sur la carte du Togo</p>
+      <div class="mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Carte Interactive</h1>
+        <p class="text-sm sm:text-base text-gray-600">Visualisez tous les points de vente sur la carte du Togo</p>
       </div>
 
       <!-- Proximity Alerts -->
-      <div v-if="proximityAlerts.length > 0" class="glass-card p-6 mb-6 border-2 border-orange-500">
-        <div class="flex items-start gap-3 mb-4">
-          <svg class="w-6 h-6 text-orange-500 flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-if="proximityAlerts.length > 0" class="glass-card p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-500">
+        <div class="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
           </svg>
           <div class="flex-1">
-            <h3 class="text-lg font-bold text-orange-700 mb-1">⚠️ Alertes de Proximité</h3>
-            <p class="text-sm text-gray-600 mb-3">{{ proximityAlerts.length }} paire(s) de PDV à moins de {{ proximityThreshold }}m détectée(s)</p>
-            <div class="space-y-2 max-h-60 overflow-y-auto">
+            <h3 class="text-base sm:text-lg font-bold text-orange-700 mb-1">⚠️ Alertes de Proximité</h3>
+            <p class="text-xs sm:text-sm text-gray-600 mb-3">{{ proximityAlerts.length }} paire(s) de PDV à moins de {{ proximityThreshold }}m détectée(s)</p>
+            <div class="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto">
               <div v-for="(alert, index) in proximityAlerts" :key="index" class="bg-orange-50 border border-orange-200 rounded-lg p-3">
                 <div class="flex items-center justify-between">
                   <div class="flex-1">
@@ -53,8 +53,8 @@
       </div>
 
       <!-- Map Controls -->
-      <div class="glass-card p-6 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+      <div class="glass-card p-4 sm:p-6 mb-4 sm:mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-4">
           <FormInput
             v-model="filters.search"
             label="Rechercher un PDV"

@@ -7,12 +7,12 @@
     <div class="py-8">
       <header class="mb-8">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 class="text-4xl font-bold text-gray-900">Tableau de bord</h1>
-              <p class="mt-2 text-gray-600">Vue d'ensemble de vos points de vente</p>
+              <h1 class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900">Tableau de bord</h1>
+              <p class="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">Vue d'ensemble de vos points de vente</p>
             </div>
-            <div class="text-sm text-gray-500">
+            <div class="text-xs sm:text-sm text-gray-500">
               {{ currentDate }}
             </div>
           </div>
@@ -111,45 +111,45 @@
           </div>
 
           <!-- Statistiques supplémentaires -->
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-8">
-            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 mb-8">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200 flex-shrink-0 w-48 sm:w-auto">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                   </svg>
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm text-gray-600 font-semibold">Validés aujourd'hui</p>
-                  <p class="text-2xl font-bold text-gray-900">{{ stats.validated_today || 0 }}</p>
+                  <p class="text-xs sm:text-sm text-gray-600 font-semibold">Validés aujourd'hui</p>
+                  <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ stats.validated_today || 0 }}</p>
                 </div>
               </div>
             </div>
 
-            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-purple-100/30 border border-purple-200">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-purple-100/30 border border-purple-200 flex-shrink-0 w-48 sm:w-auto">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm text-gray-600 font-semibold">Ce mois-ci</p>
-                  <p class="text-2xl font-bold text-gray-900">{{ stats.created_this_month || 0 }}</p>
+                  <p class="text-xs sm:text-sm text-gray-600 font-semibold">Ce mois-ci</p>
+                  <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ stats.created_this_month || 0 }}</p>
                 </div>
               </div>
             </div>
 
-            <div class="glass-card p-6 rounded-2xl bg-gradient-to-br from-green-50/50 to-green-100/30 border border-green-200">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-lg">
-                  <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-green-50/50 to-green-100/30 border border-green-200 flex-shrink-0 w-48 sm:w-auto">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-lg">
+                  <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                   </svg>
                 </div>
                 <div class="flex-1">
-                  <p class="text-sm text-gray-600 font-semibold">Cette semaine</p>
-                  <p class="text-2xl font-bold text-gray-900">{{ stats.created_this_week || 0 }}</p>
+                  <p class="text-xs sm:text-sm text-gray-600 font-semibold">Cette semaine</p>
+                  <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ stats.created_this_week || 0 }}</p>
                 </div>
               </div>
             </div>
@@ -157,29 +157,29 @@
 
           <!-- Pending Validation Alert (Admin Only) -->
           <div v-if="authStore.isAdmin && stats.pending > 0" class="mb-8">
-            <div class="glass-card p-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50/50">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                  <div class="w-14 h-14 rounded-xl bg-yellow-100 flex items-center justify-center">
-                    <svg class="w-7 h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50/50">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-6 h-6 sm:w-7 sm:h-7 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                     </svg>
                   </div>
                   <div>
-                    <h3 class="text-lg font-bold text-gray-900 mb-1">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">
                       {{ stats.pending }} PDV en attente de validation
                     </h3>
-                    <p class="text-sm text-gray-600">
+                    <p class="text-xs sm:text-sm text-gray-600">
                       Des demandes de création de points de vente nécessitent votre attention
                     </p>
                   </div>
                 </div>
                 <router-link
                   to="/validation"
-                  class="px-6 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
+                  class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-yellow-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
                 >
                   Traiter les demandes
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
                   </svg>
                 </router-link>
@@ -189,37 +189,37 @@
 
           <!-- Quick Actions -->
           <div class="mb-8">
-            <div class="glass-card p-6 rounded-2xl">
-              <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl">
+              <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
                 Actions rapides
               </h3>
-              <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div class="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
                 <router-link
                   to="/pdv/create"
-                  class="group flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200"
+                  class="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200 text-sm sm:text-base"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                   </svg>
                   Créer un PDV
                 </router-link>
                 <router-link
                   to="/pdv/list"
-                  class="group flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-white/80 backdrop-blur-sm border-2 border-gray-200 text-gray-700 font-bold hover:bg-white hover:border-moov-orange hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  class="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl bg-white/80 backdrop-blur-sm border-2 border-gray-200 text-gray-700 font-bold hover:bg-white hover:border-moov-orange hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm sm:text-base"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
                   </svg>
                   Voir tous les PDV
                 </router-link>
                 <router-link
                   to="/map"
-                  class="group flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-white/80 backdrop-blur-sm border-2 border-gray-200 text-gray-700 font-bold hover:bg-white hover:border-moov-orange hover:shadow-lg hover:scale-105 transition-all duration-200"
+                  class="group flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 rounded-xl bg-white/80 backdrop-blur-sm border-2 border-gray-200 text-gray-700 font-bold hover:bg-white hover:border-moov-orange hover:shadow-lg hover:scale-105 transition-all duration-200 text-sm sm:text-base"
                 >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
                   </svg>
                   Voir la carte

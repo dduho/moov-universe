@@ -65,7 +65,7 @@ return new class extends Migration
 
             // Visibilité
             $table->string('support_visibilite')->nullable();
-            $table->enum('etat_support', ['BON', 'MAUVAIS'])->nullable();
+            $table->enum('etat_support', ['BON', 'MAUVAIS', 'DEFRAICHI'])->nullable();
 
             // Autres
             $table->string('numero_cagnt')->nullable();

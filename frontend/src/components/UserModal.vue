@@ -2,9 +2,8 @@
   <div
     v-if="isOpen"
     class="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
-    @click.self="$emit('close')"
   >
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
       <div class="flex items-center justify-between mb-6">
         <h2 class="text-2xl font-bold text-gray-900">
           {{ user ? 'Modifier l\'utilisateur' : 'Nouvel utilisateur' }}
@@ -129,8 +128,11 @@
 
 <script setup>
 import { ref, watch, computed } from 'vue';
+import { useToast } from '../composables/useToast';
 import FormInput from './FormInput.vue';
 import FormSelect from './FormSelect.vue';
+
+const { toast } = useToast();
 
 const props = defineProps({
   user: {
@@ -202,13 +204,13 @@ const getRoleHelpText = (role) => {
 const handleSubmit = async () => {
   // Validate passwords match for new users
   if (!props.user && formData.value.password !== formData.value.password_confirmation) {
-    alert('Les mots de passe ne correspondent pas');
+    toast.error('Les mots de passe ne correspondent pas');
     return;
   }
 
   // Validate password length
-  if (!props.user && formData.value.password.length < 8) {
-    alert('Le mot de passe doit contenir au moins 8 caractères');
+  if (!props.user && formData.value.password.length < 6) {
+    toast.error('Le mot de passe doit contenir au moins 6 caractères');
     return;
   }
 

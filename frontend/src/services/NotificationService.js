@@ -115,6 +115,26 @@ const NotificationService = {
         color: 'yellow',
         label: 'Alerte proximité'
       },
+      task_assigned: {
+        icon: 'task',
+        color: 'blue',
+        label: 'Tâche assignée'
+      },
+      task_completed: {
+        icon: 'check',
+        color: 'yellow',
+        label: 'Tâche complétée'
+      },
+      task_validated: {
+        icon: 'check-circle',
+        color: 'green',
+        label: 'Tâche validée'
+      },
+      task_revision_requested: {
+        icon: 'alert',
+        color: 'orange',
+        label: 'Révision demandée'
+      },
       system: {
         icon: 'bell',
         color: 'gray',

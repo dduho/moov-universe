@@ -2,40 +2,38 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <button
-            @click="handleCancel"
-            class="w-12 h-12 rounded-xl bg-white/50 hover:bg-white flex items-center justify-center transition-all duration-200"
-          >
-            <svg class="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-            </svg>
-          </button>
-          <h1 class="text-3xl font-bold text-gray-900">Nouveau point de vente</h1>
-        </div>
+      <div class="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <button
+          @click="handleCancel"
+          class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white/50 hover:bg-white flex items-center justify-center transition-all duration-200 flex-shrink-0"
+        >
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+        </button>
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Nouveau point de vente</h1>
       </div>
 
       <!-- Progress Indicator -->
-      <div class="glass-card p-6 mb-8">
-        <div class="flex items-center justify-between mb-4">
+      <div class="glass-card p-3 sm:p-6 mb-6 sm:mb-8">
+        <div class="flex items-center justify-between mb-2 sm:mb-4">
           <div
             v-for="step in steps"
             :key="step.number"
             class="flex-1 flex items-center"
           >
-            <div class="flex items-center gap-3 flex-1">
+            <div class="flex items-center gap-2 sm:gap-3 flex-1">
               <div
-                class="w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-200"
+                class="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold transition-all duration-200 text-sm sm:text-base"
                 :class="getStepClass(step.number)"
               >
                 <span v-if="step.number < currentStep">✓</span>
                 <span v-else>{{ step.number }}</span>
               </div>
               <span
-                class="text-sm font-semibold hidden sm:block"
+                class="text-xs sm:text-sm font-semibold hidden md:block"
                 :class="step.number <= currentStep ? 'text-gray-900' : 'text-gray-400'"
               >
                 {{ step.name }}
@@ -43,7 +41,7 @@
             </div>
             <div
               v-if="step.number < steps.length"
-              class="h-1 w-full mx-2"
+              class="h-1 w-full mx-1 sm:mx-2"
               :class="step.number < currentStep ? 'bg-moov-orange' : 'bg-gray-200'"
             ></div>
           </div>
@@ -51,11 +49,11 @@
       </div>
 
       <!-- Forms -->
-      <div class="glass-card p-8">
+      <div class="glass-card p-4 sm:p-6 lg:p-8">
         <!-- Step 1: Dealer Information -->
         <div v-if="currentStep === 1">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">Informations du dealer</h2>
-          <div class="space-y-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Informations du dealer</h2>
+          <div class="space-y-4 sm:space-y-6">
             <FormSelect
               v-model="formData.organization_id"
               label="Dealer"
@@ -78,7 +76,7 @@
               required
             />
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <MaskedInput
                 v-model="formData.flooz_number"
                 label="Numéro Flooz"
@@ -97,7 +95,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormSelect
                 v-model="formData.profile"
                 label="Profil"
@@ -121,9 +119,9 @@
 
         <!-- Step 2: Owner Information -->
         <div v-if="currentStep === 2">
-          <h2 class="text-2xl font-bold text-gray-900 mb-6">Informations du propriétaire</h2>
-          <div class="space-y-6">
-            <div class="grid grid-cols-2 gap-6">
+          <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Informations du propriétaire</h2>
+          <div class="space-y-4 sm:space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormInput
                 v-model="formData.owner_first_name"
                 label="Prénom"
@@ -140,7 +138,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormInput
                 v-model="formData.owner_date_of_birth"
                 label="Date de naissance"
@@ -157,7 +155,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <MaskedInput
                 v-model="formData.owner_phone"
                 label="Téléphone"
@@ -175,7 +173,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormSelect
                 v-model="formData.owner_id_type"
                 label="Type de pièce d'identité"
@@ -196,7 +194,7 @@
               />
             </div>
 
-            <div class="grid grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               <FormInput
                 v-model="formData.owner_id_expiry_date"
                 label="Date d'expiration de la pièce"
@@ -644,52 +642,57 @@
           </div>
         </div>
 
-        <!-- Navigation Buttons -->
-        <div class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
-          <button
-            v-if="currentStep > 1"
-            @click="previousStep"
-            type="button"
-            class="px-6 py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all duration-200"
-          >
-            ← Précédent
-          </button>
-          <div v-else></div>
+        <!-- Navigation Buttons - Fixed at bottom -->
+        <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg z-30">
+          <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+            <button
+              v-if="currentStep > 1"
+              @click="previousStep"
+              type="button"
+              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all duration-200 text-sm sm:text-base"
+            >
+              ← Précédent
+            </button>
+            <div v-else></div>
 
-          <button
-            v-if="currentStep < 5"
-            @click="nextStep"
-            :disabled="validating"
-            type="button"
-            class="px-6 py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <span v-if="validating" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
-            {{ validating ? 'Vérification...' : 'Suivant →' }}
-          </button>
-          <button
-            v-else
-            @click="submitForm"
-            :disabled="submitting"
-            type="button"
-            class="px-6 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <span v-if="submitting" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
-            {{ submitting ? 'Enregistrement...' : 'Créer le PDV' }}
-          </button>
+            <button
+              v-if="currentStep < 5"
+              @click="nextStep"
+              :disabled="validating"
+              type="button"
+              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
+            >
+              <span v-if="validating" class="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></span>
+              {{ validating ? 'Vérification...' : 'Suivant →' }}
+            </button>
+            <button
+              v-else
+              @click="submitForm"
+              :disabled="submitting"
+              type="button"
+              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
+            >
+              <span v-if="submitting" class="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></span>
+              {{ submitting ? 'Enregistrement...' : 'Créer le PDV' }}
+            </button>
+          </div>
         </div>
+        
+        <!-- Spacer for fixed navigation -->
+        <div class="h-20 sm:h-24"></div>
       </div>
     </div>
 
     <!-- Floating Clear Button -->
     <button
       @click="clearAllFields"
-      class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-red-500 text-white shadow-2xl hover:bg-red-600 hover:scale-110 transition-all duration-200 flex items-center justify-center z-50 group"
+      class="fixed bottom-28 sm:bottom-32 right-4 sm:right-8 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500 text-white shadow-2xl hover:bg-red-600 hover:scale-110 transition-all duration-200 flex items-center justify-center z-40 group"
       title="Vider le formulaire"
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
       </svg>
-      <span class="absolute right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      <span class="absolute right-14 sm:right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
         Vider le formulaire
       </span>
     </button>
@@ -1960,6 +1963,25 @@ onMounted(async () => {
   // Pré-remplir l'organisation pour les non-admins AVANT de charger le brouillon
   if (!authStore.isAdmin && authStore.organizationId) {
     formData.value.organization_id = authStore.organizationId;
+    
+    // Charger le nom de l'organisation pour l'afficher dans le select
+    if (authStore.user?.organization) {
+      // Si l'organisation est déjà dans l'objet user
+      organizations.value = [authStore.user.organization];
+    } else {
+      // Sinon, charger depuis l'API
+      try {
+        await organizationStore.fetchOrganizations();
+        const userOrg = organizationStore.organizations.find(
+          org => org.id === authStore.organizationId
+        );
+        if (userOrg) {
+          organizations.value = [userOrg];
+        }
+      } catch (error) {
+        console.error('Error loading organization:', error);
+      }
+    }
   }
   
   if (authStore.isAdmin) {

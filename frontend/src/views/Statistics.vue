@@ -2,13 +2,13 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
-        <h1 class="text-3xl font-bold text-gray-900">Statistiques & Rapports</h1>
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Statistiques & Rapports</h1>
         
         <!-- Period Selector -->
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 sm:gap-3">
           <FormSelect
             v-model="selectedPeriod"
             :options="[
@@ -20,80 +20,81 @@
             option-label="label"
             option-value="value"
             @change="loadStatistics"
+            class="w-40 sm:w-auto"
           />
           
           <button
             @click="exportData"
-            class="px-4 py-2 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
+            class="px-3 sm:px-4 py-2 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 text-sm sm:text-base"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            Exporter
+            <span class="hidden sm:inline">Exporter</span>
           </button>
         </div>
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-12 text-center">
-        <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
-        <p class="text-gray-600 font-semibold">Chargement des statistiques...</p>
+      <div v-if="loading" class="glass-card p-8 sm:p-12 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
+        <p class="text-sm sm:text-base text-gray-600 font-semibold">Chargement des statistiques...</p>
       </div>
 
       <!-- Content -->
       <div v-else>
         <!-- Key Metrics -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
+          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-blue-600">{{ stats.totalPOS || 0 }}</span>
+              <span class="text-xl sm:text-2xl font-bold text-blue-600">{{ stats.totalPOS || 0 }}</span>
             </div>
-            <h3 class="text-sm font-semibold text-gray-600">Total PDV</h3>
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-600">Total PDV</h3>
             <p class="text-xs text-gray-500 mt-1">{{ stats.activePOS || 0 }} actifs</p>
           </div>
 
-          <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-green-600">{{ stats.validationRate || 0 }}%</span>
+              <span class="text-xl sm:text-2xl font-bold text-green-600">{{ stats.validationRate || 0 }}%</span>
             </div>
-            <h3 class="text-sm font-semibold text-gray-600">Taux de validation</h3>
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-600">Taux de validation</h3>
             <p class="text-xs text-gray-500 mt-1">Sur les {{ selectedPeriod }} derniers jours</p>
           </div>
 
-          <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center">
-                <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-100 flex items-center justify-center">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-moov-orange">{{ stats.averageValidationTime || 0 }}h</span>
+              <span class="text-xl sm:text-2xl font-bold text-moov-orange">{{ stats.averageValidationTime || 0 }}h</span>
             </div>
-            <h3 class="text-sm font-semibold text-gray-600">Délai moyen</h3>
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-600">Délai moyen</h3>
             <p class="text-xs text-gray-500 mt-1">De validation</p>
           </div>
 
-          <div class="glass-card p-6">
-            <div class="flex items-center justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                 </svg>
               </div>
-              <span class="text-2xl font-bold text-purple-600">{{ stats.totalDealers || 0 }}</span>
+              <span class="text-xl sm:text-2xl font-bold text-purple-600">{{ stats.totalDealers || 0 }}</span>
             </div>
-            <h3 class="text-sm font-semibold text-gray-600">Dealers actifs</h3>
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-600">Dealers actifs</h3>
             <p class="text-xs text-gray-500 mt-1">{{ stats.newDealersThisMonth || 0 }} ce mois</p>
           </div>
         </div>
@@ -269,7 +270,9 @@ import { ref, onMounted } from 'vue';
 import Navbar from '../components/Navbar.vue';
 import FormSelect from '../components/FormSelect.vue';
 import StatisticsService from '../services/StatisticsService';
+import { useToast } from '../composables/useToast';
 
+const { toast } = useToast();
 const loading = ref(true);
 const selectedPeriod = ref('30');
 
@@ -323,7 +326,7 @@ const loadStatistics = async () => {
 };
 
 const exportData = () => {
-  alert('Fonctionnalité d\'export en développement. Formats disponibles : PDF, Excel');
+  toast.info('Fonctionnalité d\'export en développement. Formats disponibles : PDF, Excel');
 };
 
 onMounted(() => {

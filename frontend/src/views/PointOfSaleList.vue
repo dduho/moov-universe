@@ -2,45 +2,46 @@
   <div class="min-h-screen bg-gradient-mesh">
     <Navbar />
     
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="flex items-center justify-between mb-8">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 class="text-3xl font-bold text-gray-900 mb-2">Points de Vente</h1>
-          <p class="text-gray-600">{{ total }} PDV au total - {{ filteredPOS.length }} affichés</p>
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Points de Vente</h1>
+          <p class="text-sm sm:text-base text-gray-600">{{ total }} PDV au total - {{ filteredPOS.length }} affichés</p>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <ExportButton
             @export="handleExport"
             label="Exporter"
+            class="flex-1 sm:flex-none"
           />
-          <button
+          <router-link
             v-if="authStore.isAdmin"
-            @click="showImportModal = true"
-            class="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all flex items-center gap-2"
+            to="/pdv/import"
+            class="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition-all flex items-center justify-center gap-2 text-sm sm:text-base"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
             </svg>
-            Importer
-          </button>
+            <span class="hidden sm:inline">Importer</span>
+          </router-link>
           <router-link
             to="/pdv/create"
-            class="px-6 py-3 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
+            class="flex-1 sm:flex-none px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
             </svg>
-            Créer un PDV
+            <span class="hidden sm:inline">Créer un PDV</span>
           </router-link>
         </div>
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-6 mb-8">
+      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
         <!-- Ligne 1: Recherche, Statut, Région, Dealer -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
-          <div class="md:col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <div class="sm:col-span-2 md:col-span-2">
             <FormInput
               v-model="filters.search"
               label="Recherche"
@@ -87,7 +88,7 @@
         </div>
 
         <!-- Ligne 2: Filtres géographiques -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <FormSelect
             v-model="filters.prefecture"
             label="Préfecture"
@@ -125,33 +126,33 @@
           />
         </div>
 
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div class="flex items-center gap-2 sm:gap-3">
             <button
               @click="viewMode = 'grid'"
-              class="px-4 py-2 rounded-xl font-bold transition-all duration-200"
+              class="px-3 sm:px-4 py-2 rounded-xl font-bold transition-all duration-200"
               :class="viewMode === 'grid' ? 'bg-moov-orange text-white' : 'bg-white/50 text-gray-700 hover:bg-white'"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
               </svg>
             </button>
             <button
               @click="viewMode = 'list'"
-              class="px-4 py-2 rounded-xl font-bold transition-all duration-200"
+              class="px-3 sm:px-4 py-2 rounded-xl font-bold transition-all duration-200"
               :class="viewMode === 'list' ? 'bg-moov-orange text-white' : 'bg-white/50 text-gray-700 hover:bg-white'"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
               </svg>
             </button>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 sm:gap-3">
             <div>
               <button
                 @click="clearFilters"
-                class="px-4 py-3 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 whitespace-nowrap"
+                class="px-3 sm:px-4 py-2 sm:py-3 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 whitespace-nowrap text-sm sm:text-base"
               >
                 Réinitialiser
               </button>
@@ -167,6 +168,7 @@
               ]"
               option-label="label"
               option-value="value"
+              class="w-32 sm:w-auto"
             />
           </div>
         </div>
@@ -405,13 +407,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Import Modal -->
-    <ImportModal
-      :is-open="showImportModal"
-      @close="showImportModal = false"
-      @import-success="handleImportSuccess"
-    />
   </div>
 </template>
 
@@ -420,7 +415,6 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import ExportButton from '../components/ExportButton.vue';
-import ImportModal from '../components/ImportModal.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
@@ -441,7 +435,6 @@ const currentPage = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 const perPage = ref(12); // Pagination par multiple de 12
-const showImportModal = ref(false);
 
 const filters = ref({
   search: '',
@@ -558,17 +551,47 @@ const clearFilters = () => {
   currentPage.value = 1;
 };
 
-const handleExport = (format) => {
-  const dataToExport = filteredPOS.value.length > 0 ? filteredPOS.value : pointsOfSale.value;
-  ExportService.exportPDV(dataToExport, format);
-};
-
-const handleImportSuccess = async (importedData) => {
-  showImportModal.value = false;
-  
-  // Reload PDV list
-  currentPage.value = 1;
-  await fetchPointsOfSale();
+const handleExport = async (format) => {
+  try {
+    loading.value = true;
+    
+    // Récupérer TOUS les PDV en faisant des appels successifs
+    let allPDV = [];
+    let currentPage = 1;
+    let hasMore = true;
+    
+    while (hasMore) {
+      const params = {
+        page: currentPage,
+        per_page: 100, // Maximum autorisé par l'API
+        sort_by: filters.value.sortBy,
+        sort_order: 'desc'
+      };
+      
+      // Ajouter les filtres actifs
+      if (filters.value.search) params.search = filters.value.search;
+      if (filters.value.status) params.status = filters.value.status;
+      if (filters.value.region) params.region = filters.value.region;
+      if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
+      if (filters.value.commune) params.commune = filters.value.commune;
+      if (filters.value.ville) params.ville = filters.value.ville;
+      if (filters.value.quartier) params.quartier = filters.value.quartier;
+      if (filters.value.dealer) params.organization_id = filters.value.dealer;
+      
+      const response = await PointOfSaleService.getAll(params);
+      allPDV = allPDV.concat(response.data);
+      
+      // Vérifier s'il y a encore des pages
+      hasMore = currentPage < response.last_page;
+      currentPage++;
+    }
+    
+    ExportService.exportPDV(allPDV, format);
+  } catch (error) {
+    console.error('Erreur lors de l\'export:', error);
+  } finally {
+    loading.value = false;
+  }
 };
 
 // Fonction pour charger les PDV avec pagination
