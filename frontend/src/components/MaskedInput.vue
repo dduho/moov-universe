@@ -245,6 +245,16 @@ const handleKeyPress = (event) => {
   transition: all 0.2s;
   color: rgb(17, 24, 39);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  /* Mobile touch optimization */
+  min-height: 48px;
+  font-size: 16px; /* Prevent iOS zoom */
+}
+
+@media (min-width: 640px) {
+  .form-input {
+    min-height: auto;
+    font-size: inherit;
+  }
 }
 
 .form-input:focus {
@@ -258,6 +268,16 @@ const handleKeyPress = (event) => {
 
 .form-input::placeholder {
   color: rgb(156, 163, 175);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 640px) {
+  .form-input::placeholder {
+    font-size: 0.8125rem;
+  }
 }
 
 .error-message {

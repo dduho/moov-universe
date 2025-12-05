@@ -327,21 +327,21 @@
             />
 
             <!-- GPS Capture -->
-            <div class="p-6 rounded-xl bg-gradient-to-br from-moov-orange/10 to-moov-orange-light/10 border-2 border-moov-orange/30">
-              <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="p-4 sm:p-6 rounded-xl bg-gradient-to-br from-moov-orange/10 to-moov-orange-light/10 border-2 border-moov-orange/30">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                 </svg>
                 Coordonnées GPS
               </h3>
-              <div class="grid grid-cols-2 gap-4 mb-4">
+              <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
                 <FormInput
                   v-model="formData.latitude"
                   label="Latitude"
                   type="number"
                   step="any"
-                  placeholder="Ex: 6.1256"
+                  placeholder="6.1256"
                   :disabled="loadingGPS"
                   :error="errors.latitude"
                   required
@@ -351,17 +351,28 @@
                   label="Longitude"
                   type="number"
                   step="any"
-                  placeholder="Ex: 1.2254"
+                  placeholder="1.2254"
                   :disabled="loadingGPS"
                   :error="errors.longitude"
                   required
                 />
               </div>
+              
+              <!-- GPS Precision Indicator -->
+              <div v-if="formData.latitude && formData.longitude && geoAccuracy" class="mb-4 p-3 rounded-lg" :class="precisionColor">
+                <div class="flex items-center gap-2 text-sm font-medium">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                  {{ precisionLabel }} (± {{ Math.round(geoAccuracy) }}m)
+                </div>
+              </div>
+              
               <button
                 @click="captureGPS"
                 :disabled="loadingGPS"
                 type="button"
-                class="w-full px-6 py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                class="w-full px-4 sm:px-6 py-3 sm:py-4 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl sm:hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 min-h-[48px] active:scale-95 touch-manipulation"
               >
                 <svg v-if="!loadingGPS" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -642,14 +653,14 @@
           </div>
         </div>
 
-        <!-- Navigation Buttons - Fixed at bottom -->
-        <div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg z-30">
-          <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex items-center justify-between">
+        <!-- Navigation Buttons - Fixed footer on mobile only -->
+        <div class="sm:relative sm:mt-8 sm:pt-6 sm:border-t sm:border-gray-200 fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg sm:shadow-none sm:bg-transparent sm:backdrop-blur-none z-30 sm:z-auto">
+          <div class="max-w-5xl mx-auto px-4 sm:px-0 py-3 sm:py-0 flex items-center justify-between">
             <button
               v-if="currentStep > 1"
               @click="previousStep"
               type="button"
-              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all duration-200 text-sm sm:text-base"
+              class="px-4 sm:px-6 py-3 sm:py-3 rounded-xl bg-white border-2 border-gray-300 text-gray-700 font-bold hover:bg-gray-50 transition-all duration-200 text-sm sm:text-base min-h-[48px] sm:min-h-0 active:scale-95 touch-manipulation"
             >
               ← Précédent
             </button>
@@ -660,7 +671,7 @@
               @click="nextStep"
               :disabled="validating"
               type="button"
-              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
+              class="px-4 sm:px-6 py-3 sm:py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl sm:hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base min-h-[48px] sm:min-h-0 active:scale-95 touch-manipulation"
             >
               <span v-if="validating" class="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></span>
               {{ validating ? 'Vérification...' : 'Suivant →' }}
@@ -670,7 +681,7 @@
               @click="submitForm"
               :disabled="submitting"
               type="button"
-              class="px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base"
+              class="px-4 sm:px-6 py-3 sm:py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl sm:hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base min-h-[48px] sm:min-h-0 active:scale-95 touch-manipulation"
             >
               <span v-if="submitting" class="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></span>
               {{ submitting ? 'Enregistrement...' : 'Créer le PDV' }}
@@ -678,21 +689,21 @@
           </div>
         </div>
         
-        <!-- Spacer for fixed navigation -->
-        <div class="h-20 sm:h-24"></div>
+        <!-- Spacer for fixed navigation on mobile only -->
+        <div class="h-20 sm:h-0"></div>
       </div>
     </div>
 
-    <!-- Floating Clear Button -->
+    <!-- Floating Clear Button - Adjusted position for mobile footer -->
     <button
       @click="clearAllFields"
-      class="fixed bottom-28 sm:bottom-32 right-4 sm:right-8 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500 text-white shadow-2xl hover:bg-red-600 hover:scale-110 transition-all duration-200 flex items-center justify-center z-40 group"
+      class="fixed bottom-24 sm:bottom-8 right-4 sm:right-8 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-red-500 text-white shadow-2xl hover:bg-red-600 sm:hover:scale-110 transition-all duration-200 flex items-center justify-center z-40 group active:scale-95 touch-manipulation"
       title="Vider le formulaire"
     >
       <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
       </svg>
-      <span class="absolute right-14 sm:right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+      <span class="absolute right-14 sm:right-16 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden sm:block">
         Vider le formulaire
       </span>
     </button>
@@ -732,6 +743,7 @@ import MaskedInput from '../components/MaskedInput.vue';
 import AutocompleteInput from '../components/AutocompleteInput.vue';
 import ConfirmDialog from '../components/ConfirmDialog.vue';
 import { useToast } from '../composables/useToast';
+import { useGeolocation } from '../composables/useGeolocation';
 import FormTextarea from '../components/FormTextarea.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import UploadService from '../services/UploadService';
@@ -746,6 +758,14 @@ const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 const { toast } = useToast();
+const { 
+  loading: geoLoading, 
+  accuracy: geoAccuracy, 
+  isApproximate: geoIsApproximate,
+  precisionLabel,
+  precisionColor,
+  getCurrentPosition: getGeoPosition
+} = useGeolocation();
 
 const STORAGE_KEY = 'pdv_form_draft';
 
@@ -766,6 +786,21 @@ const showClearDialog = ref(false);
 const uploadedIDDocument = ref([]);
 const uploadedPhotos = ref([]);
 const uploadedFiscalDocuments = ref([]);
+
+// Scroll to first error
+const scrollToFirstError = () => {
+  nextTick(() => {
+    const firstErrorElement = document.querySelector('.error-message, [class*="border-red"]');
+    if (firstErrorElement) {
+      const container = firstErrorElement.closest('.form-group') || firstErrorElement.parentElement;
+      if (container) {
+        container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        container.classList.add('scroll-highlight');
+        setTimeout(() => container.classList.remove('scroll-highlight'), 2000);
+      }
+    }
+  });
+};
 
 const steps = [
   { number: 1, name: 'Dealer' },
@@ -1367,6 +1402,7 @@ const validateStep = async () => {
     
     if (Object.keys(errors.value).length > 0) {
       toast.error('Veuillez corriger les erreurs avant de continuer', 'Validation échouée');
+      scrollToFirstError();
       return false;
     }
   }
@@ -1421,6 +1457,7 @@ const validateStep = async () => {
     
     if (Object.keys(errors.value).length > 0) {
       toast.error('Veuillez corriger les erreurs avant de continuer', 'Validation échouée');
+      scrollToFirstError();
       return false;
     }
   }
@@ -1460,6 +1497,7 @@ const validateStep = async () => {
     
     if (Object.keys(errors.value).length > 0) {
       toast.error('Veuillez corriger les erreurs avant de continuer', 'Validation échouée');
+      scrollToFirstError();
       return false;
     }
   }
@@ -1500,6 +1538,7 @@ const validateStep = async () => {
     
     if (Object.keys(errors.value).length > 0) {
       toast.error('Veuillez corriger les erreurs avant de continuer', 'Validation échouée');
+      scrollToFirstError();
       return false;
     }
   }
@@ -1569,21 +1608,18 @@ const captureGPS = async () => {
   proximityAlert.value = null;
   
   try {
-    if (!navigator.geolocation) {
-      toast.error('La géolocalisation n\'est pas supportée par votre navigateur', 'Erreur GPS');
-      return;
+    // Utiliser le composable de géolocalisation amélioré
+    const position = await getGeoPosition();
+    
+    formData.value.latitude = position.latitude.toFixed(6);
+    formData.value.longitude = position.longitude.toFixed(6);
+    
+    // Afficher un message selon la précision
+    if (geoIsApproximate.value) {
+      toast.warning('Position approximative capturée. La précision peut être limitée.', 'GPS');
+    } else {
+      toast.success(`Position capturée avec succès (précision: ${Math.round(geoAccuracy.value || 0)}m)`, 'GPS');
     }
-
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0
-      });
-    });
-
-    formData.value.latitude = position.coords.latitude.toFixed(6);
-    formData.value.longitude = position.coords.longitude.toFixed(6);
 
     // Check proximity
     try {
@@ -1601,7 +1637,7 @@ const captureGPS = async () => {
     }
   } catch (err) {
     console.error('GPS capture error:', err);
-    toast.error('Impossible de capturer la position GPS. Vérifiez vos autorisations.', 'Erreur GPS');
+    toast.error('Impossible de capturer la position GPS. Vérifiez vos autorisations et réessayez.', 'Erreur GPS');
   } finally {
     loadingGPS.value = false;
   }

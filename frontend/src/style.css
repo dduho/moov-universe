@@ -3,6 +3,8 @@
 
 :root {
   font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+  /* Désactiver le zoom sur iOS lors du focus sur les inputs */
+  touch-action: manipulation;
 }
 
 body {
@@ -10,13 +12,108 @@ body {
   min-width: 320px;
   min-height: 100vh;
   font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+  -webkit-text-size-adjust: 100%;
 }
 
 #app {
   min-height: 100vh;
 }
 
-/* Curseurs pour les éléments interactifs */
+/* ================================
+   TOUCH & MOBILE OPTIMIZATIONS
+   ================================ */
+
+/* Minimum touch target size (44x44px Apple HIG, Material Design) */
+@media (max-width: 768px) {
+  button,
+  [role="button"],
+  a.btn,
+  .touch-target,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Augmenter les zones de touch pour les liens */
+  a {
+    padding: 0.25rem;
+    margin: -0.25rem;
+  }
+}
+
+/* Touch manipulation - éviter les délais de 300ms */
+button,
+[role="button"],
+a,
+input,
+select,
+textarea,
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Désactiver le zoom sur les inputs iOS (font-size >= 16px) */
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Placeholder text overflow fix pour mobile */
+input::placeholder,
+textarea::placeholder {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ================================
+   FORM INPUTS MOBILE FIX
+   ================================ */
+
+/* Fix pour les placeholders qui débordent */
+.form-input,
+.form-select-button,
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="number"],
+input[type="date"],
+select {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .form-input,
+  .form-select-button {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 14px;
+  }
+  
+  .form-input::placeholder {
+    font-size: 13px;
+  }
+  
+  /* Select buttons - truncate long text */
+  .form-select-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: calc(100% - 2rem);
+  }
+}
+
+/* ================================
+   CURSORS
+   ================================ */
+
 button,
 [role="button"],
 a,
@@ -31,14 +128,153 @@ button:disabled,
   cursor: not-allowed;
 }
 
-/* Amélioration des transitions pour les éléments cliquables */
+/* ================================
+   TRANSITIONS
+   ================================ */
+
 button,
 [role="button"],
 a {
   transition: all 0.2s ease-in-out;
 }
 
-/* Scrollbar moderne et légère */
+/* Active state feedback for touch */
+@media (max-width: 768px) {
+  button:active:not(:disabled),
+  [role="button"]:active,
+  .touch-active:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+}
+
+/* ================================
+   SMOOTH SCROLL
+   ================================ */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll to error animation */
+@keyframes highlight-error {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.3); }
+}
+
+.scroll-highlight {
+  animation: highlight-error 1s ease-in-out 2;
+}
+
+/* ================================
+   PULL TO REFRESH INDICATOR
+   ================================ */
+
+.pull-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100%);
+  transition: transform 0.3s ease;
+  z-index: 9999;
+}
+
+.pull-indicator.visible {
+  transform: translateX(-50%) translateY(1rem);
+}
+
+/* ================================
+   SKELETON SCREENS
+   ================================ */
+
+@keyframes skeleton-loading {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 0px,
+    #e0e0e0 40px,
+    #f0f0f0 80px
+  );
+  background-size: 200px 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 0.5rem;
+}
+
+.skeleton-text {
+  height: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-title {
+  height: 1.5rem;
+  width: 60%;
+  margin-bottom: 0.75rem;
+}
+
+.skeleton-avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  height: 8rem;
+  border-radius: 1rem;
+}
+
+/* ================================
+   LAZY LOADING IMAGES
+   ================================ */
+
+img[loading="lazy"] {
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
+}
+
+img[loading="lazy"].loaded,
+img[loading="lazy"]:not([src=""]) {
+  opacity: 1;
+}
+
+/* Placeholder pendant le chargement */
+.lazy-image-container {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================================
+   HAPTIC FEEDBACK VISUAL
+   ================================ */
+
+@keyframes haptic-pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.98); }
+  100% { transform: scale(1); }
+}
+
+.haptic-feedback {
+  animation: haptic-pulse 0.15s ease-in-out;
+}
+
+/* ================================
+   GPS PRECISION INDICATORS
+   ================================ */
+
+.gps-excellent { color: #16a34a; }
+.gps-good { color: #65a30d; }
+.gps-fair { color: #ca8a04; }
+.gps-poor { color: #dc2626; }
+
+/* ================================
+   SCROLLBAR
+   ================================ */
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 102, 0, 0.3) transparent;
@@ -68,7 +304,6 @@ a {
   background: rgba(255, 102, 0, 0.7);
 }
 
-/* Scrollbar pour les modales (plus visible) */
 .modal-content::-webkit-scrollbar-thumb,
 .overflow-y-auto::-webkit-scrollbar-thumb {
   background: rgba(255, 102, 0, 0.4);
@@ -77,4 +312,17 @@ a {
 .modal-content::-webkit-scrollbar-thumb:hover,
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 102, 0, 0.6);
+}
+
+/* ================================
+   PINCH TO ZOOM ON IMAGES
+   ================================ */
+
+.pinch-zoom {
+  touch-action: pinch-zoom;
+  cursor: zoom-in;
+}
+
+.pinch-zoom.zoomed {
+  cursor: zoom-out;
 }

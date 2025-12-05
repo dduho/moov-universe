@@ -338,9 +338,26 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 0.5rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   text-align: left;
+  /* Mobile touch optimization */
+  min-height: 48px;
+  font-size: 16px; /* Prevent iOS zoom */
+}
+
+@media (min-width: 640px) {
+  .form-select-button {
+    min-height: auto;
+    font-size: inherit;
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .form-select-button {
+    padding: 0.75rem;
+  }
 }
 
 .form-select-button:focus {
@@ -350,6 +367,27 @@ onUnmounted(() => {
 
 .form-select-button:hover {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Fix for placeholder/selected text overflow */
+.form-select-button > div:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.form-select-button span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Smaller placeholder text on mobile */
+@media (max-width: 640px) {
+  .form-select-button span.text-gray-400 {
+    font-size: 0.8125rem;
+  }
 }
 
 .dropdown-menu {
@@ -372,6 +410,14 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 0.5rem;
   font-weight: 500;
+  /* Touch target size */
+  min-height: 44px;
+}
+
+.dropdown-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .error-message {

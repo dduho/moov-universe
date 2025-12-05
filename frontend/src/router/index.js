@@ -1,6 +1,15 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
+// Prefetch function for probable routes
+const prefetchRoute = (componentImport) => {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => componentImport());
+  } else {
+    setTimeout(() => componentImport(), 100);
+  }
+};
+
 const routes = [
   {
     path: '/login',
@@ -107,6 +116,19 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  // Smooth scroll behavior
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition;
+    }
+    if (to.hash) {
+      return {
+        el: to.hash,
+        behavior: 'smooth'
+      };
+    }
+    return { top: 0, behavior: 'smooth' };
+  }
 });
 
 router.beforeEach((to, from, next) => {
@@ -120,6 +142,21 @@ router.beforeEach((to, from, next) => {
     next({ name: 'Dashboard' });
   } else {
     next();
+  }
+});
+
+// Prefetch probable routes after initial load
+router.afterEach((to) => {
+  // After landing on Dashboard, prefetch common routes
+  if (to.name === 'Dashboard') {
+    prefetchRoute(() => import('../views/PointOfSaleList.vue'));
+    prefetchRoute(() => import('../views/PointOfSaleForm.vue'));
+    prefetchRoute(() => import('../views/TaskListView.vue'));
+  }
+  
+  // After landing on PDV List, prefetch detail view
+  if (to.name === 'PdvList') {
+    prefetchRoute(() => import('../views/PointOfSaleDetail.vue'));
   }
 });
 

@@ -1,5 +1,22 @@
 <template>
-  <div class="min-h-screen">
+  <div class="min-h-screen" ref="dashboardContainer" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+    <!-- Pull-to-refresh indicator -->
+    <div 
+      class="pull-indicator flex items-center justify-center gap-2 bg-moov-orange text-white px-4 py-2 rounded-full shadow-lg"
+      :class="{ 'visible': isPulling }"
+    >
+      <svg 
+        class="w-5 h-5 transition-transform" 
+        :class="{ 'rotate-180': pullProgress >= 100 }"
+        fill="none" 
+        stroke="currentColor" 
+        viewBox="0 0 24 24"
+      >
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+      </svg>
+      <span class="text-sm font-medium">{{ pullProgress >= 100 ? 'Relâchez pour actualiser' : 'Tirez pour actualiser' }}</span>
+    </div>
+
     <!-- Navigation -->
     <Navbar />
 
@@ -651,6 +668,49 @@ const fetchDashboardData = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// Pull-to-refresh functionality
+const dashboardContainer = ref(null);
+const isPulling = ref(false);
+const pullProgress = ref(0);
+const touchStartY = ref(0);
+const isRefreshing = ref(false);
+
+const handleTouchStart = (e) => {
+  if (window.scrollY === 0 && !isRefreshing.value) {
+    touchStartY.value = e.touches[0].clientY;
+  }
+};
+
+const handleTouchMove = (e) => {
+  if (touchStartY.value === 0 || isRefreshing.value) return;
+  
+  const currentY = e.touches[0].clientY;
+  const diff = currentY - touchStartY.value;
+  
+  if (diff > 0 && window.scrollY === 0) {
+    isPulling.value = true;
+    pullProgress.value = Math.min((diff / 100) * 100, 100);
+  }
+};
+
+const handleTouchEnd = async () => {
+  if (pullProgress.value >= 100 && !isRefreshing.value) {
+    isRefreshing.value = true;
+    
+    // Haptic feedback
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+    
+    await fetchDashboardData();
+    isRefreshing.value = false;
+  }
+  
+  isPulling.value = false;
+  pullProgress.value = 0;
+  touchStartY.value = 0;
 };
 
 onMounted(() => {
