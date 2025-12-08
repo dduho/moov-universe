@@ -50,10 +50,11 @@ export default {
     return response.data;
   },
 
-  async checkUniqueness(field, value) {
+  async checkUniqueness(field, value, excludeId = null) {
     const response = await api.post('/point-of-sales/check-uniqueness', {
       field,
       value,
+      exclude_id: excludeId,
     });
     return response.data;
   },

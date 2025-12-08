@@ -29,7 +29,11 @@ onMounted(() => {
 
 <template>
   <div id="app" class="min-h-screen gradient-mesh">
-    <RouterView />
+    <RouterView v-slot="{ Component, route }">
+      <Transition name="page" mode="out-in">
+        <component :is="Component" :key="route.path" />
+      </Transition>
+    </RouterView>
     <Toast ref="toastRef" />
     <GlobalSearch v-if="authStore.isAuthenticated" />
     <ConfirmModal />

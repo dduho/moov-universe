@@ -232,7 +232,7 @@ export const geographicHierarchy = {
       Ogou: {
         communes: {
           Ogou_1: {
-            cantons: ['Atakpamé', 'Djama', 'Kamina']
+            cantons: ['Atakpamé', 'Djama', 'Kamina', 'Gnagna']
           },
           Ogou_2: {
             cantons: ['Amlamé', 'Wome']

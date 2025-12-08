@@ -326,3 +326,90 @@ img[loading="lazy"]:not([src=""]) {
 .pinch-zoom.zoomed {
   cursor: zoom-out;
 }
+
+/* ================================
+   PAGE & STEP TRANSITIONS
+   ================================ */
+
+/* Page transition - Fade with slide */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* Step transition - Slide horizontal */
+.step-slide-enter-active,
+.step-slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.step-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Step transition reverse (going back) */
+.step-slide-reverse-enter-active,
+.step-slide-reverse-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.step-slide-reverse-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.step-slide-reverse-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* Fade transition for content */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Scale fade for modals and cards */
+.scale-fade-enter-active,
+.scale-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.scale-fade-enter-from,
+.scale-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+/* Slide up for mobile sheets */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(100%);
+}

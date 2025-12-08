@@ -63,6 +63,26 @@ class PointOfSale extends Model
         'rejected_at' => 'datetime',
     ];
 
+    protected $appends = ['has_active_task', 'has_task_in_revision'];
+
+    /**
+     * Accessor pour vérifier si le PDV a une tâche active (non validée/complétée)
+     * Utilisé par les admins pour voir s'il y a des tâches en cours
+     */
+    public function getHasActiveTaskAttribute()
+    {
+        return $this->tasks()->whereNotIn('status', ['validated'])->exists();
+    }
+
+    /**
+     * Accessor pour vérifier si le PDV a une tâche en révision demandée
+     * C'est le seul cas où un commercial peut modifier un PDV validé
+     */
+    public function getHasTaskInRevisionAttribute()
+    {
+        return $this->tasks()->where('status', 'revision_requested')->exists();
+    }
+
     public function organization()
     {
         return $this->belongsTo(Organization::class);

@@ -167,16 +167,27 @@ const selectedTask = ref(null);
 
 const pdvTags = computed(() => {
   // Détermine les tags basés sur les statuts des tâches
+  // Flux: pending -> completed (soumis) -> validated (admin valide) OU revision_requested (admin demande révision)
+  if (tasks.value.length === 0) return [];
+  
   const tags = [];
-  const hasCompleted = tasks.value.some(t => t.status === 'completed');
-  const hasPending = tasks.value.some(t => ['pending', 'in_progress', 'revision_requested'].includes(t.status));
-  const allValidated = tasks.value.length > 0 && tasks.value.every(t => t.status === 'validated');
+  const hasRevisionRequested = tasks.value.some(t => t.status === 'revision_requested');
+  const hasPending = tasks.value.some(t => t.status === 'pending');
+  const hasCompleted = tasks.value.some(t => t.status === 'completed'); // Soumis pour validation
+  const allValidated = tasks.value.every(t => t.status === 'validated');
   
   if (allValidated) {
+    // Toutes les tâches sont validées par l'admin - Terminé !
     tags.push('taches_completes');
-  } else {
-    if (hasPending) tags.push('en_revision');
-    if (hasCompleted) tags.push('taches_a_valider');
+  } else if (hasRevisionRequested) {
+    // Admin a demandé une révision - le commercial doit corriger
+    tags.push('revision_demandee');
+  } else if (hasCompleted) {
+    // Le commercial a soumis, en attente de validation admin
+    tags.push('taches_a_valider');
+  } else if (hasPending) {
+    // Tâches en cours de travail par le commercial
+    tags.push('en_revision');
   }
   
   return tags;
@@ -314,16 +325,18 @@ const getTaskBorderClass = (status) => {
 
 const getTagLabel = (tag) => {
   const labels = {
-    en_revision: 'En révision',
-    taches_a_valider: 'Tâches à valider',
-    taches_completes: 'Tâches complètes'
+    en_revision: 'En cours de traitement',
+    revision_demandee: 'Révision demandée',
+    taches_a_valider: 'En attente de validation',
+    taches_completes: 'Tâches validées'
   };
   return labels[tag] || tag;
 };
 
 const getTagClass = (tag) => {
   const classes = {
-    en_revision: 'bg-orange-100 text-orange-800',
+    en_revision: 'bg-blue-100 text-blue-800',
+    revision_demandee: 'bg-orange-100 text-orange-800',
     taches_a_valider: 'bg-yellow-100 text-yellow-800',
     taches_completes: 'bg-green-100 text-green-800'
   };

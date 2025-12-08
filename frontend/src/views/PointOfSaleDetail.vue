@@ -40,12 +40,25 @@
               <p class="text-sm sm:text-base text-gray-600">{{ formatPhone(pos.numero_flooz || pos.flooz_number) }}</p>
             </div>
           </div>
-          <span
-            class="self-start sm:self-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold"
-            :class="getStatusClass(pos.status)"
-          >
-            {{ getStatusLabel(pos.status) }}
-          </span>
+          <div class="flex items-center gap-3">
+            <!-- Bouton Modifier (visible si pending ou tâche active) -->
+            <router-link
+              v-if="canEdit"
+              :to="`/pdv/${pos.id}/edit`"
+              class="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-xl bg-moov-orange text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+            >
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+              Modifier
+            </router-link>
+            <span
+              class="self-start sm:self-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold"
+              :class="getStatusClass(pos.status)"
+            >
+              {{ getStatusLabel(pos.status) }}
+            </span>
+          </div>
         </div>
 
         <!-- GPS Missing Warning -->
@@ -64,6 +77,7 @@
             <strong>Raison possible :</strong> Les coordonnées ont été supprimées car elles étaient identiques à celles d'un autre PDV (doublon détecté).
           </p>
           <router-link
+            v-show="false"
             :to="`/pdv/${pos.id}/edit`"
             class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-bold hover:bg-red-700 transition-colors"
           >
@@ -684,6 +698,24 @@ const hasAnyDocuments = computed(() => {
   return (pos.value?.idDocuments?.length || 
           pos.value?.photos?.length || 
           pos.value?.fiscalDocuments?.length) > 0;
+});
+
+// Vérifier si le PDV a une tâche en révision demandée (permet la modification pour les commerciaux)
+const hasTaskInRevision = computed(() => {
+  return pos.value?.has_task_in_revision || false;
+});
+
+// Le PDV peut être modifié si:
+// - Admin: toujours (sauf si aucune raison de modifier)
+// - PDV en status pending
+// - Il y a une tâche avec révision demandée (pour les commerciaux)
+const canEdit = computed(() => {
+  // Les admins peuvent toujours modifier
+  if (authStore.isAdmin) {
+    return pos.value?.status === 'pending' || pos.value?.has_active_task || hasTaskInRevision.value;
+  }
+  // Les commerciaux peuvent modifier si pending OU si une tâche est en révision demandée
+  return pos.value?.status === 'pending' || hasTaskInRevision.value;
 });
 
 const getStatusClass = (status) => {

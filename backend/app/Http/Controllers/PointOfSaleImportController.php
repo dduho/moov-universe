@@ -383,9 +383,21 @@ class PointOfSaleImportController extends Controller
         $profil = $this->getColumnValue($row, $headerMap, 'profil');
         $profil = $profil ? strtoupper(trim($profil)) : null;
         
-        // Récupérer et normaliser la commune
+        // Récupérer et normaliser les champs géographiques (espaces -> underscores)
+        $prefecture = $this->getColumnValue($row, $headerMap, 'prefecture');
+        $prefecture = $this->normalizeCommune($prefecture) ?: 'Non spécifié';
+        
         $commune = $this->getColumnValue($row, $headerMap, 'commune');
-        $commune = $this->normalizeCommune($commune);
+        $commune = $this->normalizeCommune($commune) ?: 'Non spécifié';
+        
+        $canton = $this->getColumnValue($row, $headerMap, 'canton');
+        $canton = $this->normalizeCommune($canton);
+        
+        $ville = $this->getColumnValue($row, $headerMap, 'ville');
+        $ville = $this->normalizeCommune($ville) ?: 'Non spécifié';
+        
+        $quartier = $this->getColumnValue($row, $headerMap, 'quartier');
+        $quartier = $this->normalizeCommune($quartier) ?: 'Non spécifié';
         
         // Récupérer et normaliser le sexe
         $gender = $this->getColumnValue($row, $headerMap, 'gender');
@@ -412,6 +424,13 @@ class PointOfSaleImportController extends Controller
         $id_expiry_date = $this->getColumnValue($row, $headerMap, 'id_expiry_date');
         $id_expiry_date = $this->normalizeDate($id_expiry_date);
         
+        // Récupérer et normaliser les numéros de téléphone
+        $phone = $this->getColumnValue($row, $headerMap, 'phone');
+        $phone = $this->normalizePhoneNumber($phone);
+        
+        $autre_contact = $this->getColumnValue($row, $headerMap, 'autre_contact');
+        $autre_contact = $this->normalizePhoneNumber($autre_contact);
+        
         // Récupérer et normaliser l'état du support
         $etat_support = $this->getColumnValue($row, $headerMap, 'etat_support');
         $etat_support = $this->normalizeEtatSupport($etat_support);
@@ -423,11 +442,11 @@ class PointOfSaleImportController extends Controller
             'shortcode' => $this->getColumnValue($row, $headerMap, 'shortcode'),
             'profil' => $profil ?: 'DISTRO', // Valeur par défaut
             'region' => strtoupper($this->getColumnValue($row, $headerMap, 'region')),
-            'prefecture' => $this->getColumnValue($row, $headerMap, 'prefecture') ?: 'Non spécifié',
-            'commune' => $commune ?: 'Non spécifié',
-            'ville' => $this->getColumnValue($row, $headerMap, 'ville') ?: 'Non spécifié',
-            'quartier' => $this->getColumnValue($row, $headerMap, 'quartier') ?: 'Non spécifié',
-            'canton' => $this->getColumnValue($row, $headerMap, 'canton'),
+            'prefecture' => $prefecture,
+            'commune' => $commune,
+            'ville' => $ville,
+            'quartier' => $quartier,
+            'canton' => $canton,
             'dealer_name' => $this->getColumnValue($row, $headerMap, 'dealer_name') ?: 'Importé',
             'latitude' => $this->getColumnValue($row, $headerMap, 'latitude') ?: 0,
             'longitude' => $this->getColumnValue($row, $headerMap, 'longitude') ?: 0,
@@ -448,8 +467,8 @@ class PointOfSaleImportController extends Controller
             'nif' => $nif,
             'regime_fiscal' => $regime_fiscal,
             // Contacts
-            'numero_proprietaire' => $this->getColumnValue($row, $headerMap, 'phone'),
-            'autre_contact' => $this->getColumnValue($row, $headerMap, 'autre_contact'),
+            'numero_proprietaire' => $phone,
+            'autre_contact' => $autre_contact,
             // Visibilité
             'support_visibilite' => $this->getColumnValue($row, $headerMap, 'support_visibilite'),
             'etat_support' => $etat_support,
@@ -463,7 +482,8 @@ class PointOfSaleImportController extends Controller
     }
     
     /**
-     * Normaliser la commune
+     * Normaliser la commune (et autres champs géographiques)
+     * Transforme "Ogou 1" en "Ogou_1"
      */
     private function normalizeCommune($commune)
     {
@@ -471,11 +491,30 @@ class PointOfSaleImportController extends Controller
         
         $commune = trim($commune);
         
-        // Transformer les underscores suivis de chiffres en espaces
-        // Wawa_1 -> Wawa 1, Akébou_2 -> Akébou 2
-        $commune = preg_replace('/_(\d+)$/', ' $1', $commune);
+        // Transformer les espaces suivis de chiffres en underscores
+        // Ogou 1 -> Ogou_1, Akébou 2 -> Akébou_2
+        $commune = preg_replace('/ (\d+)$/', '_$1', $commune);
         
         return $commune;
+    }
+    
+    /**
+     * Normaliser un numéro de téléphone
+     * Ajoute 228 si le numéro a 8 chiffres
+     */
+    private function normalizePhoneNumber($phone)
+    {
+        if (!$phone) return null;
+        
+        // Nettoyer le numéro (garder uniquement les chiffres)
+        $phone = preg_replace('/[^0-9]/', '', trim($phone));
+        
+        // Si le numéro a exactement 8 chiffres, ajouter 228 devant
+        if (strlen($phone) === 8) {
+            $phone = '228' . $phone;
+        }
+        
+        return $phone;
     }
     
     /**
@@ -527,14 +566,25 @@ class PointOfSaleImportController extends Controller
     {
         if (!$regime) return null;
         
-        $regime = strtoupper(trim($regime));
+        $regime = trim($regime);
+        $regimeUpper = strtoupper($regime);
         
         // Si c'est "SANS" ou similaire, retourner null
-        if (in_array($regime, ['SANS NIF', 'SANS', 'N/A', 'NA', ''])) {
+        if (in_array($regimeUpper, ['SANS NIF', 'SANS', 'N/A', 'NA', ''])) {
             return null;
         }
         
-        return $regime;
+        // Transformer "Sans TVA" en "Réel sans TVA" et "Avec TVA" en "Réel avec TVA"
+        $mapping = [
+            'SANS TVA' => 'Réel sans TVA',
+            'AVEC TVA' => 'Réel avec TVA',
+            'REEL SANS TVA' => 'Réel sans TVA',
+            'RÉEL SANS TVA' => 'Réel sans TVA',
+            'REEL AVEC TVA' => 'Réel avec TVA',
+            'RÉEL AVEC TVA' => 'Réel avec TVA',
+        ];
+        
+        return $mapping[$regimeUpper] ?? $regime;
     }
     
     /**

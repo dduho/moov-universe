@@ -253,11 +253,11 @@ const filters = ref({
 });
 
 const regions = ref([
-  'Savanes',
-  'Kara',
-  'Centrale',
-  'Plateaux',
-  'Maritime'
+  'SAVANES',
+  'KARA',
+  'CENTRALE',
+  'PLATEAUX',
+  'MARITIME'
 ]);
 
 const dealers = computed(() => organizationStore.organizations);
@@ -534,18 +534,19 @@ const filteredPointsOfSale = computed(() => {
 // Watch for filter changes and update markers
 let markersInitialized = false;
 
-watch(filteredPointsOfSale, async (newFiltered) => {
+watch(filters, async () => {
   // Skip if markers haven't been initialized yet
   if (!markersInitialized) {
     return;
   }
   if (markerClusterGroup && leafletMap) {
-    await addMarkersToMap(newFiltered);
+    console.log('Filters changed, updating markers with', filteredPointsOfSale.value.length, 'PDVs');
+    await addMarkersToMap(filteredPointsOfSale.value);
   }
 }, { deep: true });
 
 const filterMarkers = () => {
-  // Filters are applied via computed property and watch
+  // Filters are applied via watch on filters ref
   console.log('Filters applied:', filters.value);
 };
 

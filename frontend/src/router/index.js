@@ -52,6 +52,13 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/pdv/:id/edit',
+    name: 'EditPdv',
+    component: () => import('../views/PointOfSaleForm.vue'),
+    meta: { requiresAuth: true },
+    props: true,
+  },
+  {
     path: '/tasks',
     name: 'TaskList',
     component: () => import('../views/TaskListView.vue'),

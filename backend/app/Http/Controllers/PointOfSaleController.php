@@ -285,7 +285,7 @@ class PointOfSaleController extends Controller
     public function show($id, Request $request)
     {
         $user = $request->user();
-        $query = PointOfSale::with(['organization', 'creator', 'validator', 'idDocuments', 'photos', 'fiscalDocuments']);
+        $query = PointOfSale::with(['organization', 'creator', 'validator', 'idDocuments', 'photos', 'fiscalDocuments', 'tasks']);
 
         $pdv = $query->findOrFail($id);
 
@@ -293,6 +293,8 @@ class PointOfSaleController extends Controller
         if (!$user->canAccessPointOfSale($pdv)) {
             return response()->json(['message' => 'Forbidden - You do not have access to this PDV'], 403);
         }
+
+        // has_active_task est maintenant calculé automatiquement via l'accessor du modèle
 
         // Check proximity if PDV has coordinates
         $proximityCheck = null;
@@ -320,9 +322,23 @@ class PointOfSaleController extends Controller
             return response()->json(['message' => 'Forbidden - You do not have access to this PDV'], 403);
         }
 
-        // Only allow updates if pending
-        if ($pdv->status !== 'pending') {
-            return response()->json(['message' => 'Can only update pending PDVs'], 422);
+        // Logique de permission de modification:
+        // - Admin: peut modifier si PDV pending OU s'il y a des tâches non validées
+        // - Commercial: peut modifier si PDV pending OU si une tâche est en révision demandée
+        $canUpdate = false;
+        
+        if ($pdv->status === 'pending') {
+            $canUpdate = true;
+        } elseif ($user->isAdmin()) {
+            // Admin peut modifier s'il y a des tâches actives (non validées)
+            $canUpdate = $pdv->tasks()->whereNotIn('status', ['validated'])->exists();
+        } else {
+            // Commercial peut modifier seulement si une tâche est en révision demandée
+            $canUpdate = $pdv->tasks()->where('status', 'revision_requested')->exists();
+        }
+        
+        if (!$canUpdate) {
+            return response()->json(['message' => 'Vous ne pouvez pas modifier ce PDV'], 422);
         }
 
         $validated = $request->validate([
@@ -423,9 +439,17 @@ class PointOfSaleController extends Controller
         $request->validate([
             'field' => 'required|in:numero_flooz,shortcode,profil',
             'value' => 'required|string',
+            'exclude_id' => 'nullable|integer',
         ]);
 
-        $exists = PointOfSale::where($request->field, $request->value)->exists();
+        $query = PointOfSale::where($request->field, $request->value);
+        
+        // Exclure le PDV en cours d'édition si un ID est fourni
+        if ($request->exclude_id) {
+            $query->where('id', '!=', $request->exclude_id);
+        }
+        
+        $exists = $query->exists();
 
         return response()->json([
             'exists' => $exists,

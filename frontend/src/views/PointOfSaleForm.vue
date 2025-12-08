@@ -13,7 +13,9 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
         </button>
-        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Nouveau point de vente</h1>
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">
+          {{ isEditMode ? 'Modifier le point de vente' : 'Nouveau point de vente' }}
+        </h1>
       </div>
 
       <!-- Progress Indicator -->
@@ -48,10 +50,17 @@
         </div>
       </div>
 
+      <!-- Loading state for edit mode -->
+      <div v-if="loadingPdv" class="glass-card p-8 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-moov-orange mx-auto mb-4"></div>
+        <p class="text-gray-600">Chargement des données du point de vente...</p>
+      </div>
+
       <!-- Forms -->
-      <div class="glass-card p-4 sm:p-6 lg:p-8">
-        <!-- Step 1: Dealer Information -->
-        <div v-if="currentStep === 1">
+      <div v-else class="glass-card p-4 sm:p-6 lg:p-8">
+        <Transition :name="stepTransitionName" mode="out-in">
+          <!-- Step 1: Dealer Information -->
+          <div v-if="currentStep === 1" :key="1">
           <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Informations du dealer</h2>
           <div class="space-y-4 sm:space-y-6">
             <FormSelect
@@ -118,7 +127,7 @@
         </div>
 
         <!-- Step 2: Owner Information -->
-        <div v-if="currentStep === 2">
+        <div v-else-if="currentStep === 2" :key="2">
           <h2 class="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">Informations du propriétaire</h2>
           <div class="space-y-4 sm:space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -244,7 +253,7 @@
         </div>
 
         <!-- Step 3: Location with GPS -->
-        <div v-if="currentStep === 3">
+        <div v-else-if="currentStep === 3" :key="3">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Localisation</h2>
           <div class="space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -389,7 +398,7 @@
         </div>
 
         <!-- Step 4: Fiscalité -->
-        <div v-if="currentStep === 4">
+        <div v-else-if="currentStep === 4" :key="4">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Fiscalité & Documents</h2>
           <div class="space-y-6">
             <!-- Section Fiscalité -->
@@ -565,7 +574,7 @@
         </div>
 
         <!-- Step 5: Summary -->
-        <div v-if="currentStep === 5">
+        <div v-else-if="currentStep === 5" :key="5">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">Récapitulatif</h2>
           <div class="space-y-6">
             <!-- Dealer Info Summary -->
@@ -652,6 +661,7 @@
             </div>
           </div>
         </div>
+        </Transition>
 
         <!-- Navigation Buttons - Fixed footer on mobile only -->
         <div class="sm:relative sm:mt-8 sm:pt-6 sm:border-t sm:border-gray-200 fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-sm border-t border-gray-200 shadow-lg sm:shadow-none sm:bg-transparent sm:backdrop-blur-none z-30 sm:z-auto">
@@ -684,7 +694,7 @@
               class="px-4 sm:px-6 py-3 sm:py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl sm:hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm sm:text-base min-h-[48px] sm:min-h-0 active:scale-95 touch-manipulation"
             >
               <span v-if="submitting" class="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-b-2 border-white"></span>
-              {{ submitting ? 'Enregistrement...' : 'Créer le PDV' }}
+              {{ submitting ? 'Enregistrement...' : (isEditMode ? 'Mettre à jour' : 'Créer le PDV') }}
             </button>
           </div>
         </div>
@@ -733,7 +743,7 @@
 
 <script setup>
 import { ref, onMounted, computed, h, watch, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import FileUploader from '../components/FileUploader.vue';
 import FileGallery from '../components/FileGallery.vue';
@@ -755,6 +765,7 @@ import { getNeighborhoodsByCity } from '../data/neighborhoods';
 import { formatPhone, formatShortcode } from '../utils/formatters';
 
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 const { toast } = useToast();
@@ -767,9 +778,15 @@ const {
   getCurrentPosition: getGeoPosition
 } = useGeolocation();
 
+// Mode édition
+const isEditMode = computed(() => !!route.params.id);
+const editId = computed(() => route.params.id);
+const loadingPdv = ref(false);
+
 const STORAGE_KEY = 'pdv_form_draft';
 
 const currentStep = ref(1);
+const stepDirection = ref('forward'); // 'forward' ou 'backward' pour l'animation
 const loadingGPS = ref(false);
 const submitting = ref(false);
 const validating = ref(false);
@@ -1270,6 +1287,11 @@ const shouldShowNifField = computed(() => {
   return formData.value.has_nif === 'oui';
 });
 
+// Computed pour le nom de la transition des étapes
+const stepTransitionName = computed(() => {
+  return stepDirection.value === 'forward' ? 'step-slide' : 'step-slide-reverse';
+});
+
 const formData = ref({
   organization_id: authStore.organizationId || null,
   point_name: '',
@@ -1324,20 +1346,28 @@ const getOrganizationName = () => {
 };
 
 // Gestion des changements hiérarchiques
+// Ne pas réinitialiser les champs pendant le chargement des données en mode édition
 const onRegionChange = () => {
+  if (loadingPdv.value) return;
   // Réinitialiser les champs dépendants
   formData.value.prefecture = '';
   formData.value.commune = '';
   formData.value.canton = '';
+  formData.value.city = '';
+  formData.value.neighborhood = '';
 };
 
 const onPrefectureChange = () => {
+  if (loadingPdv.value) return;
   // Réinitialiser les champs dépendants
   formData.value.commune = '';
   formData.value.canton = '';
+  formData.value.city = '';
+  formData.value.neighborhood = '';
 };
 
 const onCommuneChange = () => {
+  if (loadingPdv.value) return;
   // Réinitialiser le canton et la ville
   formData.value.canton = '';
   formData.value.city = '';
@@ -1345,6 +1375,7 @@ const onCommuneChange = () => {
 };
 
 const onCityChange = () => {
+  if (loadingPdv.value) return;
   // Réinitialiser le quartier
   formData.value.neighborhood = '';
 };
@@ -1372,7 +1403,7 @@ const validateStep = async () => {
     } else {
       // Vérifier l'unicité du numéro Flooz
       try {
-        const result = await PointOfSaleService.checkUniqueness('numero_flooz', formData.value.flooz_number);
+        const result = await PointOfSaleService.checkUniqueness('numero_flooz', formData.value.flooz_number, isEditMode.value ? editId.value : null);
         if (result.exists) {
           errors.value.flooz_number = 'Ce numéro Flooz est déjà utilisé par un autre point de vente';
         }
@@ -1388,7 +1419,7 @@ const validateStep = async () => {
     } else {
       // Vérifier l'unicité du shortcode
       try {
-        const result = await PointOfSaleService.checkUniqueness('shortcode', formData.value.shortcode);
+        const result = await PointOfSaleService.checkUniqueness('shortcode', formData.value.shortcode, isEditMode.value ? editId.value : null);
         if (result.exists) {
           errors.value.shortcode = 'Ce shortcode est déjà utilisé par un autre point de vente';
         }
@@ -1595,12 +1626,14 @@ const validateIdNumber = () => {
 const nextStep = async () => {
   if (await validateStep()) {
     errors.value = {};
+    stepDirection.value = 'forward';
     currentStep.value++;
   }
 };
 
 const previousStep = () => {
   errors.value = {};
+  stepDirection.value = 'backward';
   currentStep.value--;
 };
 
@@ -1714,16 +1747,22 @@ const submitForm = async () => {
       fiscal_document_ids: uploadedFiscalDocuments.value.map(doc => doc.id)
     };
 
-    await PointOfSaleService.create(dataToSubmit);
-    
-    // Effacer le brouillon après soumission réussie
-    clearFormStorage();
-    
-    toast.success('Le point de vente a été créé avec succès !', 'Succès');
-    router.push('/pdv/list');
+    if (isEditMode.value) {
+      // Mode édition: mettre à jour
+      await PointOfSaleService.update(editId.value, dataToSubmit);
+      toast.success('Le point de vente a été mis à jour avec succès !', 'Succès');
+      router.push(`/pdv/${editId.value}`);
+    } else {
+      // Mode création
+      await PointOfSaleService.create(dataToSubmit);
+      // Effacer le brouillon après soumission réussie
+      clearFormStorage();
+      toast.success('Le point de vente a été créé avec succès !', 'Succès');
+      router.push('/pdv/list');
+    }
   } catch (err) {
-    console.error('Error creating POS:', err);
-    const errorMessage = err.response?.data?.message || 'Une erreur est survenue lors de la création du PDV';
+    console.error('Error saving POS:', err);
+    const errorMessage = err.response?.data?.message || `Une erreur est survenue lors de ${isEditMode.value ? 'la mise à jour' : 'la création'} du PDV`;
     toast.error(errorMessage, 'Erreur');
   } finally {
     submitting.value = false;
@@ -1736,32 +1775,46 @@ const handleCancel = () => {
 
 const confirmCancel = async () => {
   try {
-    // Supprimer les fichiers uploadés du serveur
-    const filesToDelete = [
-      ...uploadedIDDocument.value,
-      ...uploadedPhotos.value,
-      ...uploadedFiscalDocuments.value
-    ];
-    
-    for (const file of filesToDelete) {
-      if (file.path) {
-        try {
-          await UploadService.delete(file.path);
-        } catch (error) {
-          console.error('Erreur lors de la suppression du fichier:', file.name, error);
+    // En mode édition, ne pas supprimer les fichiers existants du serveur
+    if (!isEditMode.value) {
+      // Supprimer les fichiers uploadés du serveur (uniquement en mode création)
+      const filesToDelete = [
+        ...uploadedIDDocument.value,
+        ...uploadedPhotos.value,
+        ...uploadedFiscalDocuments.value
+      ];
+      
+      for (const file of filesToDelete) {
+        if (file.path) {
+          try {
+            await UploadService.delete(file.path);
+          } catch (error) {
+            console.error('Erreur lors de la suppression du fichier:', file.name, error);
+          }
         }
       }
+      
+      // Effacer le brouillon
+      clearFormStorage();
     }
     
-    // Effacer le brouillon
-    clearFormStorage();
-    
-    router.push('/dashboard');
+    // Rediriger vers la page appropriée
+    if (isEditMode.value) {
+      router.push(`/pdv/${editId.value}`);
+    } else {
+      router.push('/dashboard');
+    }
   } catch (error) {
     console.error('Erreur lors de l\'annulation:', error);
     // Rediriger quand même même en cas d'erreur de suppression
-    clearFormStorage();
-    router.push('/dashboard');
+    if (!isEditMode.value) {
+      clearFormStorage();
+    }
+    if (isEditMode.value) {
+      router.push(`/pdv/${editId.value}`);
+    } else {
+      router.push('/dashboard');
+    }
   }
 };
 
@@ -1964,7 +2017,7 @@ watch(() => formData.value.flooz_number, async (newValue) => {
   if (newValue && newValue.length === 11) {
     floozCheckTimeout = setTimeout(async () => {
       try {
-        const result = await PointOfSaleService.checkUniqueness('numero_flooz', newValue);
+        const result = await PointOfSaleService.checkUniqueness('numero_flooz', newValue, isEditMode.value ? editId.value : null);
         if (result.exists) {
           errors.value.flooz_number = 'Ce numéro Flooz est déjà utilisé par un autre point de vente';
         } else if (errors.value.flooz_number === 'Ce numéro Flooz est déjà utilisé par un autre point de vente') {
@@ -1985,7 +2038,7 @@ watch(() => formData.value.shortcode, async (newValue) => {
   if (newValue && newValue.length === 7) {
     shortcodeCheckTimeout = setTimeout(async () => {
       try {
-        const result = await PointOfSaleService.checkUniqueness('shortcode', newValue);
+        const result = await PointOfSaleService.checkUniqueness('shortcode', newValue, isEditMode.value ? editId.value : null);
         if (result.exists) {
           errors.value.shortcode = 'Ce shortcode est déjà utilisé par un autre point de vente';
         } else if (errors.value.shortcode === 'Ce shortcode est déjà utilisé par un autre point de vente') {
@@ -2030,7 +2083,132 @@ onMounted(async () => {
     loadingOrganizations.value = false;
   }
   
-  // Charger le brouillon sauvegardé (après avoir défini l'organisation par défaut)
-  loadFormFromStorage();
+  // Mode édition: charger les données du PDV
+  if (isEditMode.value && editId.value) {
+    await loadPdvData();
+  } else {
+    // Mode création: charger le brouillon sauvegardé (après avoir défini l'organisation par défaut)
+    loadFormFromStorage();
+  }
 });
+
+// Charger les données du PDV en mode édition
+const loadPdvData = async () => {
+  loadingPdv.value = true;
+  try {
+    const response = await PointOfSaleService.getById(editId.value);
+    const pdv = response.pdv || response; // L'API renvoie { pdv: ..., proximity_alert: ... }
+    
+    console.log('PDV data loaded:', pdv);
+    console.log('Support visibilite from API:', pdv.support_visibilite);
+    console.log('Etat support from API:', pdv.etat_support);
+    console.log('Regime fiscal from API:', pdv.regime_fiscal);
+    
+    // Déterminer si le PDV a un NIF (utiliser 'oui'/'non' car les radio buttons utilisent ces valeurs)
+    const hasNifValue = (pdv.nif && pdv.nif.trim() !== '') ? 'oui' : '';
+    
+    // Helper pour normaliser les valeurs de support visibilité
+    // Les valeurs en DB peuvent être en majuscules, on cherche la correspondance exacte dans les options
+    const normalizeVisibilitySupport = (value) => {
+      if (!value) return '';
+      const options = ['Autocollant', 'Potence', 'Chevalet', 'Buget Flags', 'Parasols', 'Beach Flags', 'Enseignes Lumineuses'];
+      // Chercher une correspondance insensible à la casse
+      const match = options.find(opt => opt.toLowerCase() === value.toLowerCase());
+      return match || value;
+    };
+    
+    // Helper pour normaliser l'état du support
+    const normalizeSupportState = (value) => {
+      if (!value) return '';
+      // Les valeurs attendues sont BON et MAUVAIS (majuscules)
+      return value.toUpperCase();
+    };
+    
+    // Mapper les données du PDV vers le formulaire
+    formData.value = {
+      organization_id: pdv.organization_id || '',
+      point_name: pdv.nom_point || '',
+      flooz_number: pdv.numero_flooz || '',
+      shortcode: pdv.shortcode || '',
+      profile: pdv.profil || '',
+      
+      // Propriétaire - utiliser les vrais noms de champs du backend
+      owner_phone: pdv.numero_proprietaire || '',
+      owner_first_name: pdv.firstname || '',
+      owner_last_name: pdv.lastname || '',
+      alternative_contact: pdv.autre_contact || '',
+      owner_id_type: pdv.id_description || '',
+      owner_id_number: pdv.id_number || '',
+      owner_id_expiry_date: pdv.id_expiry_date ? pdv.id_expiry_date.split('T')[0] : '',
+      owner_gender: pdv.gender || pdv.sexe_gerant || '',
+      owner_date_of_birth: pdv.date_of_birth ? pdv.date_of_birth.split('T')[0] : '',
+      owner_nationality: pdv.nationality || '',
+      owner_profession: pdv.profession || '',
+      
+      // Localisation
+      region: pdv.region || '',
+      prefecture: pdv.prefecture || '',
+      commune: pdv.commune || '',
+      canton: pdv.canton || '',
+      city: pdv.ville || '',
+      neighborhood: pdv.quartier || '',
+      location_description: pdv.localisation || '',
+      latitude: pdv.latitude || '',
+      longitude: pdv.longitude || '',
+      gps_accuracy: pdv.gps_accuracy || null,
+      
+      // Fiscal - initialiser has_nif à true si NIF présent
+      has_nif: hasNifValue,
+      nif: pdv.nif || '',
+      tax_regime: pdv.regime_fiscal || '',
+      visibility_support: normalizeVisibilitySupport(pdv.support_visibilite),
+      support_state: normalizeSupportState(pdv.etat_support),
+      cagnt_number: pdv.numero_cagnt || '',
+      
+      // Activity
+      activity_type: pdv.type_activite || ''
+    };
+    
+    console.log('FormData après mapping:', formData.value.visibility_support, formData.value.support_state);
+    
+    // Charger les fichiers existants
+    if (pdv.photos && pdv.photos.length > 0) {
+      uploadedPhotos.value = pdv.photos.map(photo => ({
+        id: photo.id,
+        name: photo.name || photo.original_name || photo.file_path?.split('/').pop(),
+        path: photo.file_path || photo.path,
+        url: photo.url,
+        type: 'image'
+      }));
+    }
+    
+    if (pdv.id_documents && pdv.id_documents.length > 0) {
+      uploadedIDDocument.value = pdv.id_documents.map(doc => ({
+        id: doc.id,
+        name: doc.name || doc.original_name || doc.file_path?.split('/').pop(),
+        path: doc.file_path || doc.path,
+        url: doc.url,
+        type: 'document'
+      }));
+    }
+    
+    if (pdv.fiscal_documents && pdv.fiscal_documents.length > 0) {
+      uploadedFiscalDocuments.value = pdv.fiscal_documents.map(doc => ({
+        id: doc.id,
+        name: doc.name || doc.original_name || doc.file_path?.split('/').pop(),
+        path: doc.file_path || doc.path,
+        url: doc.url,
+        type: 'document'
+      }));
+    }
+    
+    toast.success('Données du PDV chargées', 'Succès');
+  } catch (error) {
+    console.error('Error loading PDV data:', error);
+    toast.error('Erreur lors du chargement des données du PDV', 'Erreur');
+    router.push('/pdv/list');
+  } finally {
+    loadingPdv.value = false;
+  }
+};
 </script>
