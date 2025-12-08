@@ -223,5 +223,63 @@ class StatisticsController extends Controller
             'averageTime' => $averageTime,
         ]);
     }
+
+    /**
+     * Récupérer les PDV avec alertes de cohérence géographique
+     */
+    public function geoAlerts(Request $request)
+    {
+        $user = $request->user();
+        $geoService = new \App\Services\GeoValidationService();
+        
+        // Récupérer tous les PDV avec coordonnées GPS et région
+        $query = PointOfSale::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->whereNotNull('region')
+            ->with(['organization:id,name,code', 'creator:id,name']);
+        
+        if (!$user->isAdmin()) {
+            $query->where('organization_id', $user->organization_id);
+        }
+        
+        $pdvs = $query->get();
+        
+        $alerts = [];
+        
+        foreach ($pdvs as $pdv) {
+            $validation = $geoService->validateRegionCoordinates(
+                (float) $pdv->latitude,
+                (float) $pdv->longitude,
+                $pdv->region
+            );
+            
+            if ($validation['has_alert']) {
+                $alerts[] = [
+                    'id' => $pdv->id,
+                    'nom_point' => $pdv->nom_point,
+                    'numero_flooz' => $pdv->numero_flooz,
+                    'shortcode' => $pdv->shortcode,
+                    'status' => $pdv->status,
+                    'declared_region' => $pdv->region,
+                    'actual_region' => $validation['actual_region'] ?? null,
+                    'actual_region_name' => $validation['actual_region_name'] ?? null,
+                    'alert_type' => $validation['alert_type'],
+                    'message' => $validation['message'],
+                    'latitude' => $pdv->latitude,
+                    'longitude' => $pdv->longitude,
+                    'organization' => $pdv->organization,
+                    'creator' => $pdv->creator,
+                    'created_at' => $pdv->created_at
+                ];
+            }
+        }
+        
+        return response()->json([
+            'total_checked' => $pdvs->count(),
+            'alerts_count' => count($alerts),
+            'alerts' => $alerts
+        ]);
+    }
 }
 

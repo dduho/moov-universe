@@ -105,6 +105,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/by-region', [StatisticsController::class, 'byRegion']);
         Route::get('/timeline', [StatisticsController::class, 'timeline']);
         Route::get('/validation', [StatisticsController::class, 'validation']);
+        Route::get('/geo-alerts', [StatisticsController::class, 'geoAlerts']);
         
         // Admin only
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {

@@ -186,13 +186,25 @@
               <!-- Map -->
               <div class="lg:col-span-2">
                 <div class="bg-gray-100 rounded-xl h-64 border border-gray-200 overflow-hidden relative">
-                  <iframe
-                    :src="`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(pos.longitude)-0.01},${parseFloat(pos.latitude)-0.01},${parseFloat(pos.longitude)+0.01},${parseFloat(pos.latitude)+0.01}&layer=mapnik&marker=${pos.latitude},${pos.longitude}`"
-                    class="w-full h-full"
-                    frameborder="0"
-                  ></iframe>
-                  <div class="absolute bottom-2 right-2 bg-white px-3 py-1 rounded-lg shadow-lg text-xs font-mono text-gray-600">
-                    {{ parseFloat(pos.latitude).toFixed(7) }}, {{ parseFloat(pos.longitude).toFixed(7) }}
+                  <!-- Afficher la carte seulement si les coordonnées sont valides -->
+                  <template v-if="pos.latitude && pos.longitude">
+                    <iframe
+                      :src="`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(pos.longitude)-0.01},${parseFloat(pos.latitude)-0.01},${parseFloat(pos.longitude)+0.01},${parseFloat(pos.latitude)+0.01}&layer=mapnik&marker=${pos.latitude},${pos.longitude}`"
+                      class="w-full h-full"
+                      frameborder="0"
+                    ></iframe>
+                    <div class="absolute bottom-2 right-2 bg-white px-3 py-1 rounded-lg shadow-lg text-xs font-mono text-gray-600">
+                      {{ parseFloat(pos.latitude).toFixed(7) }}, {{ parseFloat(pos.longitude).toFixed(7) }}
+                    </div>
+                  </template>
+                  <!-- Message si pas de coordonnées GPS -->
+                  <div v-else class="w-full h-full flex flex-col items-center justify-center text-gray-500">
+                    <svg class="w-12 h-12 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <p class="font-semibold">Coordonnées GPS manquantes</p>
+                    <p class="text-sm text-gray-400">Ce PDV n'a pas de position GPS</p>
                   </div>
                 </div>
               </div>

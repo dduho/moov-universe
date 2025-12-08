@@ -315,6 +315,117 @@
             </div>
           </div>
 
+          <!-- Geographic Inconsistency Alert (Admin only) -->
+          <div v-if="authStore.isAdmin && geoAlerts.alerts_count > 0" class="mb-8">
+            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/50">
+              <div class="flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-6 h-6 sm:w-7 sm:h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                        {{ geoAlerts.alerts_count }} incohérence{{ geoAlerts.alerts_count > 1 ? 's' : '' }} géographique{{ geoAlerts.alerts_count > 1 ? 's' : '' }}
+                      </h3>
+                      <p class="text-xs sm:text-sm text-gray-600">
+                        Des PDV ont des coordonnées GPS qui ne correspondent pas à leur région déclarée
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    @click="showGeoAlerts = !showGeoAlerts"
+                    class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    {{ showGeoAlerts ? 'Masquer' : 'Voir les détails' }}
+                    <svg 
+                      class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" 
+                      :class="{ 'rotate-180': showGeoAlerts }"
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Geo Stats Summary -->
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div class="p-3 rounded-xl bg-white/80">
+                    <p class="text-xs text-gray-500 mb-1">PDV vérifiés</p>
+                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ geoAlerts.total_checked }}</p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-purple-100">
+                    <p class="text-xs text-purple-600 mb-1">Incohérences</p>
+                    <p class="text-xl sm:text-2xl font-bold text-purple-700">{{ geoAlerts.alerts_count }}</p>
+                  </div>
+                </div>
+                
+                <!-- Detailed list (expandable) -->
+                <transition
+                  enter-active-class="transition-all duration-300 ease-out"
+                  enter-from-class="max-h-0 opacity-0"
+                  enter-to-class="max-h-[500px] opacity-100"
+                  leave-active-class="transition-all duration-300 ease-in"
+                  leave-from-class="max-h-[500px] opacity-100"
+                  leave-to-class="max-h-0 opacity-0"
+                >
+                  <div v-show="showGeoAlerts" class="overflow-hidden">
+                    <div class="mt-4 max-h-80 overflow-y-auto rounded-xl bg-white/80 border border-purple-200">
+                      <table class="min-w-full divide-y divide-purple-100">
+                        <thead class="bg-purple-50 sticky top-0">
+                          <tr>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-purple-700">Nom</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-purple-700 hidden sm:table-cell">N° Flooz</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-purple-700">Déclarée</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-purple-700">GPS</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-purple-700">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-purple-50">
+                          <tr 
+                            v-for="alert in geoAlerts.alerts.slice(0, 20)" 
+                            :key="alert.id"
+                            class="hover:bg-purple-25 transition-colors"
+                          >
+                            <td class="px-4 py-2 text-sm font-medium text-gray-900">{{ alert.nom_point }}</td>
+                            <td class="px-4 py-2 text-sm text-gray-600 hidden sm:table-cell">{{ alert.numero_flooz }}</td>
+                            <td class="px-4 py-2">
+                              <span class="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">{{ alert.declared_region }}</span>
+                            </td>
+                            <td class="px-4 py-2">
+                              <span class="px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-700">{{ alert.actual_region_name || alert.actual_region || 'Hors Togo' }}</span>
+                            </td>
+                            <td class="px-4 py-2 text-center">
+                              <router-link 
+                                :to="`/pdv/${alert.id}`"
+                                class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-purple-500 hover:bg-purple-600 transition-colors"
+                              >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                <span class="hidden sm:inline">Voir</span>
+                              </router-link>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      <div v-if="geoAlerts.alerts.length > 20" class="px-4 py-3 bg-purple-50 text-center">
+                        <p class="text-xs text-purple-600">
+                          Et {{ geoAlerts.alerts.length - 20 }} autres incohérences...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+
           <!-- Quick Actions -->
           <div class="mb-8">
             <div class="glass-card p-4 sm:p-6 rounded-2xl">
@@ -720,6 +831,14 @@ const gpsStats = ref({
 });
 const showGpsDetails = ref(false);
 
+// Geo alerts (incohérence région/GPS)
+const geoAlerts = ref({
+  total_checked: 0,
+  alerts_count: 0,
+  alerts: []
+});
+const showGeoAlerts = ref(false);
+
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('fr-FR', { 
     weekday: 'long', 
@@ -790,6 +909,16 @@ const fetchDashboardData = async () => {
       gpsStats.value = gpsData;
     } catch (gpsError) {
       console.error('Failed to fetch GPS stats:', gpsError);
+    }
+    
+    // Fetch geo alerts (admin only)
+    if (authStore.isAdmin) {
+      try {
+        const alertsData = await StatisticsService.getGeoAlerts();
+        geoAlerts.value = alertsData;
+      } catch (geoError) {
+        console.error('Failed to fetch geo alerts:', geoError);
+      }
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error);

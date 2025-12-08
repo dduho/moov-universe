@@ -126,6 +126,37 @@
           </div>
         </div>
 
+        <!-- Geographic Inconsistency Alert -->
+        <div v-if="geoValidation.hasAlert" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2" :class="geoValidation.alertType === 'error' ? 'border-red-400 bg-red-50/50' : 'border-purple-400 bg-purple-50/50'">
+          <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2" :class="geoValidation.alertType === 'error' ? 'text-red-800' : 'text-purple-800'">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {{ geoValidation.alertType === 'error' ? 'Erreur de localisation' : 'Incohérence géographique détectée' }}
+          </h3>
+          <p class="text-xs sm:text-sm mb-2" :class="geoValidation.alertType === 'error' ? 'text-red-700' : 'text-purple-700'">
+            {{ geoValidation.message }}
+          </p>
+          <div v-if="geoValidation.actualRegion" class="mt-3 p-3 rounded-lg bg-white/50 border" :class="geoValidation.alertType === 'error' ? 'border-red-200' : 'border-purple-200'">
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm">
+              <div>
+                <span class="font-semibold" :class="geoValidation.alertType === 'error' ? 'text-red-600' : 'text-purple-600'">Région déclarée:</span>
+                <span class="ml-1 font-bold">{{ geoValidation.declaredRegion }}</span>
+              </div>
+              <svg class="hidden sm:block w-4 h-4" :class="geoValidation.alertType === 'error' ? 'text-red-400' : 'text-purple-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+              </svg>
+              <div>
+                <span class="font-semibold" :class="geoValidation.alertType === 'error' ? 'text-red-600' : 'text-purple-600'">Région GPS:</span>
+                <span class="ml-1 font-bold">{{ geoValidation.actualRegionName || geoValidation.actualRegion }}</span>
+              </div>
+            </div>
+          </div>
+          <p class="text-xs mt-3" :class="geoValidation.alertType === 'error' ? 'text-red-600' : 'text-purple-600'">
+            <strong>Action recommandée :</strong> Vérifiez les coordonnées GPS ou la région déclarée de ce point de vente.
+          </p>
+        </div>
+
         <!-- Main Content Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           <!-- Left Column -->
@@ -638,6 +669,7 @@ import RejectionModal from '../components/RejectionModal.vue';
 import TaskList from '../components/TaskList.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
+import { validateRegionCoordinates } from '../data/regionBoundaries';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 import { useConfirm } from '../composables/useConfirm';
@@ -692,6 +724,32 @@ const hasValidCoordinates = computed(() => {
   const lat = parseFloat(pos.value.latitude);
   const lng = parseFloat(pos.value.longitude);
   return !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0 && pos.value.latitude !== null && pos.value.longitude !== null;
+});
+
+// Computed pour la validation géographique (cohérence région/GPS)
+const geoValidation = computed(() => {
+  if (!pos.value || !hasValidCoordinates.value || !pos.value.region) {
+    return { hasAlert: false };
+  }
+  
+  // Utiliser la validation du backend si disponible (normaliser snake_case vers camelCase)
+  if (pos.value.geo_validation) {
+    const gv = pos.value.geo_validation;
+    return {
+      isValid: gv.is_valid ?? gv.isValid ?? true,
+      hasAlert: gv.has_alert ?? gv.hasAlert ?? false,
+      alertType: gv.alert_type ?? gv.alertType ?? 'warning',
+      message: gv.message ?? null,
+      declaredRegion: gv.declared_region ?? gv.declaredRegion ?? null,
+      actualRegion: gv.actual_region ?? gv.actualRegion ?? null,
+      actualRegionName: gv.actual_region_name ?? gv.actualRegionName ?? null
+    };
+  }
+  
+  // Sinon, calculer côté frontend
+  const lat = parseFloat(pos.value.latitude);
+  const lng = parseFloat(pos.value.longitude);
+  return validateRegionCoordinates(lat, lng, pos.value.region);
 });
 
 const hasAnyDocuments = computed(() => {

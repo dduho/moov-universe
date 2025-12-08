@@ -20,4 +20,9 @@ export default {
     const response = await api.get('/statistics/timeline', { params: { days } });
     return response.data;
   },
+
+  async getGeoAlerts() {
+    const response = await api.get('/statistics/geo-alerts');
+    return response.data;
+  }
 };

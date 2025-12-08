@@ -63,7 +63,29 @@ class PointOfSale extends Model
         'rejected_at' => 'datetime',
     ];
 
-    protected $appends = ['has_active_task', 'has_task_in_revision'];
+    protected $appends = ['has_active_task', 'has_task_in_revision', 'geo_validation'];
+
+    /**
+     * Accessor pour la validation géographique
+     * Vérifie si les coordonnées GPS correspondent à la région déclarée
+     */
+    public function getGeoValidationAttribute()
+    {
+        if (!$this->latitude || !$this->longitude || !$this->region) {
+            return [
+                'is_valid' => true,
+                'has_alert' => false,
+                'message' => null
+            ];
+        }
+        
+        $geoService = new \App\Services\GeoValidationService();
+        return $geoService->validateRegionCoordinates(
+            (float) $this->latitude,
+            (float) $this->longitude,
+            $this->region
+        );
+    }
 
     /**
      * Accessor pour vérifier si le PDV a une tâche active (non validée/complétée)
