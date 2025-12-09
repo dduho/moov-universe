@@ -194,11 +194,17 @@
       </div>
 
       <!-- Grid View -->
-      <div v-else-if="viewMode === 'grid'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <TransitionGroup 
+        v-else-if="viewMode === 'grid'" 
+        name="pdv-grid" 
+        tag="div" 
+        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      >
         <div
-          v-for="pos in paginatedPOS"
+          v-for="(pos, index) in paginatedPOS"
           :key="pos.id"
-          class="glass-card overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group"
+          :style="{ '--animation-delay': `${index * 50}ms` }"
+          class="glass-card overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group pdv-item"
           @click="$router.push(`/pdv/${pos.id}`)"
         >
           <!-- Header with gradient -->
@@ -306,7 +312,7 @@
             </svg>
           </div>
         </div>
-      </div>
+      </TransitionGroup>
 
       <!-- List View -->
       <div v-else class="glass-card overflow-hidden">
@@ -323,11 +329,12 @@
               <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
-          <tbody class="bg-white/50 divide-y divide-gray-200">
+          <TransitionGroup name="pdv-list" tag="tbody" class="bg-white/50 divide-y divide-gray-200">
             <tr
-              v-for="pos in paginatedPOS"
+              v-for="(pos, index) in paginatedPOS"
               :key="pos.id"
-              class="hover:bg-white/80 transition-colors cursor-pointer"
+              :style="{ '--animation-delay': `${index * 30}ms` }"
+              class="hover:bg-white/80 transition-colors cursor-pointer pdv-row"
               @click="$router.push(`/pdv/${pos.id}`)"
             >
               <td class="px-6 py-4">
@@ -378,7 +385,7 @@
                 </button>
               </td>
             </tr>
-          </tbody>
+          </TransitionGroup>
         </table>
       </div>
 
@@ -663,3 +670,81 @@ onMounted(async () => {
   await organizationStore.fetchOrganizations();
 });
 </script>
+
+<style scoped>
+/* Animation pour la vue Grid */
+.pdv-grid-move,
+.pdv-grid-enter-active,
+.pdv-grid-leave-active {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pdv-grid-enter-from {
+  opacity: 0;
+  transform: translateY(30px) scale(0.9);
+}
+
+.pdv-grid-leave-to {
+  opacity: 0;
+  transform: translateY(-30px) scale(0.9);
+}
+
+.pdv-grid-leave-active {
+  position: absolute;
+}
+
+/* Animation décalée pour chaque élément */
+.pdv-item {
+  animation: slideInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  animation-delay: var(--animation-delay, 0ms);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Animation pour la vue Liste */
+.pdv-list-move,
+.pdv-list-enter-active,
+.pdv-list-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pdv-list-enter-from {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.pdv-list-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.pdv-list-leave-active {
+  position: absolute;
+}
+
+/* Animation décalée pour chaque ligne */
+.pdv-row {
+  animation: fadeSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+  animation-delay: var(--animation-delay, 0ms);
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+</style>
