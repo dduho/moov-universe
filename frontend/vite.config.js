@@ -2,11 +2,14 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Désactiver PWA si VITE_DISABLE_PWA est défini
+const disablePWA = process.env.VITE_DISABLE_PWA === 'true'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
-    VitePWA({
+    !disablePWA && VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.svg', 'icon.svg'],
       manifest: {
@@ -96,8 +99,8 @@ export default defineConfig({
         ]
       },
       devOptions: {
-        enabled: true
+        enabled: false // Désactivé car cause des problèmes avec SSL auto-signé
       }
     })
-  ],
+  ].filter(Boolean),
 })
