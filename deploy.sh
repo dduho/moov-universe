@@ -119,6 +119,13 @@ deploy_backend() {
     log_info "Installation des dépendances Composer..."
     composer install --no-dev --optimize-autoloader --no-interaction
     
+    # Génération de la clé d'application si nécessaire
+    log_info "Vérification de la clé d'application..."
+    if ! grep -q "^APP_KEY=base64:" .env 2>/dev/null; then
+        php artisan key:generate --force
+        log_success "Clé d'application générée"
+    fi
+    
     # Migrations
     if [[ "$NO_MIGRATE" != "true" ]]; then
         if [[ "$FRESH_MIGRATE" == "true" ]]; then
