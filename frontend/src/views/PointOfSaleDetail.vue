@@ -557,6 +557,13 @@
                 Aucun document disponible
               </p>
             </div>
+
+            <!-- Notes -->
+            <NotesSection
+              :point-of-sale-id="pos.id"
+              :current-user-id="authStore.user?.id"
+              :is-admin="authStore.isAdmin"
+            />
           </div>
         </div>
       </div>
@@ -667,6 +674,7 @@ import 'leaflet/dist/leaflet.css';
 import Navbar from '../components/Navbar.vue';
 import RejectionModal from '../components/RejectionModal.vue';
 import TaskList from '../components/TaskList.vue';
+import NotesSection from '../components/NotesSection.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
 import { validateRegionCoordinates } from '../data/regionBoundaries';

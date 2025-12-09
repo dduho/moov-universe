@@ -13,6 +13,7 @@ use App\Http\Controllers\UploadController;
 use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\NoteController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -83,6 +84,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/validate', [PointOfSaleController::class, 'validatePdv']);
             Route::post('/{id}/reject', [PointOfSaleController::class, 'reject']);
         });
+
+        // Notes routes (accessible à tous les utilisateurs authentifiés)
+        Route::get('/{pointOfSaleId}/notes', [NoteController::class, 'index']);
+        Route::post('/{pointOfSaleId}/notes', [NoteController::class, 'store']);
+        Route::put('/{pointOfSaleId}/notes/{noteId}', [NoteController::class, 'update']);
+        Route::delete('/{pointOfSaleId}/notes/{noteId}', [NoteController::class, 'destroy']);
+        Route::post('/{pointOfSaleId}/notes/{noteId}/toggle-pin', [NoteController::class, 'togglePin']);
     });
 
     // Organization routes (Admin only)

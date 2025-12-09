@@ -170,6 +170,11 @@ class PointOfSale extends Model
         return $this->hasMany(PointOfSaleTag::class);
     }
 
+    public function notes()
+    {
+        return $this->hasMany(Note::class)->orderByDesc('is_pinned')->orderByDesc('created_at');
+    }
+
     /**
      * Ajouter un tag au PDV
      */
