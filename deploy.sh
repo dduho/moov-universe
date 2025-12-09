@@ -17,7 +17,7 @@ set -e  # Arrêter le script en cas d'erreur
 # ============================================
 
 # Répertoire du projet
-PROJECT_DIR="/var/www/moov-universe"
+PROJECT_DIR="/data/www/moov-universe"
 
 # Répertoire du backend Laravel
 BACKEND_DIR="$PROJECT_DIR/backend"
@@ -26,7 +26,7 @@ BACKEND_DIR="$PROJECT_DIR/backend"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 
 # Répertoire où Nginx sert le frontend (dist)
-FRONTEND_PUBLIC_DIR="/var/www/moov-universe/frontend/dist"
+FRONTEND_PUBLIC_DIR="/data/www/moov-universe/frontend/dist"
 
 # Branche Git à déployer
 GIT_BRANCH="main"
