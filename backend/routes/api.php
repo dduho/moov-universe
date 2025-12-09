@@ -24,12 +24,14 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/change-password', [AuthController::class, 'changePassword']);
 
     // Geography routes (public for authenticated users)
     Route::prefix('geography')->group(function () {

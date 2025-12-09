@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rules\Password;
 
 class AuthController extends Controller
 {
@@ -21,13 +22,13 @@ class AuthController extends Controller
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
+                'email' => ['Les identifiants sont incorrects.'],
             ]);
         }
 
         if (!$user->is_active) {
             throw ValidationException::withMessages([
-                'email' => ['Your account is inactive.'],
+                'email' => ['Votre compte est désactivé.'],
             ]);
         }
 
@@ -36,6 +37,7 @@ class AuthController extends Controller
         return response()->json([
             'token' => $token,
             'user' => $user->load(['role', 'organization']),
+            'must_change_password' => (bool) $user->must_change_password,
         ]);
     }
 
@@ -43,13 +45,86 @@ class AuthController extends Controller
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out successfully']);
+        return response()->json(['message' => 'Déconnexion réussie']);
     }
 
     public function me(Request $request)
     {
+        $user = $request->user()->load(['role', 'organization']);
+        
         return response()->json([
-            'user' => $request->user()->load(['role', 'organization']),
+            'user' => $user,
+            'must_change_password' => (bool) $user->must_change_password,
+        ]);
+    }
+
+    /**
+     * Changer le mot de passe (première connexion ou volontaire)
+     */
+    public function changePassword(Request $request)
+    {
+        $user = $request->user();
+        
+        // Règles de validation du mot de passe sécurisé
+        $request->validate([
+            'current_password' => 'required',
+            'new_password' => [
+                'required',
+                'confirmed',
+                Password::min(8)
+                    ->letters()
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+                    ->uncompromised(),
+            ],
+        ], [
+            'current_password.required' => 'Le mot de passe actuel est requis.',
+            'new_password.required' => 'Le nouveau mot de passe est requis.',
+            'new_password.confirmed' => 'La confirmation du mot de passe ne correspond pas.',
+            'new_password.min' => 'Le mot de passe doit contenir au moins 8 caractères.',
+        ]);
+
+        // Vérifier le mot de passe actuel
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Le mot de passe actuel est incorrect.'],
+            ]);
+        }
+
+        // Vérifier que le nouveau mot de passe est différent de l'ancien
+        if (Hash::check($request->new_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'new_password' => ['Le nouveau mot de passe doit être différent de l\'ancien.'],
+            ]);
+        }
+
+        // Mettre à jour le mot de passe
+        $user->update([
+            'password' => Hash::make($request->new_password),
+            'must_change_password' => false,
+            'password_changed_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Mot de passe modifié avec succès.',
+            'user' => $user->fresh()->load(['role', 'organization']),
+        ]);
+    }
+
+    /**
+     * Obtenir les règles de validation du mot de passe
+     */
+    public function getPasswordRules()
+    {
+        return response()->json([
+            'rules' => [
+                ['id' => 'length', 'description' => 'Au moins 8 caractères', 'regex' => '.{8,}'],
+                ['id' => 'lowercase', 'description' => 'Au moins une lettre minuscule', 'regex' => '[a-z]'],
+                ['id' => 'uppercase', 'description' => 'Au moins une lettre majuscule', 'regex' => '[A-Z]'],
+                ['id' => 'number', 'description' => 'Au moins un chiffre', 'regex' => '[0-9]'],
+                ['id' => 'special', 'description' => 'Au moins un caractère spécial (!@#$%^&*...)', 'regex' => '[!@#$%^&*(),.?":{}|<>_\\-+=\\[\\]\\\\;\'`~]'],
+            ],
         ]);
     }
 

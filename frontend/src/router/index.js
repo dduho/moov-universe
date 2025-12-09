@@ -18,6 +18,12 @@ const routes = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/ChangePassword.vue'),
+    meta: { requiresAuth: true, allowPasswordChange: true },
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },
@@ -141,11 +147,20 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore();
   
+  // Si l'utilisateur n'est pas authentifié et la route nécessite l'authentification
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next({ name: 'Login' });
-  } else if (to.meta.requiresAdmin && !authStore.isAdmin) {
+  } 
+  // Si l'utilisateur doit changer son mot de passe et ne va pas vers la page de changement
+  else if (authStore.isAuthenticated && authStore.requiresPasswordChange && !to.meta.allowPasswordChange && to.name !== 'Login') {
+    next({ name: 'ChangePassword' });
+  }
+  // Si la route nécessite un admin et l'utilisateur n'est pas admin
+  else if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next({ name: 'Dashboard' });
-  } else if (to.name === 'Login' && authStore.isAuthenticated) {
+  } 
+  // Si l'utilisateur est déjà authentifié et va vers Login
+  else if (to.name === 'Login' && authStore.isAuthenticated) {
     next({ name: 'Dashboard' });
   } else {
     next();

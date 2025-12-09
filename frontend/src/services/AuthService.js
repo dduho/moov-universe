@@ -20,4 +20,14 @@ export default {
     const response = await api.post('/register', data);
     return response.data;
   },
+
+  async changePassword(data) {
+    const response = await api.post('/change-password', data);
+    return response.data;
+  },
+
+  async getPasswordRules() {
+    const response = await api.get('/password-rules');
+    return response.data;
+  },
 };

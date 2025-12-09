@@ -124,9 +124,11 @@ class UserController extends Controller
 
         $user = User::findOrFail($id);
         $user->password = Hash::make($validated['password']);
+        $user->must_change_password = true; // Force password change on next login
+        $user->password_changed_at = null;
         $user->save();
 
-        return response()->json(['message' => 'Password reset successfully']);
+        return response()->json(['message' => 'Mot de passe réinitialisé avec succès. L\'utilisateur devra le changer à sa prochaine connexion.']);
     }
 
     public function toggleStatus($id)
