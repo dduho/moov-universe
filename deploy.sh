@@ -113,7 +113,7 @@ deploy_backend() {
     
     # Mode maintenance
     log_info "Activation du mode maintenance..."
-    php artisan down --message="Mise à jour en cours..." --retry=60 || true
+    php artisan down || true
     
     # Installation des dépendances
     log_info "Installation des dépendances Composer..."
@@ -197,12 +197,12 @@ reload_services() {
     log_info "Rechargement des services..."
     
     # Recharger PHP-FPM si installé
-    if systemctl is-active --quiet php8.2-fpm 2>/dev/null; then
+    if systemctl is-active --quiet php8.3-fpm 2>/dev/null; then
+        systemctl reload php8.3-fpm
+        log_success "PHP-FPM 8.3 rechargé"
+    elif systemctl is-active --quiet php8.2-fpm 2>/dev/null; then
         systemctl reload php8.2-fpm
-        log_success "PHP-FPM rechargé"
-    elif systemctl is-active --quiet php8.1-fpm 2>/dev/null; then
-        systemctl reload php8.1-fpm
-        log_success "PHP-FPM rechargé"
+        log_success "PHP-FPM 8.2 rechargé"
     elif systemctl is-active --quiet php-fpm 2>/dev/null; then
         systemctl reload php-fpm
         log_success "PHP-FPM rechargé"
