@@ -113,7 +113,10 @@
         <!-- Footer -->
         <div class="mt-6 text-center">
           <p class="text-xs text-gray-500">
-            © 2025 Moov Money Universe. Tous droits réservés.
+            © {{ currentYear }} Moov Money Universe. Tous droits réservés.
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Crafted with <span class="text-red-500">❤️</span> by David D.
           </p>
         </div>
       </div>
@@ -137,6 +140,7 @@ const form = ref({
 
 const loading = ref(false);
 const error = ref('');
+const currentYear = new Date().getFullYear()
 
 // Icon components
 const EmailIcon = {
