@@ -90,7 +90,7 @@ select {
 }
 
 @media (max-width: 640px) {
-  .form-input,
+  .form-input:not(#adresse-email, #mot-de-passe),
   .form-select-button {
     padding-left: 0.75rem;
     padding-right: 0.75rem;
