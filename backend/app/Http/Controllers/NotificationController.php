@@ -17,7 +17,8 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         $notifications = DB::table('notifications')
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get()
@@ -25,12 +26,12 @@ class NotificationController extends Controller
                 $data = json_decode($notification->data, true);
                 return [
                     'id' => $notification->id,
-                    'type' => $notification->type,
-                    'title' => $notification->title,
-                    'message' => $notification->message,
+                    'type' => $data['type'] ?? 'system',
+                    'title' => $data['title'] ?? 'Notification',
+                    'message' => $data['message'] ?? '',
                     'data' => $data,
-                    'is_read' => (bool) $notification->read,
-                    'read_at' => $notification->read ? $notification->updated_at : null,
+                    'is_read' => $notification->read_at !== null,
+                    'read_at' => $notification->read_at,
                     'created_at' => $notification->created_at,
                 ];
             });
@@ -46,8 +47,9 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         $count = DB::table('notifications')
-            ->where('user_id', $user->id)
-            ->where('read', false)
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $user->id)
+            ->whereNull('read_at')
             ->count();
 
         return response()->json(['count' => $count]);
@@ -62,9 +64,10 @@ class NotificationController extends Controller
         
         $updated = DB::table('notifications')
             ->where('id', $id)
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $user->id)
             ->update([
-                'read' => true,
+                'read_at' => now(),
                 'updated_at' => now(),
             ]);
 
@@ -83,10 +86,11 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         DB::table('notifications')
-            ->where('user_id', $user->id)
-            ->where('read', false)
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $user->id)
+            ->whereNull('read_at')
             ->update([
-                'read' => true,
+                'read_at' => now(),
                 'updated_at' => now(),
             ]);
 
@@ -102,7 +106,8 @@ class NotificationController extends Controller
         
         $deleted = DB::table('notifications')
             ->where('id', $id)
-            ->where('user_id', $user->id)
+            ->where('notifiable_type', User::class)
+            ->where('notifiable_id', $user->id)
             ->delete();
 
         if (!$deleted) {
