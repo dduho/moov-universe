@@ -154,7 +154,7 @@ deploy_backend() {
     
     # Permissions
     log_info "Configuration des permissions..."
-    chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
+    sudo chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
     sudo chown -R www-data:www-data storage bootstrap/cache
     sudo chmod -R 775 storage bootstrap/cache
     
@@ -183,7 +183,7 @@ EOF
     
     # Permissions
     log_info "Configuration des permissions..."
-    chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR"
+    sudo chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR"
     
     # Build de production
     log_info "Build de production..."
@@ -199,8 +199,8 @@ EOF
     
     # Permissions
     log_info "Configuration des permissions..."
-    chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
-    chmod -R 755 "$FRONTEND_DIR/dist"
+    sudo chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
+    sudo chmod -R 755 "$FRONTEND_DIR/dist"
     
     log_success "Frontend déployé avec succès"
 }
