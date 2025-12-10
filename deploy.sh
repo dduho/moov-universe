@@ -32,8 +32,8 @@ FRONTEND_PUBLIC_DIR="/data/www/moov-universe/frontend/dist"
 GIT_BRANCH="main"
 
 # Utilisateur web (www-data pour Nginx/Apache sur Ubuntu)
-WEB_USER="www-data"
-WEB_GROUP="www-data"
+WEB_USER="moov"
+WEB_GROUP="moov"
 
 # URL de l'API pour le frontend
 API_URL="https://10.80.16.51:8443/api"
@@ -179,6 +179,10 @@ EOF
     # Installation des dépendances
     log_info "Installation des dépendances NPM..."
     npm ci --production=false
+    
+    # Permissions
+    log_info "Configuration des permissions..."
+    chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR"
     
     # Build de production
     log_info "Build de production..."
