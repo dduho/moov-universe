@@ -155,6 +155,7 @@ deploy_backend() {
     # Permissions
     log_info "Configuration des permissions..."
     chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
+    sudo chown -R www-data:www-data storage bootstrap/cache
     chmod -R 775 storage bootstrap/cache
     
     # Désactivation du mode maintenance
