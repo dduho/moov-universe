@@ -295,12 +295,6 @@ done
 
 show_banner
 
-# Vérifier qu'on est root ou sudo
-if [[ $EUID -ne 0 ]]; then
-    log_error "Ce script doit être exécuté en tant que root (sudo)"
-    exit 1
-fi
-
 check_requirements
 pull_latest_code
 
