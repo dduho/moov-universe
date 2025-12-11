@@ -180,7 +180,24 @@
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Shortcode</p>
-                  <p class="text-lg font-bold text-gray-900">{{ formatShortcode(pos.shortcode) || 'N/A' }}</p>
+                  <div class="flex items-center gap-2">
+                    <p class="text-lg font-bold text-gray-900">{{ formatShortcode(pos.shortcode) || 'N/A' }}</p>
+                    <div v-if="!pos.shortcode || pos.shortcode === 'N/A'" class="group relative">
+                      <div class="flex items-center justify-center w-6 h-6 rounded-full bg-red-100 cursor-help">
+                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                      </div>
+                      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
+                        <div class="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                          Shortcode manquant
+                          <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1">
+                            <div class="border-4 border-transparent border-t-gray-900"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Profil</p>
@@ -326,6 +343,14 @@
                 </svg>
                 Contacts & Fiscalité
               </h2>
+
+              <div v-if="pos.missing_required_fields && pos.missing_required_fields.length" class="mb-4 p-4 rounded-xl border-2 border-yellow-300 bg-yellow-50/60 text-sm text-yellow-800">
+                <div class="font-bold mb-2">Informations obligatoires manquantes</div>
+                <ul class="list-disc list-inside space-y-1">
+                  <li v-for="(field, idx) in pos.missing_required_fields" :key="idx">{{ field }}</li>
+                </ul>
+              </div>
+
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Téléphone principal</p>
@@ -349,7 +374,7 @@
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Support de visibilité</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.support_visibilite || pos.visibility_support || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatVisibilitySupport(pos.support_visibilite || pos.visibility_support) || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">État du support</p>
@@ -800,6 +825,17 @@ const getStatusLabel = (status) => {
     rejected: 'Rejeté'
   };
   return labels[status] || status;
+};
+
+const formatVisibilitySupport = (value) => {
+  if (!value) return '';
+  const items = Array.isArray(value)
+    ? value
+    : `${value}`
+        .split(/[,+;|\/]+|\bet\b|\band\b/i)
+        .map(part => part.trim())
+        .filter(Boolean);
+  return items.join(', ');
 };
 
 const formatDate = (dateString) => {

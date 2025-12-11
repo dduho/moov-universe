@@ -168,6 +168,18 @@ class PointOfSaleController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('support_visibilite')) {
+            $request->merge([
+                'support_visibilite' => $this->normalizeSupportVisibilite($request->input('support_visibilite')),
+            ]);
+        }
+
+        if ($request->has('etat_support') && $request->filled('etat_support')) {
+            $request->merge([
+                'etat_support' => strtoupper($request->input('etat_support')),
+            ]);
+        }
+
         $validated = $request->validate([
             'organization_id' => 'required|exists:organizations,id',
             'dealer_name' => 'required|string',
@@ -200,8 +212,8 @@ class PointOfSaleController extends Controller
             'autre_contact' => 'nullable|string',
             'nif' => 'nullable|string',
             'regime_fiscal' => 'nullable|string',
-            'support_visibilite' => 'required|string',
-            'etat_support' => 'nullable|in:BON,MAUVAIS',
+            'support_visibilite' => 'nullable|string',
+            'etat_support' => 'nullable|in:BON,ACCEPTABLE,MAUVAIS,DEFRAICHI',
             'numero_cagnt' => 'required|string',
         ], [
             'numero_flooz.unique' => 'Ce numéro Flooz est déjà utilisé par un autre point de vente.',
@@ -341,6 +353,18 @@ class PointOfSaleController extends Controller
             return response()->json(['message' => 'Vous ne pouvez pas modifier ce PDV'], 422);
         }
 
+        if ($request->has('support_visibilite')) {
+            $request->merge([
+                'support_visibilite' => $this->normalizeSupportVisibilite($request->input('support_visibilite')),
+            ]);
+        }
+
+        if ($request->has('etat_support') && $request->filled('etat_support')) {
+            $request->merge([
+                'etat_support' => strtoupper($request->input('etat_support')),
+            ]);
+        }
+
         $validated = $request->validate([
             'dealer_name' => 'sometimes|string',
             'numero_flooz' => 'sometimes|string',
@@ -356,9 +380,17 @@ class PointOfSaleController extends Controller
             'prefecture' => 'sometimes|string',
             'commune' => 'nullable|string',
             'ville' => 'nullable|string',
+            'quartier' => 'nullable|string',
             'latitude' => 'sometimes|numeric|between:-90,90',
             'longitude' => 'sometimes|numeric|between:-180,180',
             'gps_accuracy' => 'nullable|numeric',
+            'support_visibilite' => 'nullable|string',
+            'etat_support' => 'nullable|in:BON,ACCEPTABLE,MAUVAIS,DEFRAICHI',
+            'numero_cagnt' => 'nullable|string',
+            'type_activite' => 'nullable|string',
+            'regime_fiscal' => 'nullable|string',
+            'nif' => 'nullable|string',
+            'autre_contact' => 'nullable|string',
         ]);
 
         $pdv->update($validated);
@@ -590,5 +622,77 @@ class PointOfSaleController extends Controller
         $pdv->delete();
 
         return response()->json(['message' => 'PDV deleted successfully']);
+    }
+
+    private function normalizeSupportVisibilite($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        // Si un tableau est reçu, l'aplatir en liste
+        $parts = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        $synonyms = [
+            'AUCUN' => null,
+            'NONE' => null,
+        ];
+
+        $mapping = [
+            'AUTOCOLLANT' => 'Autocollant',
+            'POTENCE' => 'Potence',
+            'CHEVALET' => 'Chevalet',
+            'BUJET FLAGS' => 'Buget Flags',
+            'BUDJET FLAGS' => 'Buget Flags',
+            'BUDGET FLAGS' => 'Buget Flags',
+            'PARASOLS' => 'Parasols',
+            'PARASOL' => 'Parasols',
+            'BEACH FLAGS' => 'Beach Flags',
+            'BEACH FLAG' => 'Beach Flags',
+            'ENSEIGNES LUMINEUSES' => 'Enseignes Lumineuses',
+            'ENSEIGNE LUMINEUSE' => 'Enseignes Lumineuses',
+            'DRAPELET' => 'Drapelet',
+            'DRAPELET FLOOZ MONEY' => 'Drapelet',
+            'DRAPEAU' => 'Drapelet',
+        ];
+
+        foreach ($parts as $entry) {
+            if ($entry === null) {
+                continue;
+            }
+
+            // Découper sur les séparateurs courants (+, virgule, point-virgule, barre, slash, "et")
+            $split = preg_split('/[\+;,\|\/]+|\bet\b|\band\b/i', (string) $entry);
+            foreach ($split as $rawPart) {
+                $clean = trim($rawPart);
+                if ($clean === '') {
+                    continue;
+                }
+
+                $upper = strtoupper($clean);
+
+                if (array_key_exists($upper, $synonyms) && $synonyms[$upper] === null) {
+                    // AUCUN / NONE -> ignorer la liste entière
+                    return null;
+                }
+
+                $mapped = $mapping[$upper] ?? null;
+                if (!$mapped) {
+                    // Formatage générique (titre)
+                    $mapped = ucwords(strtolower($clean));
+                }
+
+                if (!in_array($mapped, $normalized, true)) {
+                    $normalized[] = $mapped;
+                }
+            }
+        }
+
+        if (empty($normalized)) {
+            return null;
+        }
+
+        return implode(', ', $normalized);
     }
 }

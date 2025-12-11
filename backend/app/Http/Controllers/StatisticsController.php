@@ -122,11 +122,23 @@ class StatisticsController extends Controller
             ->limit(5)
             ->get();
 
+        // PDV incomplets (champs requis manquants) - limité pour éviter la charge
+        $incompletePdvs = (clone $query)
+            ->select(['id', 'nom_point', 'numero_flooz', 'region', 'prefecture', 'created_at', 'organization_id', 'created_by'])
+            ->with(['organization:id,name', 'creator:id,name'])
+            ->get()
+            ->filter(function ($pdv) {
+                return !empty($pdv->missing_required_fields);
+            })
+            ->values()
+            ->take(10);
+
         return response()->json([
             'stats' => $stats,
             'by_region' => $byRegion,
             'by_organization' => $byOrganization,
             'recent_pdvs' => $recentPdvs,
+            'incomplete_pdvs' => $incompletePdvs,
         ]);
     }
 

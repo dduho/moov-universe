@@ -480,6 +480,7 @@
                   option-label="label"
                   option-value="value"
                   placeholder="Type de support"
+                  :multiple="true"
                   required
                   :error="errors.visibility_support"
                 />
@@ -490,7 +491,7 @@
                   option-label="label"
                   option-value="value"
                   placeholder="Condition du support"
-                  :disabled="!formData.visibility_support || formData.visibility_support === 'Aucun'"
+                  :disabled="!formData.visibility_support || formData.visibility_support.length === 0"
                 />
               </div>
             </div>
@@ -626,7 +627,7 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div><span class="font-semibold text-gray-600">NIF:</span> {{ formData.nif || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Régime fiscal:</span> {{ formData.tax_regime || 'N/A' }}</div>
-                <div><span class="font-semibold text-gray-600">Support de visibilité:</span> {{ formData.visibility_support || 'N/A' }}</div>
+                <div><span class="font-semibold text-gray-600">Support de visibilité:</span> {{ formatVisibilitySupport(formData.visibility_support) || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">État du support:</span> {{ formData.support_state || 'N/A' }}</div>
                 <div><span class="font-semibold text-gray-600">Numéro CAGNT:</span> {{ formatPhone(formData.cagnt_number) || 'N/A' }}</div>
               </div>
@@ -1261,6 +1262,7 @@ const visibilitySupportOptions = [
   { label: 'Autocollant', value: 'Autocollant' },
   { label: 'Potence', value: 'Potence' },
   { label: 'Chevalet', value: 'Chevalet' },
+  { label: 'Drapelet', value: 'Drapelet' },
   { label: 'Buget Flags', value: 'Buget Flags' },
   { label: 'Parasols', value: 'Parasols' },
   { label: 'Beach Flags', value: 'Beach Flags' },
@@ -1270,6 +1272,8 @@ const visibilitySupportOptions = [
 const supportStateOptions = [
   { label: 'Sélectionnez', value: '' },
   { label: 'Bon', value: 'BON' },
+  { label: 'Acceptable', value: 'ACCEPTABLE' },
+  { label: 'Défraîchi', value: 'DEFRAICHI' },
   { label: 'Mauvais', value: 'MAUVAIS' }
 ];
 
@@ -1291,6 +1295,35 @@ const shouldShowNifField = computed(() => {
 const stepTransitionName = computed(() => {
   return stepDirection.value === 'forward' ? 'step-slide' : 'step-slide-reverse';
 });
+
+const formatVisibilitySupport = (value) => {
+  if (!value) return '';
+  const items = Array.isArray(value)
+    ? value
+    : `${value}`
+        .split(/[,+;|\/]+|\bet\b|\band\b/i)
+        .map(item => item.trim())
+        .filter(Boolean);
+  return items.join(', ');
+};
+
+const normalizeVisibilitySupport = (value) => {
+  if (!value) return [];
+  const options = ['Autocollant', 'Potence', 'Chevalet', 'Drapelet', 'Buget Flags', 'Parasols', 'Beach Flags', 'Enseignes Lumineuses'];
+  const parts = Array.isArray(value) ? value : `${value}`.split(/[,+;|\/]+|\bet\b|\band\b/i);
+  return parts
+    .map(part => part.trim())
+    .filter(Boolean)
+    .map(part => {
+      const match = options.find(opt => opt.toLowerCase() === part.toLowerCase());
+      return match || part;
+    });
+};
+
+const normalizeSupportState = (value) => {
+  if (!value) return '';
+  return value.toUpperCase();
+};
 
 const formData = ref({
   organization_id: authStore.organizationId || null,
@@ -1323,7 +1356,7 @@ const formData = ref({
   has_nif: '',
   nif: '',
   tax_regime: '',
-  visibility_support: '',
+  visibility_support: [],
   support_state: '',
   cagnt_number: ''
 });
@@ -1552,7 +1585,7 @@ const validateStep = async () => {
       errors.value.tax_regime = 'Le régime fiscal est obligatoire si le PDV a un NIF';
     }
     
-    if (!formData.value.visibility_support) {
+    if (!formData.value.visibility_support || formData.value.visibility_support.length === 0) {
       errors.value.visibility_support = 'Le support de visibilité est obligatoire';
     }
     
@@ -1737,7 +1770,9 @@ const submitForm = async () => {
       // Fiscal
       nif: formData.value.nif,
       regime_fiscal: formData.value.tax_regime, // tax_regime -> regime_fiscal
-      support_visibilite: formData.value.visibility_support, // visibility_support -> support_visibilite
+      support_visibilite: Array.isArray(formData.value.visibility_support)
+        ? formData.value.visibility_support.join(', ')
+        : formData.value.visibility_support, // visibility_support -> support_visibilite
       etat_support: formData.value.support_state, // support_state -> etat_support
       numero_cagnt: formData.value.cagnt_number, // cagnt_number -> numero_cagnt
       
@@ -1848,7 +1883,11 @@ const confirmClearFields = async () => {
         // Garder l'organization_id pour les non-admins
         return;
       }
-      formData.value[key] = '';
+      if (Array.isArray(formData.value[key])) {
+        formData.value[key] = [];
+      } else {
+        formData.value[key] = '';
+      }
     });
     
     // Vider les fichiers uploadés
@@ -1947,6 +1986,11 @@ const loadFormFromStorage = () => {
         // Sauvegarder l'organization_id actuel pour les dealers
         const currentOrgId = formData.value.organization_id;
         Object.assign(formData.value, formDraft.formData);
+
+        // Normaliser le support de visibilité vers un tableau
+        if (formData.value.visibility_support && !Array.isArray(formData.value.visibility_support)) {
+          formData.value.visibility_support = normalizeVisibilitySupport(formData.value.visibility_support);
+        }
         
         // Si l'utilisateur n'est pas admin, restaurer son organization_id
         if (!authStore.isAdmin && currentOrgId) {
@@ -2106,23 +2150,6 @@ const loadPdvData = async () => {
     
     // Déterminer si le PDV a un NIF (utiliser 'oui'/'non' car les radio buttons utilisent ces valeurs)
     const hasNifValue = (pdv.nif && pdv.nif.trim() !== '') ? 'oui' : '';
-    
-    // Helper pour normaliser les valeurs de support visibilité
-    // Les valeurs en DB peuvent être en majuscules, on cherche la correspondance exacte dans les options
-    const normalizeVisibilitySupport = (value) => {
-      if (!value) return '';
-      const options = ['Autocollant', 'Potence', 'Chevalet', 'Buget Flags', 'Parasols', 'Beach Flags', 'Enseignes Lumineuses'];
-      // Chercher une correspondance insensible à la casse
-      const match = options.find(opt => opt.toLowerCase() === value.toLowerCase());
-      return match || value;
-    };
-    
-    // Helper pour normaliser l'état du support
-    const normalizeSupportState = (value) => {
-      if (!value) return '';
-      // Les valeurs attendues sont BON et MAUVAIS (majuscules)
-      return value.toUpperCase();
-    };
     
     // Mapper les données du PDV vers le formulaire
     formData.value = {

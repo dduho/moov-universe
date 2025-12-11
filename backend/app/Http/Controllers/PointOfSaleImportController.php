@@ -89,7 +89,7 @@ class PointOfSaleImportController extends Controller
                     continue;
                 }
 
-                $data = $this->mapRowData($row, $headerMap, $organizationId);
+                $data = $this->mapRowData($row, $headerMap, $organizationId, $i + 1);
                 
                 // Valider les données
                 $validator = $this->validateRow($data, $i + 1);
@@ -202,6 +202,10 @@ class PointOfSaleImportController extends Controller
         $organizationId = $request->organization_id;
         $skipDuplicates = $request->boolean('skip_duplicates', true);
 
+        // Augmenter le temps d'exécution pour les gros imports
+        set_time_limit(300); // 5 minutes
+        ini_set('memory_limit', '512M');
+
         DB::beginTransaction();
 
         try {
@@ -224,7 +228,7 @@ class PointOfSaleImportController extends Controller
                     continue;
                 }
 
-                $data = $this->mapRowData($row, $headerMap, $organizationId);
+                $data = $this->mapRowData($row, $headerMap, $organizationId, $i + 1);
                 
                 // Valider
                 $validator = $this->validateRow($data, $i + 1);
@@ -239,10 +243,10 @@ class PointOfSaleImportController extends Controller
 
                 // Vérifier si le PDV existe (par shortcode d'abord, puis par numero_flooz)
                 $existing = null;
-                if (!empty($data['shortcode'])) {
+                if (!empty($data['shortcode']) && $data['shortcode'] !== 'N/A') {
                     $existing = PointOfSale::where('shortcode', $data['shortcode'])->first();
                 }
-                if (!$existing) {
+                if (!$existing && !empty($data['numero_flooz'])) {
                     $existing = PointOfSale::where('numero_flooz', $data['numero_flooz'])->first();
                 }
                 
@@ -311,8 +315,10 @@ class PointOfSaleImportController extends Controller
         
         // Mapping des variantes de noms de colonnes
         $aliases = [
-            'nom_point' => ['nom_point', 'nom_du_point', 'nom du point', 'point', 'nom'],
-            'numero_flooz' => ['numero_flooz', 'numero flooz', 'numéro_flooz', 'numéro flooz', 'flooz', 'numero'],
+            // Le nom du point de vente doit venir des variantes textuelles, pas du numéro PDV
+            'nom_point' => ['nom_point', 'nom_du_point', 'nom du point', 'point', 'nom', 'nom pdv'],
+            // Le numéro Flooz accepte les variantes liées au numéro PDV
+            'numero_flooz' => ['numero_flooz', 'numero flooz', 'numéro_flooz', 'numéro flooz', 'flooz', 'numero', 'n° pdv', 'no pdv', 'n pdv', 'numero pdv', 'numero pdv'],
             'shortcode' => ['shortcode', 'short_code', 'short code', 'code'],
             'profil' => ['profil', 'profile', 'type'],
             'region' => ['region', 'région'],
@@ -321,7 +327,7 @@ class PointOfSaleImportController extends Controller
             'ville' => ['ville', 'city'],
             'quartier' => ['quartier', 'quarter'],
             'canton' => ['canton'],
-            'dealer_name' => ['dealer_name', 'dealer name', 'dealer', 'nom_dealer'],
+            'dealer_name' => ['dealer_name', 'dealer name', 'dealer', 'nom_dealer', 'nom du dealer'],
             'latitude' => ['latitude', 'lat'],
             'longitude' => ['longitude', 'long', 'lng'],
             // Informations gérant
@@ -375,7 +381,7 @@ class PointOfSaleImportController extends Controller
     /**
      * Mapper une ligne de données
      */
-    private function mapRowData($row, $headerMap, $organizationId)
+    private function mapRowData($row, $headerMap, $organizationId, $lineNumber = null)
     {
         $user = auth()->user();
         
@@ -405,6 +411,10 @@ class PointOfSaleImportController extends Controller
         
         $sexe_gerant = $this->getColumnValue($row, $headerMap, 'sexe_gerant');
         $sexe_gerant = $this->normalizeGender($sexe_gerant);
+
+        // Récupérer prénom/nom gérant avec valeur par défaut si manquant
+        $firstname = $this->getColumnValue($row, $headerMap, 'firstname') ?: 'N/A';
+        $lastname = $this->getColumnValue($row, $headerMap, 'lastname') ?: 'N/A';
         
         // Récupérer et normaliser NIF et régime fiscal
         $nif = $this->getColumnValue($row, $headerMap, 'nif');
@@ -435,31 +445,58 @@ class PointOfSaleImportController extends Controller
         $etat_support = $this->getColumnValue($row, $headerMap, 'etat_support');
         $etat_support = $this->normalizeEtatSupport($etat_support);
 
+        // Support visibilité (multiple possible)
+        $support_visibilite = $this->getColumnValue($row, $headerMap, 'support_visibilite');
+        $support_visibilite = $this->normalizeSupportVisibilite($support_visibilite);
+
+        // Rendre lat/long null si non numerique ou hors bornes
+        $latitude = $this->normalizeCoordinate($this->getColumnValue($row, $headerMap, 'latitude'), -90, 90);
+        $longitude = $this->normalizeCoordinate($this->getColumnValue($row, $headerMap, 'longitude'), -180, 180);
+
+        // Valeurs par défaut pour champs obligatoires manquants
+        $nom_point = $this->getColumnValue($row, $headerMap, 'nom_point') ?? 'N/A';
+        $numero_flooz = $this->getColumnValue($row, $headerMap, 'numero_flooz');
+        if (!$numero_flooz) {
+            // Générer un numéro placeholder unique sur 11 chiffres
+            $line = $lineNumber ?: rand(1000, 9999);
+            $numero_flooz = '990' . str_pad((string) $line, 8, '0', STR_PAD_LEFT);
+        }
+
+        $region = $this->getColumnValue($row, $headerMap, 'region') ?: 'MARITIME';
+        $prefecture = $prefecture ?: 'N/A';
+        $commune = $commune ?: 'N/A';
+        $ville = $ville ?: 'N/A';
+        $quartier = $quartier ?: 'N/A';
+        $dealer_name = $this->getColumnValue($row, $headerMap, 'dealer_name') ?: 'N/A';
+        $numero_cagnt = $this->getColumnValue($row, $headerMap, 'numero_cagnt') ?: '00000000000';
+        $numero_proprietaire = $phone ?: '00000000000';
+        $support_visibilite = $support_visibilite ?: 'N/A';
+
         return [
             'organization_id' => $organizationId,
-            'nom_point' => $this->getColumnValue($row, $headerMap, 'nom_point'),
-            'numero_flooz' => $this->getColumnValue($row, $headerMap, 'numero_flooz'),
+            'nom_point' => $nom_point,
+            'numero_flooz' => $numero_flooz,
             'shortcode' => $this->getColumnValue($row, $headerMap, 'shortcode'),
             'profil' => $profil ?: 'DISTRO', // Valeur par défaut
-            'region' => strtoupper($this->getColumnValue($row, $headerMap, 'region')),
+            'region' => strtoupper($region),
             'prefecture' => $prefecture,
             'commune' => $commune,
             'ville' => $ville,
             'quartier' => $quartier,
             'canton' => $canton,
-            'dealer_name' => $this->getColumnValue($row, $headerMap, 'dealer_name') ?: 'Importé',
-            'latitude' => $this->getColumnValue($row, $headerMap, 'latitude') ?: 0,
-            'longitude' => $this->getColumnValue($row, $headerMap, 'longitude') ?: 0,
+            'dealer_name' => $dealer_name,
+            'latitude' => $latitude,
+            'longitude' => $longitude,
             // Informations gérant
-            'firstname' => $this->getColumnValue($row, $headerMap, 'firstname'),
-            'lastname' => $this->getColumnValue($row, $headerMap, 'lastname'),
+            'firstname' => $firstname,
+            'lastname' => $lastname,
             'gender' => $gender,
             'sexe_gerant' => $sexe_gerant,
             'date_of_birth' => $date_of_birth,
             // Documents
             'id_description' => $id_type,
             'id_number' => $this->getColumnValue($row, $headerMap, 'id_number'),
-            'id_expiry_date' => $id_expiry,
+            'id_expiry_date' => $id_expiry_date,
             'nationality' => $this->getColumnValue($row, $headerMap, 'nationality'),
             'profession' => $this->getColumnValue($row, $headerMap, 'profession'),
             'type_activite' => $this->getColumnValue($row, $headerMap, 'type_activite'),
@@ -467,12 +504,12 @@ class PointOfSaleImportController extends Controller
             'nif' => $nif,
             'regime_fiscal' => $regime_fiscal,
             // Contacts
-            'numero_proprietaire' => $phone,
+            'numero_proprietaire' => $numero_proprietaire,
             'autre_contact' => $autre_contact,
             // Visibilité
-            'support_visibilite' => $this->getColumnValue($row, $headerMap, 'support_visibilite'),
+            'support_visibilite' => $support_visibilite,
             'etat_support' => $etat_support,
-            'numero_cagnt' => $this->getColumnValue($row, $headerMap, 'numero_cagnt'),
+            'numero_cagnt' => $numero_cagnt,
             // Status
             'status' => 'validated',
             'created_by' => $user->id,
@@ -496,6 +533,33 @@ class PointOfSaleImportController extends Controller
         $commune = preg_replace('/ (\d+)$/', '_$1', $commune);
         
         return $commune;
+    }
+
+    /**
+     * Normaliser une coordonnee et la rendre nulle si non numerique ou hors bornes
+     */
+    private function normalizeCoordinate($value, $min, $max)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // Accepter les virgules comme separateur decimal
+        if (is_string($value)) {
+            $value = str_replace(',', '.', $value);
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $number = (float) $value;
+
+        if ($number < $min || $number > $max) {
+            return null;
+        }
+
+        return $number;
     }
     
     /**
@@ -586,6 +650,72 @@ class PointOfSaleImportController extends Controller
         
         return $mapping[$regimeUpper] ?? $regime;
     }
+
+    /**
+     * Normaliser la liste des supports de visibilité
+     */
+    private function normalizeSupportVisibilite($value)
+    {
+        if (!$value) return null;
+
+        $parts = is_array($value) ? $value : [$value];
+        $normalized = [];
+
+        $synonyms = [
+            'AUCUN' => null,
+            'NONE' => null,
+        ];
+
+        $mapping = [
+            'AUTOCOLLANT' => 'Autocollant',
+            'POTENCE' => 'Potence',
+            'CHEVALET' => 'Chevalet',
+            'BUJET FLAGS' => 'Buget Flags',
+            'BUDJET FLAGS' => 'Buget Flags',
+            'BUDGET FLAGS' => 'Buget Flags',
+            'PARASOLS' => 'Parasols',
+            'PARASOL' => 'Parasols',
+            'BEACH FLAGS' => 'Beach Flags',
+            'BEACH FLAG' => 'Beach Flags',
+            'ENSEIGNES LUMINEUSES' => 'Enseignes Lumineuses',
+            'ENSEIGNE LUMINEUSE' => 'Enseignes Lumineuses',
+            'DRAPELET' => 'Drapelet',
+            'DRAPELET FLOOZ MONEY' => 'Drapelet',
+            'DRAPEAU' => 'Drapelet',
+        ];
+
+        foreach ($parts as $entry) {
+            if ($entry === null) {
+                continue;
+            }
+
+            $split = preg_split('/[\+;,\|\/]+|\bet\b|\band\b/i', (string) $entry);
+            foreach ($split as $rawPart) {
+                $clean = trim($rawPart);
+                if ($clean === '') {
+                    continue;
+                }
+
+                $upper = strtoupper($clean);
+
+                if (array_key_exists($upper, $synonyms) && $synonyms[$upper] === null) {
+                    return null;
+                }
+
+                $mapped = $mapping[$upper] ?? ucwords(strtolower($clean));
+
+                if (!in_array($mapped, $normalized, true)) {
+                    $normalized[] = $mapped;
+                }
+            }
+        }
+
+        if (empty($normalized)) {
+            return null;
+        }
+
+        return implode(', ', $normalized);
+    }
     
     /**
      * Normaliser le type de pièce
@@ -667,6 +797,7 @@ class PointOfSaleImportController extends Controller
         // Mapping des états
         $mapping = [
             'BON' => 'BON',
+            'ACCEPTABLE' => 'ACCEPTABLE',
             'MAUVAIS' => 'MAUVAIS',
             'DEFRAICHI' => 'DEFRAICHI',
             'DÉFRAICHI' => 'DEFRAICHI',
@@ -712,6 +843,8 @@ class PointOfSaleImportController extends Controller
             'dealer_name' => 'nullable|string|max:255',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
+            'support_visibilite' => 'nullable|string|max:255',
+            'etat_support' => 'nullable|in:BON,ACCEPTABLE,MAUVAIS,DEFRAICHI',
         ], [
             'numero_flooz.regex' => 'Le numéro Flooz doit contenir exactement 11 chiffres',
             'numero_flooz.size' => 'Le numéro Flooz doit contenir exactement 11 chiffres',

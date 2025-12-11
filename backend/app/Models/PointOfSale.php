@@ -63,7 +63,7 @@ class PointOfSale extends Model
         'rejected_at' => 'datetime',
     ];
 
-    protected $appends = ['has_active_task', 'has_task_in_revision', 'geo_validation'];
+    protected $appends = ['has_active_task', 'has_task_in_revision', 'geo_validation', 'missing_required_fields'];
 
     /**
      * Accessor pour la validation géographique
@@ -197,6 +197,61 @@ class PointOfSale extends Model
     public function removeAllTags()
     {
         return $this->tags()->delete();
+    }
+
+    /**
+     * Champs requis considérés manquants
+     */
+    public function getMissingRequiredFieldsAttribute(): array
+    {
+        $placeholders = ['N/A', 'NA', 'NON RENSEIGNE', 'NON RENSEIGNÉ', 'NON RENSEIGNEE', 'NON RENSEIGNÉE'];
+
+        $required = [
+            'nom_point' => 'Nom du point de vente',
+            'numero_flooz' => 'Numéro Flooz',
+            'shortcode' => 'Shortcode',
+            'profil' => 'Profil',
+            'region' => 'Région',
+            'prefecture' => 'Préfecture',
+            'commune' => 'Commune',
+            'ville' => 'Ville',
+            'quartier' => 'Quartier',
+            'latitude' => 'Latitude',
+            'longitude' => 'Longitude',
+            'numero_proprietaire' => 'Téléphone propriétaire',
+            'support_visibilite' => 'Support de visibilité',
+            'numero_cagnt' => 'Numéro CAGNT',
+        ];
+
+        $missing = [];
+
+        foreach ($required as $field => $label) {
+            $value = $this->{$field};
+
+            // Placeholders or empty
+            $isPlaceholder = is_string($value) && in_array(strtoupper(trim($value)), array_map('strtoupper', $placeholders), true);
+
+            // Placeholder numeric patterns used during import
+            if ($field === 'numero_flooz' && is_string($value) && str_starts_with($value, '990')) {
+                $isPlaceholder = true;
+            }
+
+            if ($field === 'numero_cagnt' && is_string($value) && ($value === '00000000000' || str_starts_with($value, '000'))) {
+                $isPlaceholder = true;
+            }
+
+            if ($field === 'numero_proprietaire' && is_string($value) && ($value === '00000000000' || str_starts_with($value, '000'))) {
+                $isPlaceholder = true;
+            }
+
+            $isEmpty = ($value === null || $value === '' || $value === 0 || $value === '0');
+
+            if ($isPlaceholder || $isEmpty) {
+                $missing[] = $label;
+            }
+        }
+
+        return $missing;
     }
 
     /**

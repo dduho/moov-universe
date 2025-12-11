@@ -23,8 +23,8 @@
           <component v-if="icon" :is="icon" class="w-5 h-5 text-gray-400 flex-shrink-0" />
           
           <!-- Selected Text -->
-          <span v-if="selectedOption" class="text-gray-900 font-medium truncate">
-            {{ selectedOption[optionLabel] }}
+          <span v-if="selectedText" class="text-gray-900 font-medium truncate">
+            {{ selectedText }}
           </span>
           <span v-else class="text-gray-400 truncate">
             {{ placeholder }}
@@ -150,7 +150,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps({
   modelValue: {
-    type: [String, Number, Object],
+    type: [String, Number, Object, Array],
     default: null
   },
   label: {
@@ -198,6 +198,10 @@ const props = defineProps({
     type: Object,
     default: null
   },
+  multiple: {
+    type: Boolean,
+    default: false
+  },
   loading: {
     type: Boolean,
     default: false
@@ -215,9 +219,23 @@ const id = computed(() => {
   return props.label ? props.label.toLowerCase().replace(/\s+/g, '-') : undefined;
 });
 
-const selectedOption = computed(() => {
-  if (!props.modelValue) return null;
-  return props.options.find(opt => opt[props.optionValue] === props.modelValue);
+const selectedValues = computed(() => {
+  if (!props.multiple) return [];
+  if (Array.isArray(props.modelValue)) return props.modelValue;
+  return props.modelValue ? [props.modelValue] : [];
+});
+
+const selectedText = computed(() => {
+  if (props.multiple) {
+    if (!selectedValues.value.length) return '';
+    const labels = props.options
+      .filter(opt => selectedValues.value.includes(opt[props.optionValue]))
+      .map(opt => opt[props.optionLabel]);
+    return labels.join(', ');
+  }
+  if (!props.modelValue) return '';
+  const opt = props.options.find(o => o[props.optionValue] === props.modelValue);
+  return opt ? opt[props.optionLabel] : '';
 });
 
 const filteredOptions = computed(() => {
@@ -279,13 +297,30 @@ const toggleDropdown = () => {
 };
 
 const selectOption = (option) => {
-  emit('update:modelValue', option[props.optionValue]);
-  emit('change', option);
-  isOpen.value = false;
-  searchQuery.value = '';
+  const value = option[props.optionValue];
+
+  if (props.multiple) {
+    const current = Array.isArray(props.modelValue) ? [...props.modelValue] : [];
+    const idx = current.indexOf(value);
+    if (idx !== -1) {
+      current.splice(idx, 1);
+    } else {
+      current.push(value);
+    }
+    emit('update:modelValue', current);
+    emit('change', current);
+  } else {
+    emit('update:modelValue', value);
+    emit('change', option);
+    isOpen.value = false;
+    searchQuery.value = '';
+  }
 };
 
 const isSelected = (option) => {
+  if (props.multiple) {
+    return Array.isArray(props.modelValue) && props.modelValue.includes(option[props.optionValue]);
+  }
   return props.modelValue === option[props.optionValue];
 };
 

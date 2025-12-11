@@ -93,6 +93,147 @@
 
           <!-- Actual Content -->
           <div v-else>
+          <!-- Incomplete required fields alert -->
+          <div v-if="incompletePdvs.length" class="mb-8">
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-[2px] shadow-2xl">
+              <div class="glass-card rounded-3xl bg-white p-6 sm:p-8">
+                <!-- Header -->
+                <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="flex items-start gap-4">
+                    <div class="relative">
+                      <div class="absolute inset-0 animate-pulse rounded-2xl bg-amber-400 opacity-30 blur-lg"></div>
+                      <div class="relative flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg">
+                        <svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                      </div>
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-xl sm:text-2xl font-black text-gray-900">
+                          Données incomplètes
+                        </h3>
+                        <span class="inline-flex items-center rounded-full bg-gradient-to-r from-amber-100 to-orange-100 px-3 py-1 text-sm font-bold text-amber-900 ring-2 ring-amber-400/30">
+                          {{ incompletePdvs.length }} PDV
+                        </span>
+                      </div>
+                      <p class="text-sm text-gray-600 leading-relaxed max-w-2xl">
+                        Ces points de vente ont des champs obligatoires manquants. Complétez-les rapidement pour garantir la qualité de vos données.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-50 to-orange-50 px-4 py-2 ring-2 ring-red-200/50 shadow-sm">
+                    <div class="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500"></div>
+                    <span class="text-sm font-bold text-red-700">Priorité haute</span>
+                  </div>
+                </div>
+
+                <!-- Expandable List Toggle -->
+                <button
+                  @click="showIncompleteDetails = !showIncompleteDetails"
+                  class="mb-4 w-full flex items-center justify-between rounded-xl bg-gradient-to-r from-amber-50 to-orange-50 p-4 transition-all duration-300 hover:shadow-md group"
+                >
+                  <div class="flex items-center gap-3">
+                    <svg class="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                    </svg>
+                    <span class="font-semibold text-gray-700">
+                      {{ showIncompleteDetails ? 'Masquer' : 'Afficher' }} la liste détaillée
+                    </span>
+                  </div>
+                  <svg 
+                    class="h-5 w-5 text-amber-600 transition-transform duration-300 group-hover:scale-110" 
+                    :class="{ 'rotate-180': showIncompleteDetails }"
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+
+                <!-- Expandable Details -->
+                <transition
+                  enter-active-class="transition-all duration-300 ease-out"
+                  enter-from-class="max-h-0 opacity-0"
+                  enter-to-class="max-h-[800px] opacity-100"
+                  leave-active-class="transition-all duration-300 ease-in"
+                  leave-from-class="max-h-[800px] opacity-100"
+                  leave-to-class="max-h-0 opacity-0"
+                >
+                  <div v-show="showIncompleteDetails" class="overflow-hidden">
+                    <div class="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                      <div
+                        v-for="pdv in incompletePdvs"
+                        :key="pdv.id"
+                        class="group rounded-2xl bg-gradient-to-br from-white to-gray-50 p-4 shadow-sm ring-1 ring-gray-200/50 transition-all duration-200 hover:shadow-lg hover:ring-amber-300/50 hover:scale-[1.01]"
+                      >
+                        <div class="flex flex-col gap-3">
+                          <!-- PDV Header -->
+                          <div class="flex items-start justify-between gap-3">
+                            <div class="flex-1 min-w-0">
+                              <div class="flex items-center gap-2 mb-1">
+                                <h4 class="text-base font-bold text-gray-900 truncate">
+                                  {{ pdv.nom_point || 'N/A' }}
+                                </h4>
+                                <span class="flex-shrink-0 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                                  {{ pdv.region || 'N/A' }}
+                                </span>
+                                <span v-if="pdv.dealer_name || pdv.organization?.name" class="flex-shrink-0 rounded-md bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                                  {{ pdv.dealer_name || pdv.organization?.name }}
+                                </span>
+                              </div>
+                              <div class="flex items-center gap-2 text-xs text-gray-500">
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                                </svg>
+                                <span>{{ pdv.creator?.name || 'Inconnu' }}</span>
+                              </div>
+                            </div>
+                            <router-link
+                              :to="`/pdv/${pdv.id}/edit`"
+                              class="flex-shrink-0 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1.5 text-xs font-bold text-white shadow-md transition-all duration-200 hover:shadow-lg hover:scale-105"
+                            >
+                              Compléter
+                            </router-link>
+                          </div>
+
+                          <!-- Missing Fields Pills -->
+                          <div class="flex flex-wrap gap-1.5">
+                            <span
+                              v-for="(field, idx) in formatMissingFields(pdv)"
+                              :key="idx"
+                              class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-red-50 to-orange-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-red-200/50"
+                            >
+                              <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                              </svg>
+                              {{ field }}
+                            </span>
+                          </div>
+
+                          <!-- Progress Bar -->
+                          <div class="mt-1">
+                            <div class="flex items-center justify-between text-xs text-gray-600 mb-1">
+                              <span class="font-medium">Complétude</span>
+                              <span class="font-semibold">{{ getCompletionPercentage(pdv) }}%</span>
+                            </div>
+                            <div class="h-1.5 w-full rounded-full bg-gray-200 overflow-hidden">
+                              <div 
+                                class="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500"
+                                :style="{ width: getCompletionPercentage(pdv) + '%' }"
+                              ></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+
           <!-- Stats Cards -->
           <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
             <StatsCard 
@@ -888,6 +1029,23 @@ const toggleRegionDealers = (regionName) => {
   expandedRegions.value[regionName] = !expandedRegions.value[regionName];
 };
 
+const formatMissingFields = (pdv) => {
+  return (pdv?.missing_required_fields || []).map((label) => {
+    // Capitaliser la première lettre pour rester cohérent avec les autres cartes
+    if (typeof label === 'string' && label.length > 0) {
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    }
+    return label;
+  });
+};
+
+const getCompletionPercentage = (pdv) => {
+  const totalRequiredFields = 14; // Nombre total de champs obligatoires
+  const missingCount = (pdv?.missing_required_fields || []).length;
+  const completedCount = totalRequiredFields - missingCount;
+  return Math.round((completedCount / totalRequiredFields) * 100);
+};
+
 const fetchDashboardData = async () => {
   try {
     loading.value = true;
@@ -902,6 +1060,7 @@ const fetchDashboardData = async () => {
       { name: 'Kara', count: 25, validated: 20, pending: 4, rejected: 1, cities: ['Kara', 'Bassar'] },
       { name: 'Savanes', count: 18, validated: 15, pending: 2, rejected: 1, cities: ['Dapaong', 'Mango'] },
     ];
+    incompletePdvs.value = data.incomplete_pdvs || [];
     
     // Fetch GPS stats
     try {
@@ -933,6 +1092,8 @@ const isPulling = ref(false);
 const pullProgress = ref(0);
 const touchStartY = ref(0);
 const isRefreshing = ref(false);
+const incompletePdvs = ref([]);
+const showIncompleteDetails = ref(false);
 
 const handleTouchStart = (e) => {
   if (window.scrollY === 0 && !isRefreshing.value) {
