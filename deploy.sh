@@ -93,6 +93,12 @@ pull_latest_code() {
     
     cd "$PROJECT_DIR"
     
+    # S'assurer que les permissions du dossier .git sont correctes
+    if [ -d ".git" ]; then
+        sudo chown -R $WEB_USER:$WEB_GROUP .git
+        sudo chmod -R u+w .git
+    fi
+    
     # Sauvegarder les modifications locales si nécessaire
     if [[ -n $(git status -s) ]]; then
         log_warning "Modifications locales détectées, création d'un stash..."
@@ -102,6 +108,9 @@ pull_latest_code() {
     git fetch origin
     git checkout $GIT_BRANCH
     git pull origin $GIT_BRANCH
+    
+    # Corriger les permissions après le pull
+    sudo chown -R $WEB_USER:$WEB_GROUP .
     
     log_success "Code mis à jour depuis la branche $GIT_BRANCH"
 }
@@ -154,9 +163,8 @@ deploy_backend() {
     
     # Permissions
     log_info "Configuration des permissions..."
-    sudo chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
-    sudo chown -R www-data:www-data storage bootstrap/cache
-    sudo chmod -R 775 storage bootstrap/cache
+    chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
+    chmod -R 775 storage bootstrap/cache
     
     # Désactivation du mode maintenance
     log_info "Désactivation du mode maintenance..."
@@ -181,10 +189,6 @@ EOF
     log_info "Installation des dépendances NPM..."
     npm ci --production=false
     
-    # Permissions
-    log_info "Configuration des permissions..."
-    sudo chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR"
-    
     # Build de production
     log_info "Build de production..."
     npm run build
@@ -199,8 +203,8 @@ EOF
     
     # Permissions
     log_info "Configuration des permissions..."
-    sudo chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
-    sudo chmod -R 755 "$FRONTEND_DIR/dist"
+    chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
+    chmod -R 755 "$FRONTEND_DIR/dist"
     
     log_success "Frontend déployé avec succès"
 }
