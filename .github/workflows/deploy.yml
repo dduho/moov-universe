@@ -1,0 +1,93 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  SERVER_PATH: /data/www/moov-universe
+
+jobs:
+  deploy:
+    name: 🚀 Deploy to Production Server
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🟢 Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: 📦 Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+      
+      - name: 🏗️ Build frontend
+        working-directory: ./frontend
+        env:
+          VITE_API_URL: ${{ secrets.API_URL }}
+        run: npm run build
+      
+      - name: 🔐 Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: 🚀 Deploy backend
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            cd ${{ env.SERVER_PATH }}
+            
+            # Update code from Git
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # Backend deployment
+            cd backend
+            composer install --no-dev --optimize-autoloader --no-interaction
+            
+            # Laravel optimizations
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            
+            # Run migrations
+            php artisan migrate --force
+            
+            # Fix permissions
+            sudo chown -R moov:moov storage bootstrap/cache
+            sudo chmod -R 755 storage bootstrap/cache
+          EOF
+      
+      - name: 📤 Deploy frontend
+        run: |
+          rsync -avz --delete \
+            ./frontend/dist/ \
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ env.SERVER_PATH }}/frontend/dist/
+      
+      - name: ♻️ Restart services
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+            sudo systemctl reload nginx
+            sudo systemctl restart php8.1-fpm
+          EOF
+      
+      - name: ✅ Deployment complete
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "📅 Date: $(date '+%Y-%m-%d %H:%M:%S')"
+
+# Required GitHub Secrets:
+# - SERVER_HOST: IP or domain of the production server (e.g., 10.80.16.51)
+# - SERVER_USER: SSH user for connection (e.g., moov)
+# - SSH_PRIVATE_KEY: Private SSH key for authentication
+# - API_URL: API URL for the frontend (e.g., https://10.80.16.51:8443/api)
