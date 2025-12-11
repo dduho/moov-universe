@@ -10,7 +10,7 @@
       </div>
 
       <!-- Loading state -->
-      <div v-if="loading" class="glass-card p-6 sm:p-8 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 sm:p-8 text-center">
         <div class="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-moov-orange mx-auto"></div>
         <p class="mt-3 sm:mt-4 text-sm sm:text-base text-gray-600">Chargement des paramètres...</p>
       </div>
@@ -18,7 +18,7 @@
       <!-- Settings list -->
       <div v-else class="space-y-4 sm:space-y-6">
         <!-- Proximity Threshold Setting -->
-        <div class="glass-card p-4 sm:p-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
             <div class="flex-1">
               <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Distance Minimale entre PDV</h3>
@@ -105,7 +105,7 @@
         </div>
 
         <!-- GPS Accuracy Threshold Setting -->
-        <div class="glass-card p-4 sm:p-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
             <div class="flex-1">
               <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Seuil de Précision GPS</h3>
@@ -193,7 +193,7 @@
         </div>
 
         <!-- Future settings placeholder -->
-        <div class="glass-card p-6 border-2 border-dashed border-gray-300">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
             <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -206,7 +206,7 @@
 
       <!-- Success message -->
       <Transition name="slide-up">
-        <div v-if="showSuccess" class="fixed bottom-6 right-6 glass-card p-4 shadow-xl border-2 border-green-500">
+        <div v-if="showSuccess" class="fixed bottom-6 right-6 bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 shadow-xl border-2 border-green-500">
           <div class="flex items-center gap-3">
             <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -322,3 +322,5 @@ onMounted(() => {
   opacity: 0;
 }
 </style>
+
+

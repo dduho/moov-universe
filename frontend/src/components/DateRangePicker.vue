@@ -33,7 +33,7 @@
         class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
         @click.self="showPicker = false"
       >
-        <div class="glass-strong rounded-2xl p-6 shadow-2xl max-w-md w-full mx-4">
+        <div class="bg-white/15 backdrop-blur-xl border border-white/30 rounded-2xl p-6 shadow-2xl max-w-md w-full mx-4">
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-gray-900">Sélectionner une période</h3>
             <button
@@ -239,3 +239,5 @@ watch(() => props.endDate, (newVal) => {
   localEndDate.value = newVal;
 });
 </script>
+
+

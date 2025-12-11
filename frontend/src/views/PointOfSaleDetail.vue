@@ -4,13 +4,13 @@
     
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-12 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-gray-600 font-semibold">Chargement des détails...</p>
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="glass-card p-12 text-center">
+      <div v-else-if="error" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="text-6xl mb-4">❌</div>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Erreur de chargement</h3>
         <p class="text-gray-600 mb-6">{{ error }}</p>
@@ -62,7 +62,7 @@
         </div>
 
         <!-- GPS Missing Warning -->
-        <div v-if="!hasValidCoordinates" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-red-400 bg-red-50/50">
+        <div v-if="!hasValidCoordinates" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-red-400 bg-red-50/50">
           <h3 class="text-base sm:text-lg font-bold text-red-800 mb-2 sm:mb-3 flex items-center gap-2">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -89,7 +89,7 @@
         </div>
 
         <!-- Proximity Alert -->
-        <div v-if="proximityAlert?.has_nearby" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-orange-300 bg-orange-50/50">
+        <div v-if="proximityAlert?.has_nearby" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8 border-2 border-orange-300 bg-orange-50/50">
           <h3 class="text-base sm:text-lg font-bold text-orange-800 mb-2 sm:mb-3 flex items-center gap-2">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -127,7 +127,7 @@
         </div>
 
         <!-- Geographic Inconsistency Alert -->
-        <div v-if="geoValidation.hasAlert" class="glass-card p-4 sm:p-6 mb-6 sm:mb-8 border-2" :class="geoValidation.alertType === 'error' ? 'border-red-400 bg-red-50/50' : 'border-purple-400 bg-purple-50/50'">
+        <div v-if="geoValidation.hasAlert" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8 border-2" :class="geoValidation.alertType === 'error' ? 'border-red-400 bg-red-50/50' : 'border-purple-400 bg-purple-50/50'">
           <h3 class="text-base sm:text-lg font-bold mb-2 sm:mb-3 flex items-center gap-2" :class="geoValidation.alertType === 'error' ? 'text-red-800' : 'text-purple-800'">
             <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -162,7 +162,7 @@
           <!-- Left Column -->
           <div class="lg:col-span-2 space-y-4 sm:space-y-6 lg:space-y-8">
             <!-- Flooz Info -->
-            <div class="glass-card p-4 sm:p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
               <h2 class="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -211,7 +211,7 @@
             </div>
 
             <!-- Owner Info -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -255,7 +255,7 @@
             </div>
 
             <!-- Location Info -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -336,7 +336,7 @@
             </div>
 
             <!-- Contact & Fiscal Info -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
@@ -387,7 +387,7 @@
           <!-- Right Column -->
           <div class="space-y-8">
             <!-- Quick Info Card -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Informations rapides</h3>
               <div class="space-y-4">
                 <div class="flex items-center gap-3 pb-4 border-b border-gray-200">
@@ -439,7 +439,7 @@
             </div>
 
             <!-- Rejection Reason -->
-            <div v-if="pos.status === 'rejected' && pos.rejection_reason" class="glass-card p-6 border-2 border-red-300 bg-red-50/50">
+            <div v-if="pos.status === 'rejected' && pos.rejection_reason" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-red-300 bg-red-50/50">
               <h3 class="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -450,7 +450,7 @@
             </div>
 
             <!-- Actions (Admin Only) -->
-            <div v-if="authStore.isAdmin && pos.status === 'pending'" class="glass-card p-6">
+            <div v-if="authStore.isAdmin && pos.status === 'pending'" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div class="space-y-3">
                 <button
@@ -475,12 +475,12 @@
             </div>
 
             <!-- Tâches -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <TaskList :pdv="pos" @tasks-updated="fetchPOSData" />
             </div>
 
             <!-- Documents -->
-            <div class="glass-card p-6">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <svg class="w-5 h-5 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
@@ -1025,3 +1025,5 @@ onMounted(async () => {
   }
 });
 </script>
+
+

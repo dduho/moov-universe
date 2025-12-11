@@ -28,7 +28,7 @@
         @click="isOpen = false"
       >
         <div
-          class="absolute mt-2 glass-strong rounded-xl shadow-xl overflow-hidden"
+          class="absolute mt-2 bg-white/15 backdrop-blur-xl border border-white/30 rounded-xl shadow-xl overflow-hidden"
           :style="dropdownStyle"
           @click.stop
         >
@@ -168,3 +168,5 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateDropdownPosition);
 });
 </script>
+
+

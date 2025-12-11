@@ -76,7 +76,7 @@
     
     <!-- Stats card skeleton -->
     <template v-else-if="type === 'stats'">
-      <div class="glass-card p-6 rounded-2xl">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
         <div class="flex items-center justify-between">
           <div class="flex-1">
             <div class="skeleton h-4 w-24 rounded mb-3"></div>
@@ -134,3 +134,5 @@ defineProps({
   }
 });
 </script>
+
+

@@ -8,7 +8,7 @@
     >
       <div class="w-full max-w-3xl mx-4">
         <!-- Search Input -->
-        <div class="glass-strong rounded-2xl shadow-2xl overflow-hidden">
+        <div class="bg-white/15 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden">
           <div class="p-6 border-b border-gray-200">
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -284,3 +284,5 @@ defineExpose({ open, close });
   border-radius: 3px;
 }
 </style>
+
+

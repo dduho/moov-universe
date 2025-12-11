@@ -63,7 +63,7 @@
         </div>
 
         <!-- Unsupported File Type -->
-        <div v-else class="glass-strong rounded-2xl p-12 text-center">
+        <div v-else class="bg-white/15 backdrop-blur-xl border border-white/30 rounded-2xl p-12 text-center">
           <svg class="w-20 h-20 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
           </svg>
@@ -200,3 +200,5 @@ watch(() => currentIndex.value, (newIndex) => {
 // Cleanup
 window.addEventListener('keydown', handleKeyPress);
 </script>
+
+

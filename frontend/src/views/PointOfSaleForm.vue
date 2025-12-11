@@ -19,7 +19,7 @@
       </div>
 
       <!-- Progress Indicator -->
-      <div class="glass-card p-3 sm:p-6 mb-6 sm:mb-8">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-6 mb-6 sm:mb-8">
         <div class="flex items-center justify-between mb-2 sm:mb-4">
           <div
             v-for="step in steps"
@@ -51,13 +51,13 @@
       </div>
 
       <!-- Loading state for edit mode -->
-      <div v-if="loadingPdv" class="glass-card p-8 text-center">
+      <div v-if="loadingPdv" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-moov-orange mx-auto mb-4"></div>
         <p class="text-gray-600">Chargement des données du point de vente...</p>
       </div>
 
       <!-- Forms -->
-      <div v-else class="glass-card p-4 sm:p-6 lg:p-8">
+      <div v-else class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 lg:p-8">
         <Transition :name="stepTransitionName" mode="out-in">
           <!-- Step 1: Dealer Information -->
           <div v-if="currentStep === 1" :key="1">
@@ -2239,3 +2239,5 @@ const loadPdvData = async () => {
   }
 };
 </script>
+
+

@@ -1,5 +1,5 @@
 <template>
-  <div class="glass-card p-6">
+  <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
     <!-- Header avec toggle -->
     <div 
       class="flex items-center justify-between cursor-pointer"
@@ -405,3 +405,5 @@ watch(() => props.pointOfSaleId, () => {
   width: 100%;
 }
 </style>
+
+

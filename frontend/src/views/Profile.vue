@@ -25,7 +25,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Sidebar -->
         <div class="lg:col-span-1">
-          <div class="glass-card p-6 rounded-2xl">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
             <div class="flex flex-col items-center text-center">
               <div class="w-24 h-24 rounded-full bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center text-white text-3xl font-bold mb-4 shadow-lg">
                 {{ userInitials }}
@@ -65,7 +65,7 @@
         <!-- Main Content -->
         <div class="lg:col-span-2">
           <!-- Informations Tab -->
-          <div v-show="activeTab === 'info'" class="glass-card p-6 sm:p-8 rounded-2xl">
+          <div v-show="activeTab === 'info'" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 sm:p-8 rounded-2xl">
             <h3 class="text-xl font-bold text-gray-900 mb-6">Informations personnelles</h3>
             
             <form @submit.prevent="updateProfile" class="space-y-6">
@@ -122,7 +122,7 @@
           </div>
 
           <!-- Security Tab -->
-          <div v-show="activeTab === 'security'" class="glass-card p-6 sm:p-8 rounded-2xl">
+          <div v-show="activeTab === 'security'" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 sm:p-8 rounded-2xl">
             <h3 class="text-xl font-bold text-gray-900 mb-6">Modifier le mot de passe</h3>
             
             <form @submit.prevent="updatePassword" class="space-y-6">
@@ -475,3 +475,5 @@ const updatePassword = async () => {
   }
 };
 </script>
+
+

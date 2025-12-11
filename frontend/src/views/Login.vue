@@ -19,7 +19,7 @@
     <!-- Login Card -->
     <div class="max-w-md w-full space-y-8 relative z-10">
       <!-- Glass Card -->
-      <div class="glass-card p-10 rounded-3xl shadow-2xl border-2 border-white/60 backdrop-blur-xl">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-10 rounded-3xl shadow-2xl border-2 border-white/60 backdrop-blur-xl">
         <!-- Logo & Title -->
         <div class="text-center mb-8">
           <div class="inline-flex items-center justify-center mb-6 relative">
@@ -205,3 +205,5 @@ const handleLogin = async () => {
   animation: shake 0.5s ease-in-out;
 }
 </style>
+
+

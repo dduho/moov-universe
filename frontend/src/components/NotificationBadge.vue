@@ -29,7 +29,7 @@
       
       <!-- Notification Panel -->
       <div
-        class="absolute top-20 right-4 w-96 max-h-[600px] glass-strong rounded-2xl shadow-2xl overflow-hidden"
+        class="absolute top-20 right-4 w-96 max-h-[600px] bg-white/15 backdrop-blur-xl border border-white/30 rounded-2xl shadow-2xl overflow-hidden"
         @click.stop
       >
         <!-- Header -->
@@ -325,3 +325,5 @@ onMounted(() => {
   background-color: rgba(255, 107, 0, 0.5);
 }
 </style>
+
+

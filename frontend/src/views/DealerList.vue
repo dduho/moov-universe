@@ -30,7 +30,7 @@
         </div>
 
         <!-- Search and Filters -->
-        <div class="glass-card p-4 sm:p-6 rounded-2xl mb-4 sm:mb-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl mb-4 sm:mb-6">
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             <FormInput
               v-model="searchQuery"
@@ -60,7 +60,7 @@
           <div
             v-for="org in organizations"
             :key="org.id"
-            class="glass-card p-4 sm:p-6 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer group"
+            class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl hover:shadow-xl transition-all duration-300 cursor-pointer group"
             @click="viewOrganization(org.id)"
           >
             <!-- Header -->
@@ -146,7 +146,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="!loading && organizations.length === 0" class="glass-card p-12 rounded-2xl text-center">
+        <div v-else-if="!loading && organizations.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 rounded-2xl text-center">
           <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
           </svg>
@@ -281,3 +281,5 @@ onMounted(() => {
   fetchOrganizations();
 });
 </script>
+
+

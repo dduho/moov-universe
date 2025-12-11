@@ -45,7 +45,7 @@
         </div>
 
         <!-- Step 1: Upload File & Select Dealer -->
-        <div v-if="currentStep === 1" class="glass-card p-8 rounded-2xl">
+        <div v-if="currentStep === 1" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 rounded-2xl">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">1. Sélectionner le fichier et le dealer</h2>
 
           <!-- Download Template -->
@@ -170,7 +170,7 @@
         </div>
 
         <!-- Step 2: Preview & Validate -->
-        <div v-if="currentStep === 2" class="glass-card p-8 rounded-2xl">
+        <div v-if="currentStep === 2" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 rounded-2xl">
           <h2 class="text-2xl font-bold text-gray-900 mb-6">2. Vérification des données</h2>
 
           <!-- Summary Cards -->
@@ -345,7 +345,7 @@
         </div>
 
         <!-- Step 3: Import Complete -->
-        <div v-if="currentStep === 3" class="glass-card p-8 rounded-2xl text-center">
+        <div v-if="currentStep === 3" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 rounded-2xl text-center">
           <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
@@ -554,3 +554,5 @@ onMounted(() => {
   loadDealers();
 });
 </script>
+
+

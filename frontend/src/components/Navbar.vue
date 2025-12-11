@@ -1,5 +1,5 @@
 <template>
-  <nav class="glass-strong sticky top-0 z-50 border-b border-white/20">
+  <nav class="bg-white/15 backdrop-blur-xl sticky top-0 z-50 border-b border-white/30">
     <div class="w-full px-4 sm:px-6">
       <div class="flex justify-between items-center h-16">
         <div class="flex items-center gap-4 lg:gap-8 flex-1">
@@ -440,3 +440,5 @@ const handleLogout = async () => {
   router.push({ name: 'Login' });
 };
 </script>
+
+

@@ -38,7 +38,7 @@
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <FormInput
             v-model="filters.search"
@@ -84,13 +84,13 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-12 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-gray-600 font-semibold">Chargement des PDV en attente...</p>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredPendingPOS.length === 0" class="glass-card p-12 text-center">
+      <div v-else-if="filteredPendingPOS.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="text-6xl mb-4">🎉</div>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Aucun PDV en attente</h3>
         <p class="text-gray-600">Tous les points de vente ont été traités !</p>
@@ -101,7 +101,7 @@
         <div
           v-for="pos in filteredPendingPOS"
           :key="pos.id"
-          class="glass-card p-6 hover:shadow-xl transition-all duration-200"
+          class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 hover:shadow-xl transition-all duration-200"
         >
           <div class="space-y-6">
             <!-- Info Section -->
@@ -442,3 +442,5 @@ onMounted(async () => {
   loading.value = false;
 });
 </script>
+
+

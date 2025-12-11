@@ -28,7 +28,7 @@
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-6 mb-6">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 mb-6">
         <div class="grid grid-cols-3 gap-4">
           <FormSelect
             v-model="selectedType"
@@ -83,7 +83,7 @@
       </div>
 
       <!-- Notifications List -->
-      <div class="glass-card">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl">
         <!-- Loading -->
         <div v-if="loading" class="p-12 flex flex-col items-center justify-center">
           <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-moov-orange mb-4"></div>
@@ -371,3 +371,5 @@ onMounted(async () => {
   await notificationStore.fetchUnreadCount();
 });
 </script>
+
+

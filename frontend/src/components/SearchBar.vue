@@ -51,7 +51,7 @@
     <!-- Search suggestions (optional) -->
     <div
       v-if="showSuggestions && suggestions.length > 0"
-      class="absolute z-50 w-full mt-2 glass-strong rounded-xl shadow-xl max-h-64 overflow-y-auto"
+      class="absolute z-50 w-full mt-2 bg-white/15 backdrop-blur-xl border border-white/30 rounded-xl shadow-xl max-h-64 overflow-y-auto"
     >
       <button
         v-for="(suggestion, index) in suggestions"
@@ -134,3 +134,5 @@ const handleSuggestionClick = (suggestion) => {
   emit('update:modelValue', suggestion.label);
 };
 </script>
+
+

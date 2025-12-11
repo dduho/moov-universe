@@ -11,7 +11,7 @@
       </div>
 
     <!-- Filtres -->
-    <div class="glass-card p-3 sm:p-6 mb-4 sm:mb-6">
+    <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-6 mb-4 sm:mb-6">
       <div class="grid grid-cols-1 gap-3 sm:gap-4">
         <div>
           <label class="block text-xs sm:text-sm font-medium text-gray-700 mb-1 sm:mb-2">Statut</label>
@@ -33,7 +33,7 @@
 
     <!-- Statistiques -->
     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4 mb-4 sm:mb-6">
-      <div class="glass-card p-3 sm:p-4">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs sm:text-sm text-gray-600">Total</p>
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <div class="glass-card p-3 sm:p-4">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs sm:text-sm text-gray-600">En attente</p>
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <div class="glass-card p-3 sm:p-4">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs sm:text-sm text-gray-600">En cours</p>
@@ -69,7 +69,7 @@
         </div>
       </div>
 
-      <div class="glass-card p-3 sm:p-4">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-4">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs sm:text-sm text-gray-600">Complétées</p>
@@ -81,7 +81,7 @@
         </div>
       </div>
 
-      <div class="glass-card p-3 sm:p-4 col-span-2 sm:col-span-1">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-3 sm:p-4 col-span-2 sm:col-span-1">
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs sm:text-sm text-gray-600">Validées</p>
@@ -100,7 +100,7 @@
       <p class="mt-3 sm:mt-4 text-sm sm:text-base text-gray-500">Chargement des tâches...</p>
     </div>
 
-    <div v-else-if="tasks.length === 0" class="glass-card text-center py-12">
+    <div v-else-if="tasks.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl text-center py-12">
       <svg class="w-20 h-20 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
       </svg>
@@ -111,7 +111,7 @@
       <div
         v-for="task in tasks"
         :key="task.id"
-        class="glass-card p-4 hover:shadow-lg transition cursor-pointer"
+        class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 hover:shadow-lg transition cursor-pointer"
         @click="goToPdv(task.point_of_sale_id)"
       >
         <div class="flex justify-between items-start">
@@ -293,3 +293,5 @@ const formatDate = (date) => {
   });
 };
 </script>
+
+

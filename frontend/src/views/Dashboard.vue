@@ -42,7 +42,7 @@
           <div v-if="loading">
             <!-- Stats Cards Skeleton -->
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-              <div v-for="i in 4" :key="i" class="glass-card p-6 rounded-2xl animate-pulse">
+              <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
                 <div class="flex items-center justify-between">
                   <div class="flex-1">
                     <div class="h-4 bg-gray-300 rounded w-24 mb-3"></div>
@@ -55,7 +55,7 @@
 
             <!-- Time Stats Skeleton -->
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-3 mb-8">
-              <div v-for="i in 3" :key="i" class="glass-card p-6 rounded-2xl animate-pulse">
+              <div v-for="i in 3" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
                 <div class="flex items-center gap-4">
                   <div class="w-12 h-12 bg-gray-300 rounded-xl"></div>
                   <div class="flex-1">
@@ -68,13 +68,13 @@
 
             <!-- Quick Actions & Recent PDV Skeleton -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <div class="glass-card p-6 rounded-2xl animate-pulse">
+              <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
                 <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
                 <div class="space-y-4">
                   <div v-for="i in 3" :key="i" class="h-12 bg-gray-300 rounded-xl"></div>
                 </div>
               </div>
-              <div class="glass-card p-6 rounded-2xl animate-pulse">
+              <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
                 <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
                 <div class="space-y-3">
                   <div v-for="i in 5" :key="i" class="h-16 bg-gray-300 rounded-xl"></div>
@@ -83,7 +83,7 @@
             </div>
 
             <!-- Regions Skeleton -->
-            <div class="glass-card p-6 rounded-2xl animate-pulse mb-8">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse mb-8">
               <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div v-for="i in 6" :key="i" class="h-32 bg-gray-300 rounded-xl"></div>
@@ -96,7 +96,7 @@
           <!-- Incomplete required fields alert -->
           <div v-if="incompletePdvs.length" class="mb-8">
             <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-[2px] shadow-2xl">
-              <div class="glass-card rounded-3xl bg-white p-6 sm:p-8">
+              <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-3xl bg-white p-6 sm:p-8">
                 <!-- Header -->
                 <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div class="flex items-start gap-4">
@@ -270,7 +270,7 @@
 
           <!-- Statistiques supplémentaires -->
           <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 mb-8">
-            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200 flex-shrink-0 w-48 sm:w-auto">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200 flex-shrink-0 w-48 sm:w-auto">
               <div class="flex items-center gap-3 sm:gap-4">
                 <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
                   <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,7 +284,7 @@
               </div>
             </div>
 
-            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-purple-100/30 border border-purple-200 flex-shrink-0 w-48 sm:w-auto">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-purple-50/50 to-purple-100/30 border border-purple-200 flex-shrink-0 w-48 sm:w-auto">
               <div class="flex items-center gap-3 sm:gap-4">
                 <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-500 flex items-center justify-center shadow-lg">
                   <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -298,7 +298,7 @@
               </div>
             </div>
 
-            <div class="glass-card p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-green-50/50 to-green-100/30 border border-green-200 flex-shrink-0 w-48 sm:w-auto">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-green-50/50 to-green-100/30 border border-green-200 flex-shrink-0 w-48 sm:w-auto">
               <div class="flex items-center gap-3 sm:gap-4">
                 <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500 flex items-center justify-center shadow-lg">
                   <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,7 +315,7 @@
 
           <!-- Pending Validation Alert (Admin Only) -->
           <div v-if="authStore.isAdmin && stats.pending > 0" class="mb-8">
-            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50/50">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50/50">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-center gap-3 sm:gap-4">
                   <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-yellow-100 flex items-center justify-center flex-shrink-0">
@@ -347,7 +347,7 @@
 
           <!-- GPS Missing Alert -->
           <div v-if="gpsStats.without_gps > 0" class="mb-8">
-            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-red-300 bg-red-50/50">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-red-300 bg-red-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div class="flex items-center gap-3 sm:gap-4">
@@ -458,7 +458,7 @@
 
           <!-- Geographic Inconsistency Alert (Admin only) -->
           <div v-if="authStore.isAdmin && geoAlerts.alerts_count > 0" class="mb-8">
-            <div class="glass-card p-4 sm:p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/50">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div class="flex items-center gap-3 sm:gap-4">
@@ -569,7 +569,7 @@
 
           <!-- Quick Actions -->
           <div class="mb-8">
-            <div class="glass-card p-4 sm:p-6 rounded-2xl">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl">
               <h3 class="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-2">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
@@ -611,7 +611,7 @@
           <!-- Distribution par Région et Dealer -->
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             <!-- PDV par Région -->
-            <div class="glass-card p-6 rounded-2xl">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
               <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                 <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -727,7 +727,7 @@
             </div>
 
             <!-- PDV par Dealer (Admin only) -->
-            <div v-if="authStore.isAdmin" class="glass-card p-6 rounded-2xl">
+            <div v-if="authStore.isAdmin" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
               <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -804,7 +804,7 @@
           </div>
 
           <!-- Recent PDVs -->
-          <div class="glass-card p-6 rounded-2xl mb-8">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl mb-8">
             <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -863,7 +863,7 @@
           </div>
 
           <!-- Dealers Stats (Admin only) -->
-          <div v-if="authStore.isAdmin && byOrganization.length > 0" class="glass-card p-6 rounded-2xl">
+          <div v-if="authStore.isAdmin && byOrganization.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
             <div class="flex items-center justify-between mb-6">
               <h3 class="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1170,3 +1170,5 @@ const XIcon = {
   }
 };
 </script>
+
+

@@ -37,7 +37,7 @@
       </div>
 
       <!-- Form Card -->
-      <div class="glass-card p-6 sm:p-8 rounded-3xl shadow-2xl border-2 border-white/60 backdrop-blur-xl">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 sm:p-8 rounded-3xl shadow-2xl border-2 border-white/60 backdrop-blur-xl">
         <form @submit.prevent="handleSubmit" class="space-y-6">
           <!-- Current Password -->
           <div>
@@ -341,3 +341,5 @@ onMounted(() => {
   }
 });
 </script>
+
+

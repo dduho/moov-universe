@@ -17,7 +17,7 @@
 
         <div v-if="!loading && organization" class="space-y-6">
           <!-- Header Card -->
-          <div class="glass-card p-8 rounded-2xl">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 rounded-2xl">
             <div class="flex items-start justify-between">
               <div class="flex items-center gap-4">
                 <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center">
@@ -113,7 +113,7 @@
           </div>
 
           <!-- PDV List for this dealer -->
-          <div class="glass-card p-6 rounded-2xl">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-900">Points de vente</h2>
               <router-link
@@ -439,3 +439,5 @@ const UserIcon = {
   }
 };
 </script>
+
+

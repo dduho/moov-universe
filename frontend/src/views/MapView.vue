@@ -10,7 +10,7 @@
       </div>
 
       <!-- Proximity Alerts -->
-      <div v-if="proximityAlerts.length > 0" class="glass-card p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-500">
+      <div v-if="proximityAlerts.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-500">
         <div class="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
           <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -53,7 +53,7 @@
       </div>
 
       <!-- Map Controls -->
-      <div class="glass-card p-4 sm:p-6 mb-4 sm:mb-6">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-4">
           <FormInput
             v-model="filters.search"
@@ -120,7 +120,7 @@
       </div>
 
       <!-- Map Container -->
-      <div class="glass-card p-6">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
         <div class="relative rounded-xl overflow-hidden" style="height: 700px;">
           <!-- Native Leaflet Map Container -->
           <div ref="mapContainer" class="h-full w-full rounded-xl"></div>
@@ -144,7 +144,7 @@
         <div
           v-for="dealer in dealerStats"
           :key="dealer.id"
-          class="glass-card p-4 rounded-xl hover:shadow-lg transition-shadow"
+          class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-xl hover:shadow-lg transition-shadow"
         >
           <div class="flex items-center gap-3">
             <div
@@ -164,7 +164,7 @@
       </div>
 
       <!-- Legend -->
-      <div class="glass-card p-6 mt-6">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 mt-6">
         <h3 class="text-lg font-bold text-gray-900 mb-4">Légende</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <!-- Dealers Legend -->
@@ -894,3 +894,5 @@ onUnmounted(() => {
   z-index: 1;
 }
 </style>
+
+

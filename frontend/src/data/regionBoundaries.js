@@ -7,21 +7,20 @@
 export const regionBoundaries = {
   MARITIME: {
     name: 'Maritime',
-    // Polygone englobant la région Maritime (sud du Togo)
+    // Polygone plus précis pour la région Maritime
     polygon: [
-      [0.7500, 6.1000],   // Sud-Ouest (frontière Ghana)
+      [0.7000, 6.1000],   // Sud-Ouest (frontière Ghana, côte)
       [1.8000, 6.1000],   // Sud-Est (frontière Bénin, côte)
-      [1.8000, 6.6000],   // Est
-      [1.4500, 6.9000],   // Nord-Est
-      [1.1000, 6.9000],   // Nord
-      [0.7500, 6.6500],   // Nord-Ouest
-      [0.7500, 6.1000]    // Fermeture
+      [1.8000, 6.5000],   // Est
+      [1.6000, 7.2000],   // Nord-Est
+      [1.2000, 7.2000],   // Nord
+      [0.7000, 7.0000],   // Nord-Ouest
+      [0.7000, 6.1000]    // Fermeture
     ],
-    // Bounding box pour optimisation
     bounds: {
       minLat: 6.1000,
-      maxLat: 6.9000,
-      minLng: 0.7500,
+      maxLat: 7.2000,
+      minLng: 0.7000,
       maxLng: 1.8000
     }
   },
@@ -29,80 +28,80 @@ export const regionBoundaries = {
   PLATEAUX: {
     name: 'Plateaux',
     polygon: [
-      [0.5000, 6.8500],   // Sud-Ouest
-      [1.6500, 6.8500],   // Sud-Est
-      [1.6500, 7.5500],   // Nord-Est
-      [1.4000, 7.8500],   // Est
-      [0.8500, 7.8500],   // Nord
-      [0.5000, 7.5500],   // Nord-Ouest
-      [0.5000, 6.8500]    // Fermeture
+      [0.5000, 7.2000],   // Sud-Ouest
+      [1.6000, 7.2000],   // Sud-Est
+      [1.6000, 8.3000],   // Nord-Est
+      [1.4000, 8.3000],   // Est
+      [0.8000, 8.3000],   // Nord
+      [0.5000, 8.1000],   // Nord-Ouest
+      [0.5000, 7.2000]    // Fermeture
     ],
     bounds: {
-      minLat: 6.8500,
-      maxLat: 7.8500,
+      minLat: 7.2000,
+      maxLat: 8.3000,
       minLng: 0.5000,
-      maxLng: 1.6500
+      maxLng: 1.6000
     }
   },
   
   CENTRALE: {
     name: 'Centrale',
     polygon: [
-      [0.4000, 7.8000],   // Sud-Ouest
-      [1.5500, 7.8000],   // Sud-Est
-      [1.5500, 8.5000],   // Est
-      [1.4500, 9.0500],   // Nord-Est
-      [0.7500, 9.0500],   // Nord
-      [0.4000, 8.5000],   // Nord-Ouest
-      [0.4000, 7.8000]    // Fermeture
+      [0.4000, 8.3000],   // Sud-Ouest
+      [1.5000, 8.3000],   // Sud-Est
+      [1.5000, 9.5000],   // Nord-Est
+      [1.3000, 9.5000],   // Est
+      [0.7000, 9.5000],   // Nord
+      [0.4000, 9.2000],   // Nord-Ouest
+      [0.4000, 8.3000]    // Fermeture
     ],
     bounds: {
-      minLat: 7.8000,
-      maxLat: 9.0500,
+      minLat: 8.3000,
+      maxLat: 9.5000,
       minLng: 0.4000,
-      maxLng: 1.5500
+      maxLng: 1.5000
     }
   },
   
   KARA: {
     name: 'Kara',
     polygon: [
-      [0.2500, 9.0000],   // Sud-Ouest
-      [1.5000, 9.0000],   // Sud-Est
-      [1.4500, 9.8000],   // Est
-      [1.2500, 10.0500],  // Nord-Est
-      [0.5500, 10.0500],  // Nord
-      [0.2500, 9.6000],   // Nord-Ouest
-      [0.2500, 9.0000]    // Fermeture
+      [0.2000, 9.5000],   // Sud-Ouest
+      [1.4000, 9.5000],   // Sud-Est
+      [1.4000, 10.5000],  // Nord-Est
+      [1.2000, 10.5000],  // Est
+      [0.5000, 10.5000],  // Nord
+      [0.2000, 10.2000],  // Nord-Ouest
+      [0.2000, 9.5000]    // Fermeture
     ],
     bounds: {
-      minLat: 9.0000,
-      maxLat: 10.0500,
-      minLng: 0.2500,
-      maxLng: 1.5000
+      minLat: 9.5000,
+      maxLat: 10.5000,
+      minLng: 0.2000,
+      maxLng: 1.4000
     }
   },
   
   SAVANES: {
     name: 'Savanes',
     polygon: [
-      [0.0500, 10.0000],  // Sud-Ouest
-      [1.2500, 10.0000],  // Sud-Est (frontière Bénin)
-      [1.0000, 10.5000],  // Est
-      [0.7500, 11.1500],  // Nord-Est (frontière Burkina)
-      [0.1500, 11.1500],  // Nord (frontière Burkina)
-      [-0.1500, 10.6500], // Nord-Ouest (frontière Ghana)
-      [0.0500, 10.0000]   // Fermeture
+      [0.0000, 10.5000],  // Sud-Ouest
+      [1.2000, 10.5000],  // Sud-Est (frontière Bénin)
+      [1.0000, 11.1000],  // Est
+      [0.7000, 11.1000],  // Nord-Est (frontière Burkina)
+      [0.1000, 11.1000],  // Nord (frontière Burkina)
+      [-0.1000, 10.8000], // Nord-Ouest (frontière Ghana)
+      [0.0000, 10.5000]   // Fermeture
     ],
     bounds: {
-      minLat: 10.0000,
-      maxLat: 11.1500,
-      minLng: -0.1500,
-      maxLng: 1.2500
+      minLat: 10.5000,
+      maxLat: 11.1000,
+      minLng: -0.1000,
+      maxLng: 1.2000
     }
   },
   
-  // Lomé comme zone spéciale (incluse dans Maritime mais distincte)
+  // Lomé comme zone spéciale (incluse dans Maritime)
   LOME: {
     name: 'Grand Lomé',
     polygon: [

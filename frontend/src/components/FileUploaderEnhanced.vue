@@ -119,7 +119,7 @@
     </div>
 
     <!-- Upload Progress -->
-    <div v-if="uploadStore.uploading" class="glass-card p-4">
+    <div v-if="uploadStore.uploading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4">
       <div class="flex items-center justify-between mb-2">
         <span class="text-sm font-semibold text-gray-700">Upload en cours...</span>
         <span class="text-sm font-bold text-moov-orange">{{ uploadStore.progress }}%</span>
@@ -160,7 +160,7 @@
         <div
           v-for="(file, index) in files"
           :key="index"
-          class="relative glass-card p-2 sm:p-3 group"
+          class="relative bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-2 sm:p-3 group"
         >
           <!-- Preview -->
           <div 
@@ -454,3 +454,5 @@ const uploadFiles = async () => {
   }
 };
 </script>
+
+

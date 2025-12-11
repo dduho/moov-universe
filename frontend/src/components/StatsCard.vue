@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="glass-card rounded-2xl p-6 hover:shadow-xl transition-all duration-300 border border-white/50"
+    class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-2xl p-6 hover:shadow-xl transition-all duration-300 border border-white/50"
     :class="clickable ? 'cursor-pointer hover:scale-105' : ''"
     @click="clickable && $emit('click')"
   >
@@ -69,3 +69,5 @@ const iconBgClass = computed(() => {
   return colors[props.color] || colors.orange;
 });
 </script>
+
+

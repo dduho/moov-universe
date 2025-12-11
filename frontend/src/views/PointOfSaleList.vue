@@ -38,7 +38,7 @@
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8">
         <!-- Ligne 1: Recherche, Statut, Région, Dealer -->
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <div class="sm:col-span-2 md:col-span-2">
@@ -175,13 +175,13 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-12 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-gray-600 font-semibold">Chargement des PDV...</p>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="filteredPOS.length === 0" class="glass-card p-12 text-center">
+      <div v-else-if="filteredPOS.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="text-6xl mb-4">📍</div>
         <h3 class="text-xl font-bold text-gray-900 mb-2">Aucun PDV trouvé</h3>
         <p class="text-gray-600 mb-6">Aucun point de vente ne correspond à vos critères de recherche</p>
@@ -204,7 +204,7 @@
           v-for="(pos, index) in paginatedPOS"
           :key="pos.id"
           :style="{ '--animation-delay': `${index * 50}ms` }"
-          class="glass-card overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group pdv-item"
+          class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer group pdv-item"
           @click="$router.push(`/pdv/${pos.id}`)"
         >
           <!-- Header with gradient -->
@@ -315,7 +315,7 @@
       </TransitionGroup>
 
       <!-- List View -->
-      <div v-else class="glass-card overflow-hidden">
+      <div v-else class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50/80">
             <tr>
@@ -748,3 +748,5 @@ onMounted(async () => {
   }
 }
 </style>
+
+

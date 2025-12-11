@@ -31,7 +31,7 @@
     <!-- Dropdown Menu -->
     <div
       v-if="showMenu"
-      class="absolute right-0 mt-2 w-48 glass-strong rounded-xl shadow-xl overflow-hidden z-50"
+      class="absolute right-0 mt-2 w-48 bg-white/15 backdrop-blur-xl border border-white/30 rounded-xl shadow-xl overflow-hidden z-50"
     >
       <button
         @click="handleExport('excel')"
@@ -109,3 +109,5 @@ const handleExport = async (format) => {
   }
 };
 </script>
+
+

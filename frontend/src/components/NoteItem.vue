@@ -90,3 +90,5 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 </script>
+
+

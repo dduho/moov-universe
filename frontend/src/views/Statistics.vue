@@ -36,7 +36,7 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-8 sm:p-12 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 sm:p-12 text-center">
         <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-sm sm:text-base text-gray-600 font-semibold">Chargement des statistiques...</p>
       </div>
@@ -45,7 +45,7 @@
       <div v-else>
         <!-- Key Metrics -->
         <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 mb-6 sm:mb-8">
-          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-100 flex items-center justify-center">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -59,7 +59,7 @@
             <p class="text-xs text-gray-500 mt-1">{{ stats.activePOS || 0 }} actifs</p>
           </div>
 
-          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-100 flex items-center justify-center">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +72,7 @@
             <p class="text-xs text-gray-500 mt-1">Sur les {{ selectedPeriod }} derniers jours</p>
           </div>
 
-          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-100 flex items-center justify-center">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +85,7 @@
             <p class="text-xs text-gray-500 mt-1">De validation</p>
           </div>
 
-          <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-44 sm:w-auto">
             <div class="flex items-center justify-between mb-3 sm:mb-4">
               <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-100 flex items-center justify-center">
                 <svg class="w-5 h-5 sm:w-6 sm:h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -102,7 +102,7 @@
         <!-- Charts Row 1 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <!-- Evolution Chart -->
-          <div class="glass-card p-6">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
@@ -122,7 +122,7 @@
           </div>
 
           <!-- Distribution by Region -->
-          <div class="glass-card p-6">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -151,7 +151,7 @@
         <!-- Charts Row 2 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <!-- Status Distribution -->
-          <div class="glass-card p-6">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path>
@@ -189,7 +189,7 @@
           </div>
 
           <!-- Top Dealers -->
-          <div class="glass-card p-6">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
             <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
               <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
@@ -224,7 +224,7 @@
         </div>
 
         <!-- Monthly Performance Table -->
-        <div class="glass-card p-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
           <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
             <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
@@ -333,3 +333,5 @@ onMounted(() => {
   loadStatistics();
 });
 </script>
+
+

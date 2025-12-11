@@ -26,7 +26,7 @@
       </div>
 
       <!-- Filters -->
-      <div class="glass-card p-4 sm:p-6 mb-6 sm:mb-8">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8">
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
           <FormInput
             v-model="filters.search"
@@ -76,7 +76,7 @@
 
       <!-- Stats Cards -->
       <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-2 md:grid-cols-4 mb-6 sm:mb-8">
-        <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs sm:text-sm font-semibold text-gray-600">Total</p>
@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        <div class="glass-card p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 flex-shrink-0 w-40 sm:w-auto">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-xs sm:text-sm font-semibold text-gray-600">Actifs</p>
@@ -104,7 +104,7 @@
           </div>
         </div>
 
-        <div class="glass-card p-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold text-gray-600">Admins</p>
@@ -118,7 +118,7 @@
           </div>
         </div>
 
-        <div class="glass-card p-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
           <div class="flex items-center justify-between">
             <div>
               <p class="text-sm font-semibold text-gray-600">Dealers</p>
@@ -134,13 +134,13 @@
       </div>
 
       <!-- Loading State -->
-      <div v-if="loading" class="glass-card p-12 text-center">
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-12 text-center">
         <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-gray-600 font-semibold">Chargement des utilisateurs...</p>
       </div>
 
       <!-- Users Table -->
-      <div v-else class="glass-card overflow-hidden">
+      <div v-else class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
             <thead class="bg-white/50">
@@ -458,3 +458,5 @@ onMounted(async () => {
   }
 });
 </script>
+
+
