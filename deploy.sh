@@ -112,6 +112,12 @@ pull_latest_code() {
     # Corriger les permissions après le pull
     sudo chown -R $WEB_USER:$WEB_GROUP .
     
+    # Garder .git pour l'utilisateur de déploiement
+    sudo chown -R moov:moov .git
+    
+    # Ajouter le répertoire aux répertoires sûrs pour Git
+    git config --global --add safe.directory $PROJECT_DIR
+    
     log_success "Code mis à jour depuis la branche $GIT_BRANCH"
 }
 
