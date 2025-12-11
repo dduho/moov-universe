@@ -93,6 +93,9 @@ pull_latest_code() {
     
     cd "$PROJECT_DIR"
     
+    # Ajouter le répertoire aux répertoires sûrs pour Git
+    sudo git config --global --add safe.directory $PROJECT_DIR
+    
     # S'assurer que les permissions du dossier .git sont correctes
     if [ -d ".git" ]; then
         sudo chown -R $WEB_USER:$WEB_GROUP .git
@@ -114,9 +117,6 @@ pull_latest_code() {
     
     # Garder .git pour l'utilisateur de déploiement
     sudo chown -R moov:moov .git
-    
-    # Ajouter le répertoire aux répertoires sûrs pour Git
-    sudo git config --global --add safe.directory $PROJECT_DIR
     
     log_success "Code mis à jour depuis la branche $GIT_BRANCH"
 }
