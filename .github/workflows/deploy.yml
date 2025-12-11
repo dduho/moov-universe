@@ -41,6 +41,13 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+          
+          # Configure SSH to avoid host key checking for automated deployment
+          cat >> ~/.ssh/config << 'SSHCONFIG'
+          Host ${{ secrets.SERVER_HOST }}
+            StrictHostKeyChecking accept-new
+            UserKnownHostsFile ~/.ssh/known_hosts
+          SSHCONFIG
       
       - name: 🚀 Deploy backend
         run: |
@@ -71,7 +78,7 @@ jobs:
             php artisan migrate --force
             
             # Fix permissions
-            sudo chown -R moov:moov storage bootstrap/cache
+            sudo chown -R ${{ secrets.SERVER_USER }}:${{ secrets.SERVER_USER }} storage bootstrap/cache
             sudo chmod -R 775 storage bootstrap/cache
           EOF
       
@@ -89,16 +96,13 @@ jobs:
               sudo systemctl reload nginx
             fi
             
-            # Restart PHP-FPM (try different versions)
-            if systemctl is-active --quiet php8.3-fpm 2>/dev/null; then
-              sudo systemctl restart php8.3-fpm
-            elif systemctl is-active --quiet php8.2-fpm 2>/dev/null; then
-              sudo systemctl restart php8.2-fpm
-            elif systemctl is-active --quiet php8.1-fpm 2>/dev/null; then
-              sudo systemctl restart php8.1-fpm
-            elif systemctl is-active --quiet php-fpm 2>/dev/null; then
-              sudo systemctl restart php-fpm
-            fi
+            # Restart PHP-FPM (try different versions in order of preference)
+            for php_version in php8.3-fpm php8.2-fpm php8.1-fpm php-fpm; do
+              if systemctl is-active --quiet $php_version 2>/dev/null; then
+                sudo systemctl restart $php_version
+                break
+              fi
+            done
           EOF
       
       - name: ✅ Deployment complete
