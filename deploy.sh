@@ -210,30 +210,33 @@ EOF
 }
 
 reload_services() {
-    log_info "Rechargement des services..."
+    log_info "Redémarrage des services..."
     
-    # Recharger PHP-FPM si installé
+    # Redémarrer PHP-FPM si installé
     if systemctl is-active --quiet php8.3-fpm 2>/dev/null; then
-        systemctl reload php8.3-fpm
-        log_success "PHP-FPM 8.3 rechargé"
+        systemctl restart php8.3-fpm
+        log_success "PHP-FPM 8.3 redémarré"
     elif systemctl is-active --quiet php8.2-fpm 2>/dev/null; then
-        systemctl reload php8.2-fpm
-        log_success "PHP-FPM 8.2 rechargé"
+        systemctl restart php8.2-fpm
+        log_success "PHP-FPM 8.2 redémarré"
+    elif systemctl is-active --quiet php8.1-fpm 2>/dev/null; then
+        systemctl restart php8.1-fpm
+        log_success "PHP-FPM 8.1 redémarré"
     elif systemctl is-active --quiet php-fpm 2>/dev/null; then
-        systemctl reload php-fpm
-        log_success "PHP-FPM rechargé"
+        systemctl restart php-fpm
+        log_success "PHP-FPM redémarré"
     fi
     
-    # Recharger Nginx
+    # Redémarrer Nginx
     if systemctl is-active --quiet nginx; then
-        nginx -t && systemctl reload nginx
-        log_success "Nginx rechargé"
+        nginx -t && systemctl restart nginx
+        log_success "Nginx redémarré"
     fi
     
-    # Recharger Apache si utilisé
+    # Redémarrer Apache si utilisé
     if systemctl is-active --quiet apache2; then
-        systemctl reload apache2
-        log_success "Apache rechargé"
+        systemctl restart apache2
+        log_success "Apache redémarré"
     fi
 }
 
