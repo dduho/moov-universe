@@ -116,7 +116,7 @@ pull_latest_code() {
     sudo chown -R moov:moov .git
     
     # Ajouter le répertoire aux répertoires sûrs pour Git
-    git config --global --add safe.directory $PROJECT_DIR
+    sudo git config --global --add safe.directory $PROJECT_DIR
     
     log_success "Code mis à jour depuis la branche $GIT_BRANCH"
 }
