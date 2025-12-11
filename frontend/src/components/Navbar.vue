@@ -109,10 +109,45 @@
           <!-- Notification Badge -->
           <NotificationBadge />
           
-          <div class="hidden xl:block text-right px-4 py-2 rounded-xl bg-white/30 border border-white/40">
-            <p class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ authStore.user?.name }}</p>
-            <p class="text-xs font-semibold text-gray-600 whitespace-nowrap">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
+          <!-- User Profile Dropdown -->
+          <div class="relative" @click.stop>
+            <button
+              @click="showUserMenu = !showUserMenu"
+              class="hidden xl:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/30 border border-white/40 hover:bg-white/50 transition-all"
+            >
+              <div class="text-right">
+                <p class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ authStore.user?.name }}</p>
+                <p class="text-xs font-semibold text-gray-600 whitespace-nowrap">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
+              </div>
+              <svg
+                class="w-4 h-4 text-gray-600 transition-transform"
+                :class="{ 'rotate-180': showUserMenu }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+
+            <!-- User Dropdown Menu -->
+            <div
+              v-if="showUserMenu"
+              class="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-white/40 overflow-hidden z-50"
+            >
+              <router-link
+                to="/profile"
+                @click="showUserMenu = false"
+                class="flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-all border-b border-gray-100 text-gray-700 hover:bg-moov-orange/10 hover:text-moov-orange"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span>Mon Profil</span>
+              </router-link>
+            </div>
           </div>
+          
           <button
             @click="handleLogout"
             class="px-3 xl:px-4 py-2 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white text-sm font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200 flex items-center gap-2 cursor-pointer"
@@ -174,6 +209,17 @@
             <p class="text-sm font-bold text-gray-900">{{ authStore.user?.name }}</p>
             <p class="text-xs font-semibold text-gray-600">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
           </div>
+
+          <router-link
+            to="/profile"
+            @click="mobileMenuOpen = false"
+            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/30 border border-white/40 text-gray-700 hover:bg-white/50 transition-all"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+            <span class="text-sm font-semibold">Mon Profil</span>
+          </router-link>
           
           <button
             @click="openGlobalSearch"
@@ -211,6 +257,7 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const showAdminMenu = ref(false);
+const showUserMenu = ref(false);
 const mobileMenuOpen = ref(false);
 
 // Global search
@@ -227,10 +274,13 @@ const handleKeydown = (event) => {
   }
 };
 
-// Close admin menu when clicking outside
+// Close menus when clicking outside
 const closeAdminMenu = (event) => {
   if (showAdminMenu.value && !event.target.closest('.relative')) {
     showAdminMenu.value = false;
+  }
+  if (showUserMenu.value && !event.target.closest('.relative')) {
+    showUserMenu.value = false;
   }
 };
 

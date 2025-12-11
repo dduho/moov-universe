@@ -1,12 +1,34 @@
 <template>
-  <div class="min-h-screen bg-gradient-mesh flex items-center justify-center p-4">
-    <div class="w-full max-w-md">
+  <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Animated gradient background -->
+    <div class="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-orange-50"></div>
+    
+    <!-- Animated background elements -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+      <!-- Large animated circles -->
+      <div class="absolute -top-40 -left-40 w-96 h-96 bg-moov-orange rounded-full opacity-10 blur-3xl animate-pulse"></div>
+      <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-moov-orange-dark rounded-full opacity-10 blur-3xl animate-pulse" style="animation-delay: 1.5s;"></div>
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-moov-orange-light rounded-full opacity-5 blur-3xl animate-pulse" style="animation-delay: 0.75s;"></div>
+      
+      <!-- Floating geometric shapes -->
+      <div class="absolute top-20 right-20 w-16 h-16 border-4 border-moov-orange/20 rounded-lg rotate-45 animate-bounce" style="animation-duration: 3s;"></div>
+      <div class="absolute bottom-32 left-32 w-12 h-12 bg-moov-orange/10 rounded-full animate-bounce" style="animation-duration: 4s; animation-delay: 1s;"></div>
+      <div class="absolute top-1/3 right-1/4 w-8 h-8 border-4 border-moov-orange-light/30 rounded-full animate-bounce" style="animation-duration: 5s; animation-delay: 0.5s;"></div>
+    </div>
+
+    <div class="w-full max-w-md relative z-10">
       <!-- Logo -->
       <div class="text-center mb-8">
-        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-moov-orange to-moov-orange-dark shadow-2xl mb-4">
-          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-          </svg>
+        <div class="inline-flex items-center justify-center mb-6 relative">
+          <!-- Glow effect behind logo -->
+          <div class="absolute inset-0 bg-gradient-moov rounded-full blur-2xl opacity-30 scale-110"></div>
+          <div class="relative">
+            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-moov-orange to-moov-orange-dark shadow-2xl flex items-center justify-center">
+              <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+            </div>
+          </div>
         </div>
         <h1 class="text-2xl font-bold text-gray-900">Changement de mot de passe</h1>
         <p class="text-gray-600 mt-2">
@@ -15,7 +37,7 @@
       </div>
 
       <!-- Form Card -->
-      <div class="glass-card p-6 sm:p-8 rounded-2xl">
+      <div class="glass-card p-6 sm:p-8 rounded-3xl shadow-2xl border-2 border-white/60 backdrop-blur-xl">
         <form @submit.prevent="handleSubmit" class="space-y-6">
           <!-- Current Password -->
           <div>

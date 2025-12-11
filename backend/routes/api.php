@@ -14,6 +14,7 @@ use App\Http\Controllers\SystemSettingController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -33,6 +34,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
+
+    // Profile routes
+    Route::get('/profile', [ProfileController::class, 'show']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+    Route::put('/profile/password', [ProfileController::class, 'updatePassword']);
 
     // Geography routes (public for authenticated users)
     Route::prefix('geography')->group(function () {

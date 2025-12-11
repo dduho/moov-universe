@@ -30,4 +30,14 @@ export default {
     const response = await api.get('/password-rules');
     return response.data;
   },
+
+  async updateProfile(data) {
+    const response = await api.put('/profile', data);
+    return response.data;
+  },
+
+  async updatePassword(data) {
+    const response = await api.put('/profile/password', data);
+    return response.data;
+  },
 };

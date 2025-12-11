@@ -24,6 +24,12 @@ const routes = [
     meta: { requiresAuth: true, allowPasswordChange: true },
   },
   {
+    path: '/profile',
+    name: 'Profile',
+    component: () => import('../views/Profile.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/',
     redirect: '/dashboard',
   },
