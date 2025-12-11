@@ -32,8 +32,8 @@ FRONTEND_PUBLIC_DIR="/data/www/moov-universe/frontend/dist"
 GIT_BRANCH="main"
 
 # Utilisateur web (www-data pour Nginx/Apache sur Ubuntu)
-WEB_USER="moov"
-WEB_GROUP="moov"
+WEB_USER="www-data"
+WEB_GROUP="www-data"
 
 # URL de l'API pour le frontend
 API_URL="https://10.80.16.51:8443/api"
@@ -163,8 +163,8 @@ deploy_backend() {
     
     # Permissions
     log_info "Configuration des permissions..."
-    chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
-    chmod -R 775 storage bootstrap/cache
+    sudo chown -R $WEB_USER:$WEB_GROUP storage bootstrap/cache
+    sudo chmod -R 775 storage bootstrap/cache
     
     # Désactivation du mode maintenance
     log_info "Désactivation du mode maintenance..."
@@ -203,8 +203,8 @@ EOF
     
     # Permissions
     log_info "Configuration des permissions..."
-    chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
-    chmod -R 755 "$FRONTEND_DIR/dist"
+    sudo chown -R $WEB_USER:$WEB_GROUP "$FRONTEND_DIR/dist"
+    sudo chmod -R 755 "$FRONTEND_DIR/dist"
     
     log_success "Frontend déployé avec succès"
 }
