@@ -7,40 +7,37 @@
 export const regionBoundaries = {
   MARITIME: {
     name: 'Maritime',
-    // Polygone précis suivant frontière Ghana (ouest), côte (sud) et fleuve Mono (est)
+    // Polygone simplifié en rectangle pour couvrir toute la région Maritime
     polygon: [
-      [1.1667, 6.1000],  // Sud-Ouest : embouchure frontière Ghana-Togo (côte atlantique)
-      [0.9000, 6.7000],  // Ouest : le long de la frontière Ghana jusqu’à la limite Plateaux
-      [1.1000, 6.9000],  // Nord : limite avec Plateaux (intérieur)
-      [1.5000, 7.0000],  // Nord-Est : sur le fleuve Mono vers la région Plateaux
-      [1.6650, 6.1000],  // Sud-Est : frontière Togo–Bénin sur la côte (Grand-Popo)
-      [1.1667, 6.1000]   // Fermeture du polygone (retour au point de départ)
+      [0.9000, 6.0000],  // Sud-Ouest (frontière Ghana)
+      [0.9000, 7.0000],  // Nord-Ouest
+      [1.8000, 7.0000],  // Nord-Est (frontière Bénin)
+      [1.8000, 6.0000],  // Sud-Est (côte)
+      [0.9000, 6.0000]   // Fermeture
     ],
     bounds: {
-      minLat: 6.1000,
+      minLat: 6.0000,
       maxLat: 7.0000,
       minLng: 0.9000,
-      maxLng: 1.6650
+      maxLng: 1.8000
     }
   },
 
   PLATEAUX: {
     name: 'Plateaux',
-    // Polygone ajusté pour couvrir Agoú-Gare et Kpalimé
+    // Polygone simplifié rectangulaire pour éviter les trous
     polygon: [
-      [0.5000, 6.8000],  // Sud-Ouest : frontière Ghana
-      [0.3000, 7.5000],  // Ouest : intérieur
-      [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana
-      [1.5000, 8.3000],  // Nord-Est : frontière Bénin
-      [1.5000, 7.0000],  // Sud-Est : fleuve Mono
-      [0.9000, 6.8000],  // Sud : frontière Maritime
-      [0.5000, 6.8000]   // Fermeture
+      [0.3000, 6.5000],  // Sud-Ouest : frontière Ghana (chevauche Maritime)
+      [0.3000, 8.5000],  // Nord-Ouest : frontière Ghana
+      [1.6000, 8.5000],  // Nord-Est : frontière Bénin
+      [1.6000, 6.5000],  // Sud-Est : chevauche Maritime
+      [0.3000, 6.5000]   // Fermeture
     ],
     bounds: {
-      minLat: 6.8000,
-      maxLat: 8.3000,
+      minLat: 6.5000,
+      maxLat: 8.5000,
       minLng: 0.3000,
-      maxLng: 1.5000
+      maxLng: 1.6000
     }
   },
 
@@ -48,15 +45,15 @@ export const regionBoundaries = {
     name: 'Centrale',
     // Polygone couvrant la région centrale (entre Plateaux et Kara, du Ghana au Bénin)
     polygon: [
-      [0.3000, 8.3000],  // Sud-Ouest : commence à la jonction avec Plateaux sur frontière Ghana
-      [0.2000, 9.5000],  // Nord-Ouest : sur la frontière Ghana jusqu’à la région Kara
-      [1.3000, 9.5000],  // Nord-Est : frontière avec la Kara vers le Bénin
-      [1.5000, 8.3000],  // Sud-Est : sur la frontière Bénin à la jonction avec Plateaux
-      [0.3000, 8.3000]   // Fermeture du polygone
+      [0.3000, 8.5000],  // Sud-Ouest : commence à la jonction avec Plateaux sur frontière Ghana
+      [0.2000, 9.3000],  // Nord-Ouest : sur la frontière Ghana jusqu’à la région Kara
+      [1.3000, 9.3000],  // Nord-Est : frontière avec la Kara vers le Bénin
+      [1.5000, 8.5000],  // Sud-Est : sur la frontière Bénin à la jonction avec Plateaux
+      [0.3000, 8.5000]   // Fermeture du polygone
     ],
     bounds: {
-      minLat: 8.3000,
-      maxLat: 9.5000,
+      minLat: 8.5000,
+      maxLat: 9.3000,
       minLng: 0.2000,
       maxLng: 1.5000
     }
@@ -66,14 +63,14 @@ export const regionBoundaries = {
     name: 'Kara',
     // Polygone de la région de la Kara (entre Centrale et Savanes, Ghana à l'ouest, Bénin à l'est)
     polygon: [
-      [0.2000, 9.5000],   // Sud-Ouest : départ à la frontière Ghana (limite avec Centrale)
+      [0.2000, 9.3000],   // Sud-Ouest : départ à la frontière Ghana (limite avec Centrale)
       [0.0000, 10.5000],  // Nord-Ouest : frontière Ghana jusqu’à la région des Savanes
       [1.2000, 10.5000],  // Nord-Est : extrémité est vers la frontière du Bénin (limite Savanes)
-      [1.3000, 9.5000],   // Sud-Est : sur la frontière Bénin à la limite de la Centrale
-      [0.2000, 9.5000]    // Fermeture du polygone
+      [1.3000, 9.3000],   // Sud-Est : sur la frontière Bénin à la limite de la Centrale
+      [0.2000, 9.3000]    // Fermeture du polygone
     ],
     bounds: {
-      minLat: 9.5000,
+      minLat: 9.3000,
       maxLat: 10.5000,
       minLng: 0.0000,
       maxLng: 1.3000
