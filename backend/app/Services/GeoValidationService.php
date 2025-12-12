@@ -16,65 +16,57 @@ class GeoValidationService
         'MARITIME' => [
             'name' => 'Maritime',
             'polygon' => [
-                [0.7000, 6.1000],
-                [0.7000, 6.8000],
-                [1.2000, 6.8000],
-                [1.6000, 6.8000],
-                [1.8000, 6.5000],
-                [1.8000, 6.1000],
-                [0.7000, 6.1000]
+                [1.1667, 6.1000],  // Sud-Ouest : embouchure frontière Ghana-Togo (côte atlantique)
+                [0.9000, 6.7000],  // Ouest : le long de la frontière Ghana jusqu’à la limite Plateaux
+                [1.1000, 6.9000],  // Nord : limite avec Plateaux (intérieur)
+                [1.5000, 7.0000],  // Nord-Est : sur le fleuve Mono vers la région Plateaux
+                [1.6650, 6.1000],  // Sud-Est : frontière Togo–Bénin sur la côte (Grand-Popo)
+                [1.1667, 6.1000]   // Fermeture du polygone (retour au point de départ)
             ],
-            'bounds' => ['minLat' => 6.1000, 'maxLat' => 6.8000, 'minLng' => 0.7000, 'maxLng' => 1.8000]
+            'bounds' => ['minLat' => 6.1000, 'maxLat' => 7.0000, 'minLng' => 0.9000, 'maxLng' => 1.6650]
         ],
         'PLATEAUX' => [
             'name' => 'Plateaux',
             'polygon' => [
-                [0.5000, 6.8000],
-                [0.5000, 8.1000],
-                [0.8000, 8.3000],
-                [1.4000, 8.3000],
-                [1.6000, 8.3000],
-                [1.6000, 6.8000],
-                [0.5000, 6.8000]
+                [0.9000, 6.8000],  // Sud-Ouest : sur la frontière Ghana, début de la région Plateaux
+                [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana jusqu’à la région Centrale
+                [1.5000, 8.3000],  // Nord-Est : frontière avec le Bénin à la limite de la Centrale
+                [1.5000, 7.0000],  // Sud-Est : descendant le long du fleuve Mono (frontière Bénin) vers Maritime
+                [0.9000, 6.8000]   // Fermeture du polygone (retour au point de départ)
             ],
-            'bounds' => ['minLat' => 6.8000, 'maxLat' => 8.3000, 'minLng' => 0.5000, 'maxLng' => 1.6000]
+            'bounds' => ['minLat' => 6.8000, 'maxLat' => 8.3000, 'minLng' => 0.3000, 'maxLng' => 1.5000]
         ],
         'CENTRALE' => [
             'name' => 'Centrale',
             'polygon' => [
-                [0.4000, 8.3000],
-                [1.5000, 8.3000],
-                [1.5000, 9.5000],
-                [1.3000, 9.5000],
-                [0.7000, 9.5000],
-                [0.4000, 9.2000],
-                [0.4000, 8.3000]
+                [0.3000, 8.3000],  // Sud-Ouest : commence à la jonction avec Plateaux sur frontière Ghana
+                [0.2000, 9.5000],  // Nord-Ouest : sur la frontière Ghana jusqu’à la région Kara
+                [1.3000, 9.5000],  // Nord-Est : frontière avec la Kara vers le Bénin
+                [1.5000, 8.3000],  // Sud-Est : sur la frontière Bénin à la jonction avec Plateaux
+                [0.3000, 8.3000]   // Fermeture du polygone
             ],
-            'bounds' => ['minLat' => 8.3000, 'maxLat' => 9.5000, 'minLng' => 0.4000, 'maxLng' => 1.5000]
+            'bounds' => ['minLat' => 8.3000, 'maxLat' => 9.5000, 'minLng' => 0.2000, 'maxLng' => 1.5000]
         ],
         'KARA' => [
             'name' => 'Kara',
             'polygon' => [
-                [0.2000, 9.5000],
-                [1.4000, 9.5000],
-                [1.4000, 10.5000],
-                [1.2000, 10.5000],
-                [0.5000, 10.5000],
-                [0.2000, 10.2000],
-                [0.2000, 9.5000]
+                [0.2000, 9.5000],   // Sud-Ouest : départ à la frontière Ghana (limite avec Centrale)
+                [0.0000, 10.5000],  // Nord-Ouest : frontière Ghana jusqu’à la région des Savanes
+                [1.2000, 10.5000],  // Nord-Est : extrémité est vers la frontière du Bénin (limite Savanes)
+                [1.3000, 9.5000],   // Sud-Est : sur la frontière Bénin à la limite de la Centrale
+                [0.2000, 9.5000]    // Fermeture du polygone
             ],
-            'bounds' => ['minLat' => 9.5000, 'maxLat' => 10.5000, 'minLng' => 0.2000, 'maxLng' => 1.4000]
+            'bounds' => ['minLat' => 9.5000, 'maxLat' => 10.5000, 'minLng' => 0.0000, 'maxLng' => 1.3000]
         ],
         'SAVANES' => [
             'name' => 'Savanes',
             'polygon' => [
-                [0.0000, 10.5000],
-                [1.2000, 10.5000],
-                [1.0000, 11.1000],
-                [0.7000, 11.1000],
-                [0.1000, 11.1000],
-                [-0.1000, 10.8000],
-                [0.0000, 10.5000]
+                [0.0000, 10.5000],  // Sud-Ouest : départ à la frontière Ghana (limite avec Kara)
+                [-0.1000, 10.9000], // Ouest : remontée le long de la frontière Ghana
+                [0.0000, 11.1000],  // Nord-Ouest : tripoint Ghana–Burkina–Togo (frontière Burkina Faso)
+                [1.0000, 11.1000],  // Nord-Est : tripoint Burkina–Bénin–Togo (frontière Burkina/Bénin)
+                [1.2000, 10.5000],  // Sud-Est : sur la frontière du Bénin (limite avec Kara)
+                [0.0000, 10.5000]   // Fermeture du polygone
             ],
             'bounds' => ['minLat' => 10.5000, 'maxLat' => 11.1000, 'minLng' => -0.1000, 'maxLng' => 1.2000]
         ]
