@@ -28,11 +28,13 @@ class GeoValidationService
         'PLATEAUX' => [
             'name' => 'Plateaux',
             'polygon' => [
-                [0.9000, 6.8000],  // Sud-Ouest : sur la frontière Ghana, début de la région Plateaux
-                [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana jusqu’à la région Centrale
-                [1.5000, 8.3000],  // Nord-Est : frontière avec le Bénin à la limite de la Centrale
-                [1.5000, 7.0000],  // Sud-Est : descendant le long du fleuve Mono (frontière Bénin) vers Maritime
-                [0.9000, 6.8000]   // Fermeture du polygone (retour au point de départ)
+                [0.5000, 6.8000],  // Sud-Ouest : frontière Ghana
+                [0.3000, 7.5000],  // Ouest : intérieur
+                [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana
+                [1.5000, 8.3000],  // Nord-Est : frontière Bénin
+                [1.5000, 7.0000],  // Sud-Est : fleuve Mono
+                [0.9000, 6.8000],  // Sud : frontière Maritime
+                [0.5000, 6.8000]   // Fermeture
             ],
             'bounds' => ['minLat' => 6.8000, 'maxLat' => 8.3000, 'minLng' => 0.3000, 'maxLng' => 1.5000]
         ],
@@ -69,6 +71,17 @@ class GeoValidationService
                 [0.0000, 10.5000]   // Fermeture du polygone
             ],
             'bounds' => ['minLat' => 10.5000, 'maxLat' => 11.1000, 'minLng' => -0.1000, 'maxLng' => 1.2000]
+        ],
+        'LOME' => [
+            'name' => 'Grand Lomé',
+            'polygon' => [
+                [1.1700, 6.1000],   // Sud-Ouest : frontière Ghana au niveau de Lomé (Aflao)
+                [1.3000, 6.1000],   // Sud-Est : côté est de Lomé, vers le lac Togo
+                [1.3000, 6.2500],   // Nord-Est : limite nord de l'agglomération de Lomé
+                [1.1700, 6.2500],   // Nord-Ouest : limite nord-ouest (vers Agoè)
+                [1.1700, 6.1000]    // Fermeture du polygone
+            ],
+            'bounds' => ['minLat' => 6.1000, 'maxLat' => 6.2500, 'minLng' => 1.1700, 'maxLng' => 1.3000]
         ]
     ];
 
@@ -88,19 +101,24 @@ class GeoValidationService
     {
         $inside = false;
         $n = count($polygon);
-        
+
         for ($i = 0, $j = $n - 1; $i < $n; $j = $i++) {
             $xi = $polygon[$i][0];
             $yi = $polygon[$i][1];
             $xj = $polygon[$j][0];
             $yj = $polygon[$j][1];
-            
+
+            // Ignorer les côtés horizontaux (même latitude)
+            if ($yi == $yj) {
+                continue;
+            }
+
             if ((($yi > $lat) !== ($yj > $lat)) &&
                 ($lng < ($xj - $xi) * ($lat - $yi) / ($yj - $yi) + $xi)) {
                 $inside = !$inside;
             }
         }
-        
+
         return $inside;
     }
 
@@ -109,12 +127,28 @@ class GeoValidationService
      */
     public function getRegionFromCoordinates(float $lat, float $lng): ?array
     {
+        // Vérifier d'abord le Grand Lomé (zone spéciale dans Maritime)
+        if (isset($this->regionBoundaries['LOME'])) {
+            $lome = $this->regionBoundaries['LOME'];
+            if ($this->isPointInBounds($lat, $lng, $lome['bounds']) &&
+                $this->isPointInPolygon($lat, $lng, $lome['polygon'])) {
+                // Lomé est dans Maritime
+                return [
+                    'region' => 'MARITIME',
+                    'name' => 'Grand Lomé (Maritime)'
+                ];
+            }
+        }
+
+        // Vérifier les autres régions
         foreach ($this->regionBoundaries as $regionCode => $regionData) {
+            if ($regionCode === 'LOME') continue; // Déjà vérifié
+
             // Optimisation: vérifier d'abord la bounding box
             if (!$this->isPointInBounds($lat, $lng, $regionData['bounds'])) {
                 continue;
             }
-            
+
             // Vérifier le polygone
             if ($this->isPointInPolygon($lat, $lng, $regionData['polygon'])) {
                 return [
@@ -123,7 +157,7 @@ class GeoValidationService
                 ];
             }
         }
-        
+
         return null;
     }
 

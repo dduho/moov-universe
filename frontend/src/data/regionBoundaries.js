@@ -26,13 +26,15 @@ export const regionBoundaries = {
 
   PLATEAUX: {
     name: 'Plateaux',
-    // Polygone englobant la plus grande région (frontières Ghana à l'ouest, Bénin à l'est)
+    // Polygone ajusté pour couvrir Agoú-Gare et Kpalimé
     polygon: [
-      [0.9000, 6.8000],  // Sud-Ouest : sur la frontière Ghana, début de la région Plateaux
-      [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana jusqu’à la région Centrale
-      [1.5000, 8.3000],  // Nord-Est : frontière avec le Bénin à la limite de la Centrale
-      [1.5000, 7.0000],  // Sud-Est : descendant le long du fleuve Mono (frontière Bénin) vers Maritime
-      [0.9000, 6.8000]   // Fermeture du polygone (retour au point de départ)
+      [0.5000, 6.8000],  // Sud-Ouest : frontière Ghana
+      [0.3000, 7.5000],  // Ouest : intérieur
+      [0.3000, 8.3000],  // Nord-Ouest : frontière Ghana
+      [1.5000, 8.3000],  // Nord-Est : frontière Bénin
+      [1.5000, 7.0000],  // Sud-Est : fleuve Mono
+      [0.9000, 6.8000],  // Sud : frontière Maritime
+      [0.5000, 6.8000]   // Fermeture
     ],
     bounds: {
       minLat: 6.8000,
@@ -130,6 +132,11 @@ export function isPointInPolygon(lat, lng, polygon) {
   for (let i = 0, j = n - 1; i < n; j = i++) {
     const xi = polygon[i][0], yi = polygon[i][1];
     const xj = polygon[j][0], yj = polygon[j][1];
+    
+    // Ignorer les côtés horizontaux (même latitude)
+    if (yi === yj) {
+      continue;
+    }
     
     if (((yi > lat) !== (yj > lat)) &&
         (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
