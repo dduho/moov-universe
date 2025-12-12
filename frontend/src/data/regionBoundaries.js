@@ -10,16 +10,16 @@ export const regionBoundaries = {
     // Polygone plus précis pour la région Maritime
     polygon: [
       [0.7000, 6.1000],   // Sud-Ouest (frontière Ghana, côte)
-      [1.8000, 6.1000],   // Sud-Est (frontière Bénin, côte)
+      [0.7000, 6.8000],   // Nord-Ouest
+      [1.2000, 6.8000],   // Nord
+      [1.6000, 6.8000],   // Nord-Est
       [1.8000, 6.5000],   // Est
-      [1.6000, 7.2000],   // Nord-Est
-      [1.2000, 7.2000],   // Nord
-      [0.7000, 7.0000],   // Nord-Ouest
+      [1.8000, 6.1000],   // Sud-Est (frontière Bénin, côte)
       [0.7000, 6.1000]    // Fermeture
     ],
     bounds: {
       minLat: 6.1000,
-      maxLat: 7.2000,
+      maxLat: 6.8000,
       minLng: 0.7000,
       maxLng: 1.8000
     }
@@ -28,16 +28,16 @@ export const regionBoundaries = {
   PLATEAUX: {
     name: 'Plateaux',
     polygon: [
-      [0.5000, 7.2000],   // Sud-Ouest
-      [1.6000, 7.2000],   // Sud-Est
-      [1.6000, 8.3000],   // Nord-Est
-      [1.4000, 8.3000],   // Est
-      [0.8000, 8.3000],   // Nord
+      [0.5000, 6.8000],   // Sud-Ouest
       [0.5000, 8.1000],   // Nord-Ouest
-      [0.5000, 7.2000]    // Fermeture
+      [0.8000, 8.3000],   // Nord
+      [1.4000, 8.3000],   // Est
+      [1.6000, 8.3000],   // Nord-Est
+      [1.6000, 6.8000],   // Sud-Est
+      [0.5000, 6.8000]    // Fermeture
     ],
     bounds: {
-      minLat: 7.2000,
+      minLat: 6.8000,
       maxLat: 8.3000,
       minLng: 0.5000,
       maxLng: 1.6000
