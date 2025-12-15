@@ -32,7 +32,7 @@ Desktop.ini
 # IDE / Editor
 .idea/
 .vscode/
- .vs/
+.vs/
 *.swp
 *.swo
 *.sublime-workspace
