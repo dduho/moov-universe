@@ -567,6 +567,146 @@
             </div>
           </div>
 
+          <!-- Proximity Alerts -->
+          <div v-if="proximityAlerts.count > 0" class="mb-8">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-orange-300 bg-orange-50/50">
+              <div class="flex flex-col gap-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div class="flex items-center gap-3 sm:gap-4">
+                    <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-orange-100 flex items-center justify-center flex-shrink-0">
+                      <svg class="w-6 h-6 sm:w-7 sm:h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                      </svg>
+                    </div>
+                    <div>
+                      <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                        {{ proximityAlerts.count }} alerte{{ proximityAlerts.count > 1 ? 's' : '' }} de proximité
+                      </h3>
+                      <p class="text-xs sm:text-sm text-gray-600">
+                        Points de vente situés à moins de {{ proximityAlerts.threshold }}m les uns des autres
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    @click="showProximityDetails = !showProximityDetails"
+                    class="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2 text-sm sm:text-base"
+                  >
+                    {{ showProximityDetails ? 'Masquer' : 'Voir les détails' }}
+                    <svg 
+                      class="w-4 h-4 sm:w-5 sm:h-5 transition-transform duration-200" 
+                      :class="{ 'rotate-180': showProximityDetails }"
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+                </div>
+                
+                <!-- Proximity Stats Summary -->
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div class="p-3 rounded-xl bg-white/80">
+                    <p class="text-xs text-gray-500 mb-1">Groupes détectés</p>
+                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ proximityAlerts.count }}</p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-white/80">
+                    <p class="text-xs text-gray-500 mb-1">PDV affectés</p>
+                    <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ proximityAlerts.total_pdv_affected || 0 }}</p>
+                  </div>
+                  <div class="p-3 rounded-xl bg-white/80 col-span-2 sm:col-span-1">
+                    <p class="text-xs text-gray-500 mb-1">Seuil configuré</p>
+                    <p class="text-xl sm:text-2xl font-bold text-orange-600">{{ proximityAlerts.threshold }}m</p>
+                  </div>
+                </div>
+                
+                <!-- Detailed list (expandable) -->
+                <transition
+                  enter-active-class="transition-all duration-300 ease-out"
+                  enter-from-class="max-h-0 opacity-0"
+                  enter-to-class="max-h-[600px] opacity-100"
+                  leave-active-class="transition-all duration-300 ease-in"
+                  leave-from-class="max-h-[600px] opacity-100"
+                  leave-to-class="max-h-0 opacity-0"
+                >
+                  <div v-show="showProximityDetails" class="overflow-hidden">
+                    <div class="mt-4 max-h-96 overflow-y-auto rounded-xl bg-white/80 border border-orange-200">
+                      <div class="divide-y divide-orange-100">
+                        <!-- Each cluster -->
+                        <div 
+                          v-for="(cluster, clusterIndex) in proximityAlerts.clusters.slice(0, 20)" 
+                          :key="clusterIndex"
+                          class="p-4 hover:bg-orange-25 transition-colors"
+                        >
+                          <div class="mb-3 flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                              <span class="px-3 py-1 rounded-lg bg-orange-500 text-white text-xs font-bold">
+                                Groupe {{ clusterIndex + 1 }}
+                              </span>
+                              <span class="text-xs text-gray-600">
+                                {{ cluster.count }} PDV • Distance min: <span class="font-bold text-orange-600">{{ cluster.min_distance }}m</span>
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <!-- PDVs in cluster -->
+                          <div class="space-y-3 ml-2 border-l-2 border-orange-200 pl-4">
+                            <div 
+                              v-for="(pdv, pdvIndex) in cluster.pdvs" 
+                              :key="pdv.id"
+                              class="flex items-start justify-between gap-3"
+                            >
+                              <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                  <span v-if="pdv.is_own" class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-700">Vôtre</span>
+                                  <span v-else class="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600">{{ pdv.organization_name }}</span>
+                                  <p class="text-sm font-bold text-gray-900">{{ pdv.nom_point }}</p>
+                                </div>
+                                <p class="text-xs text-gray-600">{{ pdv.numero_flooz }} • {{ pdv.ville }}, {{ pdv.quartier }}</p>
+                                
+                                <!-- Distances to other PDVs in the cluster -->
+                                <div v-if="pdvIndex < cluster.pdvs.length - 1" class="mt-1 ml-2 text-xs text-gray-500">
+                                  <span 
+                                    v-for="dist in cluster.distances.filter(d => d.from_id === pdv.id)" 
+                                    :key="`${dist.from_id}-${dist.to_id}`"
+                                    class="inline-flex items-center gap-1 mr-2"
+                                  >
+                                    <svg class="w-3 h-3 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                                    </svg>
+                                    <span class="font-semibold text-orange-600">{{ dist.distance }}m</span>
+                                  </span>
+                                </div>
+                              </div>
+                              
+                              <!-- Action button -->
+                              <router-link 
+                                v-if="pdv.can_access"
+                                :to="`/pdv/${pdv.id}`"
+                                class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors whitespace-nowrap flex-shrink-0"
+                              >
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                Voir
+                              </router-link>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div v-if="proximityAlerts.clusters.length > 20" class="px-4 py-3 bg-orange-50 text-center">
+                        <p class="text-xs text-orange-600">
+                          Et {{ proximityAlerts.clusters.length - 20 }} autres groupes...
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
+              </div>
+            </div>
+          </div>
+
           <!-- Quick Actions -->
           <div class="mb-8">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl">
@@ -980,6 +1120,15 @@ const geoAlerts = ref({
 });
 const showGeoAlerts = ref(false);
 
+// Proximity alerts
+const proximityAlerts = ref({
+  clusters: [],
+  count: 0,
+  threshold: 300,
+  total_pdv_affected: 0
+});
+const showProximityDetails = ref(false);
+
 const currentDate = computed(() => {
   return new Date().toLocaleDateString('fr-FR', { 
     weekday: 'long', 
@@ -1078,6 +1227,14 @@ const fetchDashboardData = async () => {
       } catch (geoError) {
         console.error('Failed to fetch geo alerts:', geoError);
       }
+    }
+    
+    // Fetch proximity alerts
+    try {
+      const proximityData = await PointOfSaleService.getProximityAlerts();
+      proximityAlerts.value = proximityData;
+    } catch (proximityError) {
+      console.error('Failed to fetch proximity alerts:', proximityError);
     }
   } catch (error) {
     console.error('Failed to fetch dashboard data:', error);

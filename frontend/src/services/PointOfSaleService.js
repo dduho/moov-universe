@@ -64,6 +64,11 @@ export default {
     return response.data;
   },
 
+  async getProximityAlerts() {
+    const response = await api.get('/point-of-sales/proximity-alerts');
+    return response.data;
+  },
+
   async clearDuplicateCoordinates() {
     const response = await api.post('/point-of-sales/clear-duplicate-coordinates');
     return response.data;

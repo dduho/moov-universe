@@ -334,11 +334,29 @@ class PointOfSaleImportController extends Controller
             'firstname' => ['firstname', 'firstname prenom', 'prenom', 'prénom'],
             'lastname' => ['lastname', 'lastname nom', 'nom', 'nom de famille'],
             'gender' => ['gender', 'gender sexe', 'sexe', 'sexe du gerant', 'sexe_gerant', 'sexe gerant'],
-            'date_of_birth' => ['date_of_birth', 'date of birth', 'date de naissance', 'datenaissance'],
+            'date_of_birth' => [
+                'date_of_birth', 
+                'date of birth', 
+                'date de naissance', 
+                'datenaissance',
+                'date de naissance date of birth',  // Combinaison des deux
+                'date of birth date de naissance',  // Ordre inversé
+            ],
             // Documents
             'id_type' => ['id_type', 'iddescription', 'iddescription type de piece', 'type de piece', 'type_piece'],
             'id_number' => ['id_number', 'idnumber', 'idnumber numero de piece', 'numero de piece', 'numero_piece'],
-            'id_expiry_date' => ['id_expiry', 'id_expiry_date', 'idexpirydate', 'idexpirydate date d expiration', 'date d expiration', 'date_expiration'],
+            'id_expiry_date' => [
+                'id_expiry', 
+                'id_expiry_date', 
+                'idexpirydate', 
+                'idexpirydate date d expiration',
+                'idexpirydate date expiration', 
+                'date d expiration',
+                'date expiration', 
+                'expiry date',
+                'expiry_date',
+                'date expiry'
+            ],
             'nationality' => ['nationality', 'nationality nationalite', 'nationalite', 'nationalité'],
             'profession' => ['profession', 'profession profession'],
             'type_activite' => ['type_activite', 'type d activite', "type d'activite", 'type activite', 'activite'],
@@ -356,8 +374,8 @@ class PointOfSaleImportController extends Controller
         
         foreach ($headers as $index => $header) {
             $normalized = strtolower(trim($header));
-            // Nettoyer les slashes, retours à la ligne, parenthèses et leur contenu
-            $normalized = str_replace(['/', '\\n', '\\r', "\n", "\r"], ' ', $normalized);
+            // Nettoyer les slashes, apostrophes, retours à la ligne, parenthèses et leur contenu
+            $normalized = str_replace(['/', "'", "\u{2019}", '\\n', '\\r', "\n", "\r"], ' ', $normalized);
             // Retirer tout ce qui est entre parenthèses (descriptions supplémentaires)
             $normalized = preg_replace('/\([^)]*\)/', '', $normalized);
             // Multiples espaces -> un seul
@@ -756,20 +774,41 @@ class PointOfSaleImportController extends Controller
         if (empty($date)) return null;
         
         try {
-            // Essayer différents formats de date
+            // Si c'est un nombre (format Excel de date sérielle)
+            if (is_numeric($date)) {
+                // Excel stocke les dates comme nombre de jours depuis 1900-01-01
+                // PhpSpreadsheet devrait gérer ça, mais au cas où...
+                $excelEpoch = new \DateTime('1899-12-30'); // Excel base date (bug de 1900)
+                $excelEpoch->modify("+{$date} days");
+                return $excelEpoch->format('Y-m-d');
+            }
+            
+            // Normaliser le format de l'heure si présent (0:00:00 -> 00:00:00)
+            // Excel peut retourner "2024-09-04 0:00:00" au lieu de "2024-09-04 00:00:00"
+            $date = preg_replace('/(\d{4}-\d{2}-\d{2}) (\d):(\d{2}):(\d{2})/', '$1 0$2:$3:$4', $date);
+            $date = preg_replace('/(\d{2}\/\d{2}\/\d{4}) (\d):(\d{2}):(\d{2})/', '$1 0$2:$3:$4', $date);
+            
+            // Essayer différents formats de date (avec et sans heure)
             $formats = [
-                'Y-m-d',      // 2030-12-10
-                'd/m/Y',      // 10/12/2030
-                'd-m-Y',      // 10-12-2030
-                'm/d/Y',      // 12/10/2030 (US format)
-                'Y/m/d',      // 2030/12/10
-                'd.m.Y',      // 10.12.2030
+                'Y-m-d H:i:s',  // 2027-03-31 00:00:00 (avec heure)
+                'Y-m-d H:i',    // 2027-03-31 00:00
+                'Y-m-d',        // 2030-12-10
+                'd/m/Y H:i:s',  // 10/12/2030 00:00:00
+                'd/m/Y',        // 10/12/2030
+                'd-m-Y',        // 10-12-2030
+                'm/d/Y',        // 12/10/2030 (US format)
+                'Y/m/d',        // 2030/12/10
+                'd.m.Y',        // 10.12.2030
             ];
             
             foreach ($formats as $format) {
                 $dateObj = \DateTime::createFromFormat($format, $date);
-                if ($dateObj !== false && $dateObj->format($format) === $date) {
-                    return $dateObj->format('Y-m-d');
+                if ($dateObj !== false) {
+                    // Vérifier que la date est valide (pas de faux positifs)
+                    $errors = \DateTime::getLastErrors();
+                    if ($errors && $errors['warning_count'] === 0 && $errors['error_count'] === 0) {
+                        return $dateObj->format('Y-m-d');
+                    }
                 }
             }
             
@@ -845,6 +884,9 @@ class PointOfSaleImportController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'support_visibilite' => 'nullable|string|max:255',
             'etat_support' => 'nullable|in:BON,ACCEPTABLE,MAUVAIS,DEFRAICHI',
+            // Dates
+            'date_of_birth' => 'nullable|date',
+            'id_expiry_date' => 'nullable|date',
         ], [
             'numero_flooz.regex' => 'Le numéro Flooz doit contenir exactement 11 chiffres',
             'numero_flooz.size' => 'Le numéro Flooz doit contenir exactement 11 chiffres',
@@ -905,5 +947,187 @@ class PointOfSaleImportController extends Controller
         $writer->save($temp_file);
 
         return response()->download($temp_file, $filename)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Exporter les résultats d'analyse d'import en Excel
+     */
+    public function exportAnalysis(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'analysis_data' => 'required|array',
+            'analysis_data.to_import' => 'present|array',
+            'analysis_data.to_update' => 'present|array',
+            'analysis_data.duplicates' => 'present|array',
+            'analysis_data.errors' => 'present|array',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Données invalides',
+                'errors' => $validator->errors()
+            ], 400);
+        }
+
+        $data = $request->analysis_data;
+        
+        try {
+            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
+            
+            // Feuille 1: Résumé
+            $summarySheet = $spreadsheet->getActiveSheet();
+            $summarySheet->setTitle('Résumé');
+            
+            $summaryData = [
+                ['RÉSUMÉ DE L\'ANALYSE D\'IMPORT'],
+                [''],
+                ['Catégorie', 'Nombre'],
+                ['PDV à importer (nouveaux)', count($data['to_import'])],
+                ['PDV à mettre à jour', count($data['to_update'])],
+                ['PDV en doublon', count($data['duplicates'])],
+                ['PDV avec erreurs', count($data['errors'])],
+                ['Total lignes analysées', count($data['to_import']) + count($data['to_update']) + count($data['duplicates']) + count($data['errors'])],
+            ];
+            
+            $summarySheet->fromArray($summaryData, null, 'A1');
+            $summarySheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+            $summarySheet->getStyle('A3:B3')->getFont()->setBold(true);
+            $summarySheet->getStyle('A3:B8')->getBorders()->getAllBorders()
+                ->setBorderStyle(\PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN);
+            $summarySheet->getColumnDimension('A')->setWidth(30);
+            $summarySheet->getColumnDimension('B')->setWidth(20);
+            
+            // Feuille 2: PDV à importer
+            if (!empty($data['to_import'])) {
+                $importSheet = $spreadsheet->createSheet();
+                $importSheet->setTitle('À Importer');
+                $importHeaders = ['Ligne', 'Nom du point', 'Numéro Flooz', 'Shortcode', 'Région', 'Ville'];
+                $importSheet->fromArray([$importHeaders], null, 'A1');
+                
+                $importData = [];
+                foreach ($data['to_import'] as $item) {
+                    $importData[] = [
+                        $item['line'] ?? '',
+                        $item['nom_point'] ?? '',
+                        $item['numero_flooz'] ?? '',
+                        $item['shortcode'] ?? 'N/A',
+                        $item['region'] ?? '',
+                        $item['ville'] ?? ''
+                    ];
+                }
+                $importSheet->fromArray($importData, null, 'A2');
+                $importSheet->getStyle('A1:F1')->getFont()->setBold(true);
+                $importSheet->getStyle('A1:F1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('4CAF50');
+                foreach (range('A', 'F') as $col) {
+                    $importSheet->getColumnDimension($col)->setAutoSize(true);
+                }
+            }
+            
+            // Feuille 3: PDV à mettre à jour
+            if (!empty($data['to_update'])) {
+                $updateSheet = $spreadsheet->createSheet();
+                $updateSheet->setTitle('À Mettre à Jour');
+                $updateHeaders = ['Ligne', 'ID PDV', 'Nom du point', 'Numéro Flooz', 'Shortcode', 'Statut actuel'];
+                $updateSheet->fromArray([$updateHeaders], null, 'A1');
+                
+                $updateData = [];
+                foreach ($data['to_update'] as $item) {
+                    $updateData[] = [
+                        $item['line'] ?? '',
+                        $item['existing_id'] ?? '',
+                        $item['nom_point'] ?? '',
+                        $item['numero_flooz'] ?? '',
+                        $item['shortcode'] ?? 'N/A',
+                        $item['current_status'] ?? ''
+                    ];
+                }
+                $updateSheet->fromArray($updateData, null, 'A2');
+                $updateSheet->getStyle('A1:F1')->getFont()->setBold(true);
+                $updateSheet->getStyle('A1:F1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('FF9800');
+                foreach (range('A', 'F') as $col) {
+                    $updateSheet->getColumnDimension($col)->setAutoSize(true);
+                }
+            }
+            
+            // Feuille 4: Doublons
+            if (!empty($data['duplicates'])) {
+                $duplicateSheet = $spreadsheet->createSheet();
+                $duplicateSheet->setTitle('Doublons');
+                $duplicateHeaders = ['Ligne', 'Nom du point', 'Numéro Flooz / Shortcode', 'Raison'];
+                $duplicateSheet->fromArray([$duplicateHeaders], null, 'A1');
+                
+                $duplicateData = [];
+                foreach ($data['duplicates'] as $item) {
+                    $duplicateData[] = [
+                        $item['line'] ?? '',
+                        $item['nom_point'] ?? '',
+                        $item['numero_flooz'] ?? $item['shortcode'] ?? '',
+                        $item['reason'] ?? 'PDV déjà existant'
+                    ];
+                }
+                $duplicateSheet->fromArray($duplicateData, null, 'A2');
+                $duplicateSheet->getStyle('A1:D1')->getFont()->setBold(true);
+                $duplicateSheet->getStyle('A1:D1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('FFC107');
+                foreach (range('A', 'D') as $col) {
+                    $duplicateSheet->getColumnDimension($col)->setAutoSize(true);
+                }
+            }
+            
+            // Feuille 5: Erreurs
+            if (!empty($data['errors'])) {
+                $errorSheet = $spreadsheet->createSheet();
+                $errorSheet->setTitle('Erreurs');
+                $errorHeaders = ['Ligne', 'Champ', 'Erreur'];
+                $errorSheet->fromArray([$errorHeaders], null, 'A1');
+                
+                $errorData = [];
+                foreach ($data['errors'] as $item) {
+                    $errors = $item['errors'] ?? [];
+                    if (is_array($errors)) {
+                        foreach ($errors as $field => $messages) {
+                            $errorData[] = [
+                                $item['line'] ?? '',
+                                $field,
+                                is_array($messages) ? implode(', ', $messages) : $messages
+                            ];
+                        }
+                    } else {
+                        $errorData[] = [
+                            $item['line'] ?? '',
+                            'Général',
+                            $errors
+                        ];
+                    }
+                }
+                $errorSheet->fromArray($errorData, null, 'A2');
+                $errorSheet->getStyle('A1:C1')->getFont()->setBold(true);
+                $errorSheet->getStyle('A1:C1')->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('F44336');
+                foreach (range('A', 'C') as $col) {
+                    $errorSheet->getColumnDimension($col)->setAutoSize(true);
+                }
+            }
+            
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+            
+            $filename = 'analyse_import_' . date('Y-m-d_His') . '.xlsx';
+            $temp_file = tempnam(sys_get_temp_dir(), $filename);
+            $writer->save($temp_file);
+
+            return response()->download($temp_file, $filename)->deleteFileAfterSend(true);
+            
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Erreur lors de la génération du fichier',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

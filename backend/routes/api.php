@@ -28,6 +28,12 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
 
+// Public system settings (read-only)
+Route::prefix('settings')->group(function () {
+    Route::get('/', [SystemSettingController::class, 'index']);
+    Route::get('/{key}', [SystemSettingController::class, 'show']);
+});
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Auth routes
@@ -54,15 +60,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/uploads/multiple', [UploadController::class, 'uploadMultiple']);
     Route::delete('/uploads', [UploadController::class, 'delete']);
 
-    // System settings routes
-    Route::prefix('settings')->group(function () {
-        Route::get('/', [SystemSettingController::class, 'index']);
-        Route::get('/{key}', [SystemSettingController::class, 'show']);
-        
-        // Admin only - update settings
-        Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
-            Route::put('/{key}', [SystemSettingController::class, 'update']);
-        });
+    // System settings update (admin only)
+    Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
+        Route::put('/settings/{key}', [SystemSettingController::class, 'update']);
     });
 
     // Point of Sale routes
@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [PointOfSaleController::class, 'index']);
         Route::get('/for-map', [PointOfSaleController::class, 'forMap']);
         Route::get('/gps-stats', [PointOfSaleController::class, 'getGpsStats']);
+        Route::get('/proximity-alerts', [PointOfSaleController::class, 'getProximityAlerts']);
         Route::post('/', [PointOfSaleController::class, 'store']);
         Route::get('/{id}', [PointOfSaleController::class, 'show']);
         Route::put('/{id}', [PointOfSaleController::class, 'update']);
@@ -81,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::post('/import/preview', [PointOfSaleImportController::class, 'preview']);
             Route::post('/import', [PointOfSaleImportController::class, 'import']);
+            Route::post('/import/export-analysis', [PointOfSaleImportController::class, 'exportAnalysis']);
             Route::get('/import/template', [PointOfSaleImportController::class, 'downloadTemplate']);
             Route::post('/clear-duplicate-coordinates', [PointOfSaleController::class, 'clearDuplicateCoordinates']);
         });

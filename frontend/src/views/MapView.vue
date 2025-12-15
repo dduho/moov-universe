@@ -9,8 +9,21 @@
         <p class="text-sm sm:text-base text-gray-600">Visualisez tous les points de vente sur la carte du Togo</p>
       </div>
 
+      <!-- Proximity Alerts Loading -->
+      <div v-if="loadingProximityAlerts" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-300">
+        <div class="flex items-center gap-3">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <div class="flex-1">
+            <h3 class="text-base sm:text-lg font-bold text-orange-700">Détection des alertes de proximité...</h3>
+            <p class="text-xs sm:text-sm text-gray-600">Analyse des distances entre points de vente en cours</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Proximity Alerts -->
-      <div v-if="proximityAlerts.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-500">
+      <div v-else-if="proximityAlerts.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-500">
         <div class="flex flex-col sm:flex-row sm:items-start gap-3 mb-4">
           <svg class="w-5 h-5 sm:w-6 sm:h-6 text-orange-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
@@ -357,6 +370,9 @@ const createPopupContent = (pos) => {
     ? `<p><span style="font-weight: 600;">Dealer:</span> ${pos.organization.name || 'N/A'}</p>` 
     : '';
   
+  // Generate Google Maps directions link
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${pos.latitude},${pos.longitude}`;
+  
   return `
     <div style="padding: 8px; min-width: 250px;">
       <h3 style="font-size: 18px; font-weight: bold; color: #111827; margin-bottom: 8px;">${pos.nom_point || pos.point_name || 'Sans nom'}</h3>
@@ -372,14 +388,30 @@ const createPopupContent = (pos) => {
         </p>
         ${dealerInfo}
       </div>
-      <button 
-        onclick="window.dispatchEvent(new CustomEvent('pdv-detail', { detail: ${pos.id} }))"
-        style="margin-top: 12px; width: 100%; padding: 8px 12px; border-radius: 8px; background-color: #FF6B00; color: white; font-size: 14px; font-weight: bold; border: none; cursor: pointer;"
-        onmouseover="this.style.backgroundColor='#E65C00'"
-        onmouseout="this.style.backgroundColor='#FF6B00'"
-      >
-        Voir les détails
-      </button>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+        <a 
+          href="${mapsUrl}"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="padding: 8px 12px; border-radius: 8px; background-color: #4285F4; color: white; font-size: 14px; font-weight: bold; text-align: center; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer;"
+          onmouseover="this.style.backgroundColor='#3367D6'"
+          onmouseout="this.style.backgroundColor='#4285F4'"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"></path>
+            <path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0z"></path>
+          </svg>
+          Itinéraire
+        </a>
+        <button 
+          onclick="window.dispatchEvent(new CustomEvent('pdv-detail', { detail: ${pos.id} }))"
+          style="padding: 8px 12px; border-radius: 8px; background-color: #FF6B00; color: white; font-size: 14px; font-weight: bold; border: none; cursor: pointer;"
+          onmouseover="this.style.backgroundColor='#E65C00'"
+          onmouseout="this.style.backgroundColor='#FF6B00'"
+        >
+          Détails
+        </button>
+      </div>
     </div>
   `;
 };
@@ -545,6 +577,13 @@ watch(filters, async () => {
   }
 }, { deep: true });
 
+// Watch for filtered points of sale changes to recalculate proximity alerts
+watch(filteredPointsOfSale, () => {
+  if (markersInitialized) {
+    detectProximityAlerts();
+  }
+});
+
 const filterMarkers = () => {
   // Filters are applied via watch on filters ref
   console.log('Filters applied:', filters.value);
@@ -588,8 +627,14 @@ const dealerStats = computed(() => {
   return Array.from(dealerMap.values()).sort((a, b) => b.count - a.count);
 });
 
+const normalizeThreshold = (value) => {
+  const num = Number(value);
+  return Number.isFinite(num) && num > 0 ? num : 300;
+};
+
 const proximityThreshold = ref(300);
 const proximityAlerts = ref([]);
+const loadingProximityAlerts = ref(false);
 
 // Calculer la distance entre deux points GPS (formule de Haversine)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -609,19 +654,33 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 // Optimized proximity detection using spatial grid
 const detectProximityAlerts = () => {
-  const alerts = [];
-  const pdvs = pointsOfSale.value;
-  const pdvIdsWithAlert = new Set();
+  loadingProximityAlerts.value = true;
   
-  // Skip if too many points (would be too slow)
-  if (pdvs.length > 5000) {
-    console.log('Skipping proximity detection for performance (> 5000 points)');
-    proximityAlerts.value = [];
-    return;
-  }
+  // Use setTimeout to allow UI to update
+  setTimeout(() => {
+    try {
+      // Sécurise le seuil (API peut renvoyer string/undefined)
+      proximityThreshold.value = normalizeThreshold(proximityThreshold.value);
+      const alerts = [];
+      const pdvs = filteredPointsOfSale.value;
+      const pdvIdsWithAlert = new Set();
+      
+      // Skip if too many points (would be too slow)
+      if (pdvs.length > 5000) {
+        console.log('Skipping proximity detection for performance (> 5000 points)');
+        proximityAlerts.value = [];
+        loadingProximityAlerts.value = false;
+        return;
+      }
   
   // Create spatial grid for O(n) average complexity instead of O(n²)
   const gridSize = proximityThreshold.value / 111000; // Convert meters to approximate degrees
+  if (!Number.isFinite(gridSize) || gridSize <= 0) {
+    console.warn('Proximity grid skipped: invalid threshold', proximityThreshold.value);
+    proximityAlerts.value = [];
+    loadingProximityAlerts.value = false;
+    return;
+  }
   const grid = new Map();
   
   // Place PDVs in grid cells
@@ -677,12 +736,16 @@ const detectProximityAlerts = () => {
     }
   });
 
-  // Mark PDVs with proximity alerts
-  pointsOfSale.value.forEach(pdv => {
-    pdv.has_proximity_alert = pdvIdsWithAlert.has(pdv.id);
-  });
+      // Mark PDVs with proximity alerts
+      filteredPointsOfSale.value.forEach(pdv => {
+        pdv.has_proximity_alert = pdvIdsWithAlert.has(pdv.id);
+      });
 
-  proximityAlerts.value = alerts.sort((a, b) => a.distance - b.distance);
+      proximityAlerts.value = alerts.sort((a, b) => a.distance - b.distance);
+    } finally {
+      loadingProximityAlerts.value = false;
+    }
+  }, 0);
 };
 
 // Centrer la carte sur une alerte
@@ -753,9 +816,10 @@ onMounted(async () => {
     // Load proximity threshold from system settings
     try {
       const threshold = await SystemSettingService.getProximityThreshold();
-      proximityThreshold.value = threshold;
+      proximityThreshold.value = normalizeThreshold(threshold);
     } catch (error) {
       console.warn('Could not load proximity threshold, using default:', error);
+      proximityThreshold.value = normalizeThreshold(proximityThreshold.value);
     }
     
     // Load all PDVs
@@ -894,5 +958,3 @@ onUnmounted(() => {
   z-index: 1;
 }
 </style>
-
-

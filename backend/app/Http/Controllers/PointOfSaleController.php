@@ -335,15 +335,15 @@ class PointOfSaleController extends Controller
         }
 
         // Logique de permission de modification:
-        // - Admin: peut modifier si PDV pending OU s'il y a des tâches non validées
+        // - Admin: peut toujours modifier un PDV quel que soit son statut
         // - Commercial: peut modifier si PDV pending OU si une tâche est en révision demandée
         $canUpdate = false;
         
-        if ($pdv->status === 'pending') {
+        if ($user->isAdmin()) {
+            // Admin peut toujours modifier
             $canUpdate = true;
-        } elseif ($user->isAdmin()) {
-            // Admin peut modifier s'il y a des tâches actives (non validées)
-            $canUpdate = $pdv->tasks()->whereNotIn('status', ['validated'])->exists();
+        } elseif ($pdv->status === 'pending') {
+            $canUpdate = true;
         } else {
             // Commercial peut modifier seulement si une tâche est en révision demandée
             $canUpdate = $pdv->tasks()->where('status', 'revision_requested')->exists();
@@ -463,6 +463,14 @@ class PointOfSaleController extends Controller
             $request->exclude_id
         );
 
+        return response()->json($result);
+    }
+
+    public function getProximityAlerts(Request $request)
+    {
+        $user = $request->user();
+        $result = $this->proximityService->getAllProximityAlerts($user);
+        
         return response()->json($result);
     }
 

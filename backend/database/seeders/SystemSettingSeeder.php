@@ -14,11 +14,11 @@ class SystemSettingSeeder extends Seeder
     public function run(): void
     {
         SystemSetting::firstOrCreate(
-            ['key' => 'proximity_alert_distance'],
+            ['key' => 'pdv_proximity_threshold'],
             [
                 'value' => '300',
                 'type' => 'integer',
-                'description' => 'Distance d\'alerte de proximité entre PDV en mètres',
+                'description' => 'Distance minimale en mètres entre deux points de vente (défaut: 300m)',
             ]
         );
 

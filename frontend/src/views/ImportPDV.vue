@@ -225,6 +225,16 @@
             </button>
             <div class="flex gap-4">
               <button
+                @click="exportAnalysis"
+                :disabled="loading"
+                class="px-6 py-3 border-2 border-moov-orange text-moov-orange rounded-xl font-bold hover:bg-moov-orange hover:text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Exporter l'analyse
+              </button>
+              <button
                 v-if="(previewData.summary?.valid > 0 || previewData.summary?.to_update > 0) && previewData.summary?.invalid === 0"
                 @click="proceedToImport"
                 :disabled="loading"
@@ -522,6 +532,39 @@ const proceedToImport = async () => {
   } catch (error) {
     console.error('Erreur import:', error);
     const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erreur lors de l\'import';
+    toast.error(errorMessage);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const exportAnalysis = async () => {
+  loading.value = true;
+  try {
+    // Préparer les données d'analyse au format attendu par le backend
+    const analysisData = {
+      to_import: previewData.value.valid_rows || [],
+      to_update: previewData.value.to_update || [],
+      duplicates: previewData.value.duplicates || [],
+      errors: previewData.value.invalid_rows || []
+    };
+    
+    const response = await ImportService.exportAnalysis(analysisData);
+    
+    // Créer un lien de téléchargement
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `analyse_import_${new Date().toISOString().split('T')[0]}.xlsx`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Analyse exportée avec succès !');
+  } catch (error) {
+    console.error('Erreur export:', error);
+    const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Erreur lors de l\'export';
     toast.error(errorMessage);
   } finally {
     loading.value = false;

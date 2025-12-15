@@ -93,32 +93,39 @@
         </div>
 
         <!-- User Menu (Desktop) -->
-        <div class="hidden lg:flex items-center gap-2 xl:gap-4">
-          <!-- Global Search Button -->
+        <div class="hidden lg:flex items-center gap-2">
+          <!-- Global Search Button - Icon only on lg, with text on xl -->
           <button
             @click="openGlobalSearch"
-            class="flex items-center gap-2 px-3 xl:px-4 py-2 rounded-xl bg-white/30 border border-white/40 text-gray-700 hover:bg-white/50 transition-all"
+            class="flex items-center gap-2 p-2 lg:px-3 xl:px-4 lg:py-2 rounded-xl bg-white/30 border border-white/40 text-gray-700 hover:bg-white/50 transition-all"
+            title="Rechercher (Ctrl+K)"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
             <span class="hidden xl:inline text-sm font-semibold">Rechercher</span>
-            <kbd class="hidden 2xl:inline-block px-2 py-0.5 rounded bg-gray-100 text-xs font-mono text-gray-600">Ctrl+K</kbd>
           </button>
 
           <!-- Notification Badge -->
           <NotificationBadge />
           
-          <!-- User Profile Dropdown -->
+          <!-- User Profile Dropdown - Compact on lg, Full on 2xl -->
           <div class="relative" @click.stop>
             <button
               @click="showUserMenu = !showUserMenu"
-              class="hidden xl:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/30 border border-white/40 hover:bg-white/50 transition-all"
+              class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/30 border border-white/40 hover:bg-white/50 transition-all"
             >
-              <div class="text-right">
+              <!-- Avatar avec initiales sur lg, nom complet sur 2xl -->
+              <div class="lg:hidden 2xl:block text-right">
                 <p class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ authStore.user?.name }}</p>
                 <p class="text-xs font-semibold text-gray-600 whitespace-nowrap">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
               </div>
+              
+              <!-- Avatar compact pour lg-2xl -->
+              <div class="hidden lg:flex 2xl:hidden items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white font-bold text-sm">
+                {{ getInitials(authStore.user?.name) }}
+              </div>
+              
               <svg
                 class="w-4 h-4 text-gray-600 transition-transform"
                 :class="{ 'rotate-180': showUserMenu }"
@@ -135,6 +142,10 @@
               v-if="showUserMenu"
               class="absolute right-0 top-full mt-2 w-56 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl border border-white/40 overflow-hidden z-50"
             >
+              <div class="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p class="text-sm font-bold text-gray-900">{{ authStore.user?.name }}</p>
+                <p class="text-xs text-gray-600">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
+              </div>
               <router-link
                 to="/profile"
                 @click="showUserMenu = false"
@@ -145,18 +156,17 @@
                 </svg>
                 <span>Mon Profil</span>
               </router-link>
+              <button
+                @click="handleLogout"
+                class="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-all text-red-700 hover:bg-red-50"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                <span>Déconnexion</span>
+              </button>
             </div>
           </div>
-          
-          <button
-            @click="handleLogout"
-            class="px-3 xl:px-4 py-2 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white text-sm font-bold hover:shadow-xl hover:shadow-moov-orange/40 hover:scale-105 transition-all duration-200 flex items-center gap-2 cursor-pointer"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-            </svg>
-            <span class="hidden sm:inline">Déconnexion</span>
-          </button>
         </div>
 
         <!-- Mobile User Menu -->
@@ -433,6 +443,15 @@ const isAdminRouteActive = computed(() => {
 
 const isActive = (path) => {
   return route.path.startsWith(path);
+};
+
+const getInitials = (name) => {
+  if (!name) return 'U';
+  const parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
 };
 
 const handleLogout = async () => {

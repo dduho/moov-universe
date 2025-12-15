@@ -100,7 +100,7 @@
             <span class="font-bold">{{ proximityAlert.count }}</span> PDV {{ proximityAlert.count > 1 ? 'se trouvent' : 'se trouve' }} à moins de <span class="font-bold">{{ proximityAlert.alert_distance }}m</span> de ce point :
           </p>
           <p class="text-xs text-orange-600 mb-2 sm:mb-3">Seuil de distance configuré dans les paramètres système</p>
-          <div class="space-y-2">
+          <div class="space-y-2 max-h-64 overflow-y-auto pr-2">
             <div
               v-for="nearby in proximityAlert.nearby_pdvs"
               :key="nearby.id"
@@ -904,17 +904,88 @@ const initMap = () => {
         maxZoom: 19
       }).addTo(mapInstance.value);
       
-      // Add marker
-      const marker = L.marker([parseFloat(pos.value.latitude), parseFloat(pos.value.longitude)])
+      // Create blue icon for main PDV
+      const blueIcon = L.divIcon({
+        className: 'custom-marker',
+        html: `
+          <div style="position: relative;">
+            <svg width="32" height="42" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#3B82F6"/>
+              <circle cx="16" cy="16" r="6" fill="white"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [32, 42],
+        iconAnchor: [16, 42],
+        popupAnchor: [0, -42]
+      });
+      
+      // Add main marker with blue icon
+      const mainMarker = L.marker([parseFloat(pos.value.latitude), parseFloat(pos.value.longitude)], { icon: blueIcon })
         .addTo(mapInstance.value);
       
-      // Add popup
-      marker.bindPopup(`
+      // Add popup for main marker
+      mainMarker.bindPopup(`
         <div class="text-center">
           <strong class="text-moov-orange">${pos.value.nom_point || pos.value.point_name}</strong><br/>
           ${pos.value.ville || pos.value.city}, ${pos.value.quartier || pos.value.neighborhood || ''}
         </div>
       `).openPopup();
+      
+      // Add nearby PDVs if they exist and within threshold
+      if (proximityAlert.value?.has_nearby && proximityAlert.value?.nearby_pdvs) {
+        const bounds = [[parseFloat(pos.value.latitude), parseFloat(pos.value.longitude)]];
+        const alertDistance = proximityAlert.value.alert_distance || 300;
+        
+        proximityAlert.value.nearby_pdvs.forEach(nearby => {
+          if (nearby.latitude && nearby.longitude && nearby.distance <= alertDistance) {
+            // Create red icon for nearby PDV
+            const redIcon = L.divIcon({
+              className: 'custom-marker',
+              html: `
+                <div style="position: relative;">
+                  <svg width="32" height="42" viewBox="0 0 32 42" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M16 0C7.163 0 0 7.163 0 16c0 12 16 26 16 26s16-14 16-26c0-8.837-7.163-16-16-16z" fill="#EF4444"/>
+                    <circle cx="16" cy="16" r="6" fill="white"/>
+                  </svg>
+                </div>
+              `,
+              iconSize: [32, 42],
+              iconAnchor: [16, 42],
+              popupAnchor: [0, -42]
+            });
+            
+            // Add red marker for nearby PDV
+            L.marker([parseFloat(nearby.latitude), parseFloat(nearby.longitude)], { icon: redIcon })
+              .bindPopup(`
+                <div class="text-center">
+                  <strong style="color: #EF4444;">⚠️ ${nearby.nom_point}</strong><br/>
+                  ${nearby.numero_flooz}<br/>
+                  <strong>Distance: ${nearby.distance}m</strong>
+                </div>
+              `)
+              .addTo(mapInstance.value);
+            
+            bounds.push([parseFloat(nearby.latitude), parseFloat(nearby.longitude)]);
+            
+            // Draw line between PDVs
+            L.polyline([
+              [parseFloat(pos.value.latitude), parseFloat(pos.value.longitude)],
+              [parseFloat(nearby.latitude), parseFloat(nearby.longitude)]
+            ], {
+              color: '#EF4444',
+              weight: 2,
+              opacity: 0.7,
+              dashArray: '5, 10'
+            }).addTo(mapInstance.value);
+          }
+        });
+        
+        // Fit map to show all markers if there are nearby PDVs
+        if (bounds.length > 1) {
+          mapInstance.value.fitBounds(bounds, { padding: [50, 50] });
+        }
+      }
       
       console.log('Carte initialisée avec succès');
     } catch (err) {

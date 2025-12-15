@@ -52,4 +52,16 @@ export default {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  /**
+   * Exporter les résultats d'analyse d'import
+   */
+  async exportAnalysis(analysisData) {
+    const response = await api.post('/point-of-sales/import/export-analysis', {
+      analysis_data: analysisData
+    }, {
+      responseType: 'blob',
+    });
+    return response;
+  },
 };
