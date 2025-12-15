@@ -154,15 +154,20 @@ deploy_backend() {
         log_warning "Migrations ignorées (--no-migrate)"
     fi
     
-    # Optimisations Laravel
+    # Nettoyage des caches (doit être fait AVANT le cache rebuild)
+    log_info "Nettoyage des caches..."
+    php artisan config:clear
+    php artisan route:clear
+    php artisan cache:clear
+    php artisan view:clear
+    php artisan event:clear
+    
+    # Optimisations Laravel (rebuild des caches)
     log_info "Optimisation de Laravel..."
     php artisan config:cache
     php artisan route:cache
     php artisan view:cache
     php artisan event:cache
-    
-    # Nettoyage des caches obsolètes
-    php artisan cache:clear
     
     # Liens de stockage
     php artisan storage:link 2>/dev/null || true
