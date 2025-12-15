@@ -149,6 +149,10 @@ deploy_backend() {
         else
             log_info "Exécution des migrations..."
             php artisan migrate --force
+            
+            # Exécuter les seeders système (sans réinitialiser)
+            log_info "Exécution des seeders système..."
+            php artisan db:seed --class=SystemSettingSeeder --force
         fi
     else
         log_warning "Migrations ignorées (--no-migrate)"
