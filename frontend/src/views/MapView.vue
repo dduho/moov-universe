@@ -671,8 +671,8 @@ const detectProximityAlerts = () => {
       });
       
       // Skip if too many points (would be too slow)
-      if (pdvs.length > 5000) {
-        console.log('Skipping proximity detection for performance (> 5000 points)');
+      if (pdvs.length > 10000) {
+        console.log('Skipping proximity detection for performance (> 10000 points)');
         proximityAlerts.value = [];
         loadingProximityAlerts.value = false;
         return;
