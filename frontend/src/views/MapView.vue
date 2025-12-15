@@ -665,6 +665,11 @@ const detectProximityAlerts = () => {
       const pdvs = filteredPointsOfSale.value;
       const pdvIdsWithAlert = new Set();
       
+      console.log('Detecting proximity alerts:', { 
+        pdvCount: pdvs.length, 
+        threshold: proximityThreshold.value 
+      });
+      
       // Skip if too many points (would be too slow)
       if (pdvs.length > 5000) {
         console.log('Skipping proximity detection for performance (> 5000 points)');
@@ -739,6 +744,11 @@ const detectProximityAlerts = () => {
       // Mark PDVs with proximity alerts
       filteredPointsOfSale.value.forEach(pdv => {
         pdv.has_proximity_alert = pdvIdsWithAlert.has(pdv.id);
+      });
+
+      console.log('Proximity detection complete:', { 
+        alertCount: alerts.length, 
+        pdvsWithAlert: pdvIdsWithAlert.size 
       });
 
       proximityAlerts.value = alerts.sort((a, b) => a.distance - b.distance);
