@@ -225,6 +225,14 @@ EOF
 }
 
 reload_services() {
+    log_info "Mise à jour de la configuration Nginx..."
+    
+    # Copier la nouvelle configuration Nginx si elle a changé
+    if [ -f "$PROJECT_DIR/nginx.conf" ]; then
+        sudo cp "$PROJECT_DIR/nginx.conf" /etc/nginx/sites-available/moov-universe
+        log_success "Configuration Nginx mise à jour"
+    fi
+    
     log_info "Redémarrage des services..."
     
     # Redémarrer PHP-FPM si installé
