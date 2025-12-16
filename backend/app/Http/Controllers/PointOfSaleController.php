@@ -92,6 +92,96 @@ class PointOfSaleController extends Controller
             });
         }
 
+        // Filtres de qualité des données
+        if ($request->has('incomplete_data') && $request->incomplete_data) {
+            // PDV avec des champs obligatoires manquants
+            $query->whereRaw('(
+                firstname IS NULL OR firstname = "" OR
+                lastname IS NULL OR lastname = "" OR
+                id_description IS NULL OR id_description = "" OR
+                id_number IS NULL OR id_number = "" OR
+                nationality IS NULL OR nationality = "" OR
+                profession IS NULL OR profession = ""
+            )');
+        }
+
+        if ($request->has('no_gps') && $request->no_gps) {
+            // PDV sans coordonnées GPS
+            $query->where(function($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhere('latitude', '')
+                  ->orWhere('longitude', '');
+            });
+        }
+
+        if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
+            // PDV avec incohérences géographiques
+            // On doit vérifier chaque PDV individuellement avec validateRegionCoordinates
+            // car cela utilise des polygones précis, pas juste des bounds rectangulaires
+            $geoService = new \App\Services\GeoValidationService();
+            
+            // Récupérer tous les PDV avec GPS et région
+            $tempQuery = clone $query;
+            $pdvsToCheck = $tempQuery
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->whereNotNull('region')
+                ->get(['id', 'latitude', 'longitude', 'region']);
+            
+            $pdvIdsWithAlert = [];
+            foreach ($pdvsToCheck as $pdv) {
+                $validation = $geoService->validateRegionCoordinates(
+                    (float) $pdv->latitude,
+                    (float) $pdv->longitude,
+                    $pdv->region
+                );
+                
+                if ($validation['has_alert']) {
+                    $pdvIdsWithAlert[] = $pdv->id;
+                }
+            }
+            
+            if (!empty($pdvIdsWithAlert)) {
+                $query->whereIn('id', $pdvIdsWithAlert);
+            } else {
+                // Aucun PDV avec alerte, retourner vide
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($request->has('proximity_alert') && $request->proximity_alert) {
+            // PDV trop proches d'autres PDV
+            try {
+                $organizationId = $request->organization_id ?? null;
+                $proximityData = $this->proximityService->getAllProximityAlerts($user, $organizationId);
+                
+                $pdvIdsWithAlert = [];
+                // L'API retourne ['clusters' => [...], 'count' => ..., etc.]
+                if (!empty($proximityData['clusters'])) {
+                    foreach ($proximityData['clusters'] as $cluster) {
+                        if (isset($cluster['pdvs']) && is_array($cluster['pdvs'])) {
+                            foreach ($cluster['pdvs'] as $pdv) {
+                                if (isset($pdv['id'])) {
+                                    $pdvIdsWithAlert[] = $pdv['id'];
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($pdvIdsWithAlert)) {
+                    $query->whereIn('id', array_unique($pdvIdsWithAlert));
+                } else {
+                    // Aucun PDV avec alerte, retourner vide
+                    $query->whereRaw('1 = 0');
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error filtering proximity alerts: ' . $e->getMessage());
+                // En cas d'erreur, ne pas filtrer (retourner tous)
+            }
+        }
+
         // Pagination with performance optimization
         $perPage = $request->get('per_page', 50); // Default to 50 for better performance
         $sortBy = $request->get('sort_by', 'created_at');

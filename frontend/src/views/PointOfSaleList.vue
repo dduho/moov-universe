@@ -553,34 +553,7 @@ const filteredPOS = computed(() => {
     filtered = filtered.filter(pos => pos.quartier?.toLowerCase().includes(quartierLower));
   }
 
-  // Filtre: Données incomplètes
-  if (filters.value.incompleteData) {
-    filtered = filtered.filter(pos => {
-      return pos.missing_required_fields && pos.missing_required_fields.length > 0;
-    });
-  }
-
-  // Filtre: Sans GPS
-  if (filters.value.noGPS) {
-    filtered = filtered.filter(pos => {
-      return !pos.latitude || !pos.longitude;
-    });
-  }
-
-  // Filtre: Incohérences géographiques
-  if (filters.value.geoInconsistency) {
-    filtered = filtered.filter(pos => {
-      return pos.geo_validation && pos.geo_validation.has_alert === true;
-    });
-  }
-
-  // Filtre: Trop proche d'autres PDV
-  if (filters.value.proximityAlert) {
-    filtered = filtered.filter(pos => {
-      return pos.has_proximity_alert === true;
-    });
-  }
-
+  // Les filtres de qualité sont gérés côté serveur
   return filtered;
 });
 
@@ -661,6 +634,12 @@ const handleExport = async (format) => {
       if (filters.value.quartier) params.quartier = filters.value.quartier;
       if (filters.value.dealer) params.organization_id = filters.value.dealer;
       
+      // Filtres de qualité des données
+      if (filters.value.incompleteData) params.incomplete_data = true;
+      if (filters.value.noGPS) params.no_gps = true;
+      if (filters.value.geoInconsistency) params.geo_inconsistency = true;
+      if (filters.value.proximityAlert) params.proximity_alert = true;
+      
       const response = await PointOfSaleService.getAll(params);
       allPDV = allPDV.concat(response.data);
       
@@ -700,6 +679,12 @@ const fetchPointsOfSale = async (append = false) => {
     if (filters.value.search) params.search = filters.value.search;
     if (filters.value.dealer) params.organization_id = filters.value.dealer;
     
+    // Filtres de qualité des données
+    if (filters.value.incompleteData) params.incomplete_data = true;
+    if (filters.value.noGPS) params.no_gps = true;
+    if (filters.value.geoInconsistency) params.geo_inconsistency = true;
+    if (filters.value.proximityAlert) params.proximity_alert = true;
+    
     const response = await PointOfSaleService.getAll(params);
     
     if (append) {
@@ -737,7 +722,18 @@ const refreshList = async () => {
 };
 
 // Reset to page 1 when changing filters
-watch([() => filters.value.search, () => filters.value.status, () => filters.value.region, () => filters.value.prefecture, () => filters.value.dealer, () => filters.value.sortBy], () => {
+watch([
+  () => filters.value.search, 
+  () => filters.value.status, 
+  () => filters.value.region, 
+  () => filters.value.prefecture, 
+  () => filters.value.dealer, 
+  () => filters.value.sortBy,
+  () => filters.value.incompleteData,
+  () => filters.value.noGPS,
+  () => filters.value.geoInconsistency,
+  () => filters.value.proximityAlert
+], () => {
   refreshList();
 }, { deep: true });
 
