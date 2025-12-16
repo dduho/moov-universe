@@ -5,9 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\PointOfSale;
 use App\Models\User;
+use App\Mail\TaskAssignedMail;
+use App\Mail\TaskCompletedMail;
+use App\Mail\TaskValidatedMail;
+use App\Mail\TaskRevisionRequestedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 
 class TaskController extends Controller
@@ -146,6 +151,11 @@ class TaskController extends Controller
                 ]);
             }
 
+            // Envoyer l'email au commercial assigné
+            if ($commercial->email) {
+                Mail::to($commercial->email)->send(new TaskAssignedMail($task));
+            }
+
             DB::commit();
 
             return response()->json([
@@ -224,6 +234,11 @@ class TaskController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                // Envoyer l'email
+                if ($admin->email) {
+                    Mail::to($admin->email)->send(new TaskCompletedMail($task, $admin));
+                }
             }
 
             DB::commit();
@@ -280,6 +295,11 @@ class TaskController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                // Envoyer l'email
+                if ($task->assignedUser->email) {
+                    Mail::to($task->assignedUser->email)->send(new TaskValidatedMail($task));
+                }
             }
 
             DB::commit();
@@ -348,6 +368,11 @@ class TaskController extends Controller
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+
+                // Envoyer l'email
+                if ($task->assignedUser->email) {
+                    Mail::to($task->assignedUser->email)->send(new TaskRevisionRequestedMail($task));
+                }
             }
 
             DB::commit();

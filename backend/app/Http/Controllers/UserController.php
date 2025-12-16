@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Mail\UserCreatedMail;
+use App\Mail\UserUpdatedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
@@ -70,6 +73,11 @@ class UserController extends Controller
 
         $user = User::create($validated);
 
+        // Envoyer l'email de bienvenue
+        if ($user->email) {
+            Mail::to($user->email)->send(new UserCreatedMail($user->load(['role', 'organization'])));
+        }
+
         return response()->json($user->load(['role', 'organization']), 201);
     }
 
@@ -97,7 +105,15 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        // Capturer les champs modifiés
+        $updatedFields = array_keys($validated);
+
         $user->update($validated);
+
+        // Envoyer l'email de mise à jour si des champs ont été modifiés
+        if (!empty($updatedFields) && $user->email) {
+            Mail::to($user->email)->send(new UserUpdatedMail($user->load(['role', 'organization']), $updatedFields));
+        }
 
         return response()->json($user->load(['role', 'organization']));
     }
