@@ -15,7 +15,7 @@ return new class extends Migration
         // Ajouter le paramètre pour activer/désactiver les emails
         DB::table('system_settings')->insert([
             'key' => 'mail_notifications_enabled',
-            'value' => 'true',
+            'value' => 'false',
             'type' => 'boolean',
             'description' => 'Activer ou désactiver toutes les notifications par email',
             'created_at' => now(),

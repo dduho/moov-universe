@@ -288,7 +288,7 @@
         </div>
 
         <!-- Future settings placeholder -->
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
+        <!-- <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
             <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -296,7 +296,7 @@
             <p class="text-gray-500 font-medium">D'autres paramètres seront ajoutés ici</p>
             <p class="text-sm text-gray-400 mt-1">Personnalisation, notifications, exports, etc.</p>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <!-- Success message -->
