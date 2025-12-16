@@ -126,6 +126,45 @@
           />
         </div>
 
+        <!-- Ligne 3: Filtres de qualité des données -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-white/50 border border-gray-200 hover:bg-white hover:border-moov-orange transition-all cursor-pointer">
+            <input
+              v-model="filters.incompleteData"
+              type="checkbox"
+              class="w-4 h-4 text-moov-orange rounded focus:ring-moov-orange"
+            />
+            <span class="text-sm font-semibold text-gray-700">📋 Données incomplètes</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-white/50 border border-gray-200 hover:bg-white hover:border-moov-orange transition-all cursor-pointer">
+            <input
+              v-model="filters.noGPS"
+              type="checkbox"
+              class="w-4 h-4 text-moov-orange rounded focus:ring-moov-orange"
+            />
+            <span class="text-sm font-semibold text-gray-700">📍 Sans GPS</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-white/50 border border-gray-200 hover:bg-white hover:border-moov-orange transition-all cursor-pointer">
+            <input
+              v-model="filters.geoInconsistency"
+              type="checkbox"
+              class="w-4 h-4 text-moov-orange rounded focus:ring-moov-orange"
+            />
+            <span class="text-sm font-semibold text-gray-700">🗺️ Incohérence géo</span>
+          </label>
+
+          <label class="flex items-center gap-2 p-3 rounded-lg bg-white/50 border border-gray-200 hover:bg-white hover:border-moov-orange transition-all cursor-pointer">
+            <input
+              v-model="filters.proximityAlert"
+              type="checkbox"
+              class="w-4 h-4 text-moov-orange rounded focus:ring-moov-orange"
+            />
+            <span class="text-sm font-semibold text-gray-700">⚠️ Trop proche</span>
+          </label>
+        </div>
+
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div class="flex items-center gap-2 sm:gap-3">
             <button
@@ -452,7 +491,12 @@ const filters = ref({
   ville: '',
   quartier: '',
   dealer: '',
-  sortBy: 'created_at'
+  sortBy: 'created_at',
+  // Filtres de qualité des données
+  incompleteData: false,
+  noGPS: false,
+  geoInconsistency: false,
+  proximityAlert: false
 });
 
 const regions = ref([
@@ -509,6 +553,34 @@ const filteredPOS = computed(() => {
     filtered = filtered.filter(pos => pos.quartier?.toLowerCase().includes(quartierLower));
   }
 
+  // Filtre: Données incomplètes
+  if (filters.value.incompleteData) {
+    filtered = filtered.filter(pos => {
+      return pos.missing_required_fields && pos.missing_required_fields.length > 0;
+    });
+  }
+
+  // Filtre: Sans GPS
+  if (filters.value.noGPS) {
+    filtered = filtered.filter(pos => {
+      return !pos.latitude || !pos.longitude;
+    });
+  }
+
+  // Filtre: Incohérences géographiques
+  if (filters.value.geoInconsistency) {
+    filtered = filtered.filter(pos => {
+      return pos.geo_validation && pos.geo_validation.has_alert === true;
+    });
+  }
+
+  // Filtre: Trop proche d'autres PDV
+  if (filters.value.proximityAlert) {
+    filtered = filtered.filter(pos => {
+      return pos.has_proximity_alert === true;
+    });
+  }
+
   return filtered;
 });
 
@@ -553,7 +625,11 @@ const clearFilters = () => {
     ville: '',
     quartier: '',
     dealer: '',
-    sortBy: 'created_at'
+    sortBy: 'created_at',
+    incompleteData: false,
+    noGPS: false,
+    geoInconsistency: false,
+    proximityAlert: false
   };
   currentPage.value = 1;
 };
