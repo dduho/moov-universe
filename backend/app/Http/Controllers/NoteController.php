@@ -42,6 +42,26 @@ class NoteController extends Controller
 
         $note->load('user:id,name');
 
+        // Notifier le créateur du PDV (s'il est différent de l'auteur de la note)
+        $currentUser = $request->user();
+        if ($pointOfSale->created_by && $pointOfSale->created_by !== $currentUser->id) {
+            \DB::table('notifications')->insert([
+                'user_id' => $pointOfSale->created_by,
+                'type' => 'info',
+                'title' => 'Nouvelle note sur votre PDV',
+                'message' => $currentUser->name . ' a ajouté une note sur "' . $pointOfSale->nom_point . '"',
+                'data' => json_encode([
+                    'pdv_id' => $pointOfSale->id,
+                    'pdv_name' => $pointOfSale->nom_point,
+                    'note_id' => $note->id,
+                    'url' => '/pdv/' . $pointOfSale->id,
+                ]),
+                'read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return response()->json($note, 201);
     }
 

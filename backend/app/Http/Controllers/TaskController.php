@@ -8,10 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-use App\Notifications\TaskAssigned;
-use App\Notifications\TaskCompleted;
-use App\Notifications\TaskValidated;
-use App\Notifications\TaskRevisionRequested;
+
 
 class TaskController extends Controller
 {
@@ -113,8 +110,41 @@ class TaskController extends Controller
             // Ajouter le tag "en_revision" au PDV
             $pdv->addTag('en_revision');
 
-            // Notifier le commercial assigné
-            $commercial->notify(new TaskAssigned($task));
+            // Notifier le commercial assigné via le système custom
+            DB::table('notifications')->insert([
+                'user_id' => $commercial->id,
+                'type' => 'task_assigned',
+                'title' => 'Nouvelle tâche assignée',
+                'message' => 'Nouvelle tâche assignée : "' . $task->title . '" pour le PDV ' . ($pdv->nom_point ?? ''),
+                'data' => json_encode([
+                    'task_id' => $task->id,
+                    'point_of_sale_id' => $task->point_of_sale_id,
+                    'point_of_sale_name' => $pdv->nom_point ?? null,
+                    'url' => '/pdv/' . $task->point_of_sale_id,
+                ]),
+                'read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Notifier le créateur que sa tâche a été créée
+            if ($user->id !== $commercial->id) {
+                DB::table('notifications')->insert([
+                    'user_id' => $user->id,
+                    'type' => 'task_assigned',
+                    'title' => 'Tâche créée',
+                    'message' => 'Vous avez créé la tâche "' . $task->title . '" assignée à ' . $commercial->name,
+                    'data' => json_encode([
+                        'task_id' => $task->id,
+                        'point_of_sale_id' => $task->point_of_sale_id,
+                        'point_of_sale_name' => $pdv->nom_point ?? null,
+                        'url' => '/pdv/' . $task->point_of_sale_id,
+                    ]),
+                    'read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
 
             DB::commit();
 
@@ -174,13 +204,26 @@ class TaskController extends Controller
         try {
             $task->complete();
 
-            // Notifier les administrateurs
+            // Notifier les administrateurs via le système custom
             $admins = User::whereHas('role', function($query) {
                 $query->where('name', 'admin');
             })->get();
             
             foreach ($admins as $admin) {
-                $admin->notify(new TaskCompleted($task));
+                DB::table('notifications')->insert([
+                    'user_id' => $admin->id,
+                    'type' => 'task_completed',
+                    'title' => 'Tâche complétée',
+                    'message' => 'La tâche "' . $task->title . '" a été complétée par ' . $user->name,
+                    'data' => json_encode([
+                        'task_id' => $task->id,
+                        'point_of_sale_id' => $task->point_of_sale_id,
+                        'url' => '/pdv/' . $task->point_of_sale_id,
+                    ]),
+                    'read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             DB::commit();
@@ -221,9 +264,22 @@ class TaskController extends Controller
         try {
             $task->validate($user->id);
 
-            // Notifier le commercial
+            // Notifier le commercial via le système custom
             if ($task->assignedUser) {
-                $task->assignedUser->notify(new TaskValidated($task));
+                DB::table('notifications')->insert([
+                    'user_id' => $task->assignedUser->id,
+                    'type' => 'task_validated',
+                    'title' => 'Tâche validée',
+                    'message' => 'Votre tâche "' . $task->title . '" a été validée',
+                    'data' => json_encode([
+                        'task_id' => $task->id,
+                        'point_of_sale_id' => $task->point_of_sale_id,
+                        'url' => '/pdv/' . $task->point_of_sale_id,
+                    ]),
+                    'read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             DB::commit();
@@ -275,9 +331,23 @@ class TaskController extends Controller
         try {
             $task->requestRevision($request->feedback);
 
-            // Notifier le commercial
+            // Notifier le commercial via le système custom
             if ($task->assignedUser) {
-                $task->assignedUser->notify(new TaskRevisionRequested($task));
+                DB::table('notifications')->insert([
+                    'user_id' => $task->assignedUser->id,
+                    'type' => 'task_revision_requested',
+                    'title' => 'Révision demandée',
+                    'message' => 'Une révision est demandée pour votre tâche "' . $task->title . '"',
+                    'data' => json_encode([
+                        'task_id' => $task->id,
+                        'point_of_sale_id' => $task->point_of_sale_id,
+                        'feedback' => $task->feedback,
+                        'url' => '/pdv/' . $task->point_of_sale_id,
+                    ]),
+                    'read' => false,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
             }
 
             DB::commit();

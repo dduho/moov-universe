@@ -508,6 +508,24 @@ class PointOfSaleController extends Controller
             'validated_at' => now(),
         ]);
 
+        // Notifier le créateur du PDV
+        if ($pdv->creator) {
+            DB::table('notifications')->insert([
+                'user_id' => $pdv->creator->id,
+                'type' => 'pdv_validated',
+                'title' => 'PDV validé',
+                'message' => 'Votre PDV "' . $pdv->nom_point . '" a été validé par ' . $user->name,
+                'data' => json_encode([
+                    'pdv_id' => $pdv->id,
+                    'pdv_name' => $pdv->nom_point,
+                    'url' => '/pdv/' . $pdv->id,
+                ]),
+                'read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         return response()->json($pdv->load(['organization', 'creator', 'validator']));
     }
 
@@ -535,6 +553,25 @@ class PointOfSaleController extends Controller
             'rejected_at' => now(),
             'rejection_reason' => $request->rejection_reason,
         ]);
+
+        // Notifier le créateur du PDV
+        if ($pdv->creator) {
+            DB::table('notifications')->insert([
+                'user_id' => $pdv->creator->id,
+                'type' => 'pdv_rejected',
+                'title' => 'PDV rejeté',
+                'message' => 'Votre PDV "' . $pdv->nom_point . '" a été rejeté : ' . $request->rejection_reason,
+                'data' => json_encode([
+                    'pdv_id' => $pdv->id,
+                    'pdv_name' => $pdv->nom_point,
+                    'rejection_reason' => $request->rejection_reason,
+                    'url' => '/pdv/' . $pdv->id,
+                ]),
+                'read' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
 
         return response()->json($pdv->load(['organization', 'creator', 'validator']));
     }
