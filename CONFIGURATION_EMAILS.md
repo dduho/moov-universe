@@ -2,7 +2,21 @@
 
 ## Vue d'ensemble
 
-Le système d'emails de Moov Universe utilise Laravel Mail avec des templates HTML brandés aux couleurs Moov (#FF6B00). Les emails sont envoyés pour toutes les actions liées aux tâches.
+Le système d'emails de Moov Universe utilise Laravel Mail avec des templates HTML brandés aux couleurs Moov (#FF6B00). Les emails sont envoyés pour toutes les actions liées aux tâches et utilisateurs.
+
+## ⚙️ Activation/Désactivation des notifications
+
+Vous pouvez activer ou désactiver TOUTES les notifications par email en modifiant le fichier `.env` :
+
+```env
+# Activer les emails (par défaut)
+MAIL_NOTIFICATIONS_ENABLED=true
+
+# Désactiver tous les emails
+MAIL_NOTIFICATIONS_ENABLED=false
+```
+
+Quand `MAIL_NOTIFICATIONS_ENABLED=false`, aucun email ne sera envoyé, mais les notifications dans l'application continueront de fonctionner normalement.
 
 ## 📧 Types d'emails configurés
 
@@ -10,6 +24,8 @@ Le système d'emails de Moov Universe utilise Laravel Mail avec des templates HT
 2. **TaskCompletedMail** - Quand une tâche est complétée (envoyé aux admins)
 3. **TaskValidatedMail** - Quand une tâche est validée par un admin
 4. **TaskRevisionRequestedMail** - Quand une révision est demandée
+5. **UserCreatedMail** - Quand un utilisateur est créé
+6. **UserUpdatedMail** - Quand les informations d'un utilisateur sont modifiées
 
 ## 🎨 Templates
 

@@ -114,6 +114,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Email Notifications Toggle
+    |--------------------------------------------------------------------------
+    |
+    | This option allows you to enable or disable all email notifications
+    | globally. When set to false, no emails will be sent regardless of
+    | the trigger. Useful for testing or maintenance periods.
+    |
+    */
+
+    'notifications_enabled' => env('MAIL_NOTIFICATIONS_ENABLED', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |

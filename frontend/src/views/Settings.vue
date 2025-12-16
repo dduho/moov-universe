@@ -192,6 +192,101 @@
           </div>
         </div>
 
+        <!-- Email Notifications Setting -->
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Notifications par Email</h3>
+              <p class="text-xs sm:text-sm text-gray-600">Activer ou désactiver l'envoi de toutes les notifications par email</p>
+            </div>
+            <span class="self-start px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-700">
+              Communication
+            </span>
+          </div>
+
+          <div class="space-y-4">
+            <!-- SMTP Status Warning -->
+            <div v-if="!smtpConfigured && !checkingSmtp" class="p-4 bg-red-50 rounded-lg border border-red-200">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-red-900">⚠️ Serveur SMTP non configuré</p>
+                  <p class="text-xs text-red-800 mt-1">
+                    Les notifications par email ne peuvent pas être activées tant que le serveur SMTP n'est pas configuré dans le fichier .env
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Toggle Switch -->
+            <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                 :class="!smtpConfigured ? 'opacity-50' : ''">
+              <div class="flex-1">
+                <p class="font-semibold text-gray-900">Envoi d'emails</p>
+                <p class="text-sm text-gray-600 mt-1">
+                  {{ mailNotificationsEnabled ? 'Les emails sont actuellement activés' : 'Les emails sont actuellement désactivés' }}
+                </p>
+                <p v-if="smtpConfigured" class="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                  </svg>
+                  SMTP configuré et actif
+                </p>
+              </div>
+              
+              <button
+                @click="toggleEmailNotifications"
+                :disabled="savingMailNotifications || (!smtpConfigured && !mailNotificationsEnabled)"
+                class="relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-moov-orange focus:ring-offset-2"
+                :class="[
+                  mailNotificationsEnabled ? 'bg-moov-orange' : 'bg-gray-300',
+                  (!smtpConfigured && !mailNotificationsEnabled) ? 'cursor-not-allowed opacity-50' : ''
+                ]"
+              >
+                <span
+                  class="inline-block h-6 w-6 transform rounded-full bg-white transition-transform shadow-lg"
+                  :class="mailNotificationsEnabled ? 'translate-x-7' : 'translate-x-1'"
+                />
+              </button>
+            </div>
+
+            <!-- Information box -->
+            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-blue-900 mb-2">Types d'emails concernés :</p>
+                  <ul class="space-y-1 text-sm text-blue-800">
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Assignation de tâches aux commerciaux</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Notification de complétion de tâches (admins)</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Validation et révision de tâches</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Création et modification d'utilisateurs</span>
+                    </li>
+                  </ul>
+                  <p class="text-xs text-blue-700 mt-3 italic">
+                    Note : Les notifications dans l'application restent actives même si les emails sont désactivés.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Future settings placeholder -->
         <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
@@ -238,18 +333,27 @@ const proximityValue = ref(300);
 const gpsAccuracySetting = ref(null);
 const gpsAccuracyValue = ref(30);
 const savingGpsAccuracy = ref(false);
+const mailNotificationsEnabled = ref(true);
+const savingMailNotifications = ref(false);
+const smtpConfigured = ref(false);
+const checkingSmtp = ref(false);
 
 const loadSettings = async () => {
   try {
     loading.value = true;
-    const [proximitySett, gpsAccuracySett] = await Promise.all([
+    const [proximitySett, gpsAccuracySett, mailNotifSett] = await Promise.all([
       SystemSettingService.getSetting('pdv_proximity_threshold'),
-      SystemSettingService.getSetting('gps_accuracy_max').catch(() => ({ value: 30, description: 'Précision GPS maximale acceptée en mètres' }))
+      SystemSettingService.getSetting('gps_accuracy_max').catch(() => ({ value: 30, description: 'Précision GPS maximale acceptée en mètres' })),
+      SystemSettingService.getSetting('mail_notifications_enabled').catch(() => ({ value: true }))
     ]);
     proximitySetting.value = proximitySett;
     proximityValue.value = proximitySett.value;
     gpsAccuracySetting.value = gpsAccuracySett;
     gpsAccuracyValue.value = parseInt(gpsAccuracySett.value) || 30;
+    mailNotificationsEnabled.value = mailNotifSett.value;
+    
+    // Vérifier la configuration SMTP
+    await checkSmtpConfiguration();
   } catch (error) {
     console.error('Error loading settings:', error);
   } finally {
@@ -292,6 +396,63 @@ const saveGpsAccuracy = async () => {
     toast.error('Erreur lors de la sauvegarde du paramètre');
   } finally {
     savingGpsAccuracy.value = false;
+  }
+};
+
+const toggleEmailNotifications = async () => {
+  // Vérifier SMTP avant d'activer
+  if (!mailNotificationsEnabled.value && !smtpConfigured.value) {
+    toast.error('Serveur SMTP non configuré. Veuillez configurer SMTP dans le fichier .env');
+    return;
+  }
+
+  try {
+    savingMailNotifications.value = true;
+    const newValue = !mailNotificationsEnabled.value;
+    
+    // Si on active, re-vérifier SMTP
+    if (newValue) {
+      const smtpCheck = await checkSmtpConfiguration();
+      if (!smtpCheck) {
+        toast.error('Impossible d\'activer : serveur SMTP non accessible');
+        return;
+      }
+    }
+    
+    await SystemSettingService.updateSetting('mail_notifications_enabled', newValue.toString());
+    mailNotificationsEnabled.value = newValue;
+    
+    // Show success message
+    showSuccess.value = true;
+    setTimeout(() => {
+      showSuccess.value = false;
+    }, 3000);
+    
+    toast.success(
+      newValue 
+        ? 'Notifications par email activées' 
+        : 'Notifications par email désactivées'
+    );
+  } catch (error) {
+    console.error('Error toggling email notifications:', error);
+    toast.error('Erreur lors de la modification du paramètre');
+  } finally {
+    savingMailNotifications.value = false;
+  }
+};
+
+const checkSmtpConfiguration = async () => {
+  try {
+    checkingSmtp.value = true;
+    const result = await SystemSettingService.testSmtpConnection();
+    smtpConfigured.value = result.success;
+    return result.success;
+  } catch (error) {
+    console.error('SMTP check error:', error);
+    smtpConfigured.value = false;
+    return false;
+  } finally {
+    checkingSmtp.value = false;
   }
 };
 

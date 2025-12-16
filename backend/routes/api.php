@@ -15,6 +15,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\MailTestController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -63,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // System settings update (admin only)
     Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
         Route::put('/settings/{key}', [SystemSettingController::class, 'update']);
+        Route::get('/mail/test-smtp', [MailTestController::class, 'testSmtpConnection']);
     });
 
     // Point of Sale routes
@@ -174,4 +176,3 @@ Route::middleware('auth:sanctum')->group(function () {
         });
     });
 });
-

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Task;
 use App\Models\PointOfSale;
 use App\Models\User;
+use App\Models\SystemSetting;
 use App\Mail\TaskAssignedMail;
 use App\Mail\TaskCompletedMail;
 use App\Mail\TaskValidatedMail;
@@ -152,7 +153,7 @@ class TaskController extends Controller
             }
 
             // Envoyer l'email au commercial assigné
-            if ($commercial->email) {
+            if (SystemSetting::getValue('mail_notifications_enabled', true) && $commercial->email) {
                 Mail::to($commercial->email)->send(new TaskAssignedMail($task));
             }
 
@@ -236,7 +237,7 @@ class TaskController extends Controller
                 ]);
 
                 // Envoyer l'email
-                if ($admin->email) {
+                if (SystemSetting::getValue('mail_notifications_enabled', true) && $admin->email) {
                     Mail::to($admin->email)->send(new TaskCompletedMail($task, $admin));
                 }
             }
@@ -297,7 +298,7 @@ class TaskController extends Controller
                 ]);
 
                 // Envoyer l'email
-                if ($task->assignedUser->email) {
+                if (SystemSetting::getValue('mail_notifications_enabled', true) && $task->assignedUser->email) {
                     Mail::to($task->assignedUser->email)->send(new TaskValidatedMail($task));
                 }
             }
@@ -370,7 +371,7 @@ class TaskController extends Controller
                 ]);
 
                 // Envoyer l'email
-                if ($task->assignedUser->email) {
+                if (SystemSetting::getValue('mail_notifications_enabled', true) && $task->assignedUser->email) {
                     Mail::to($task->assignedUser->email)->send(new TaskRevisionRequestedMail($task));
                 }
             }
