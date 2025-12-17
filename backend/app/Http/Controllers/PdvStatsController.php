@@ -10,24 +10,33 @@ use Illuminate\Support\Facades\DB;
 class PdvStatsController extends Controller
 {
     /**
-     * Récupérer les statistiques d'un PDV
+     * Récupérer les statistiques d'un PDV avec filtres
      */
-    public function getStats($id)
+    public function getStats($id, Request $request)
     {
         $pdv = PointOfSale::findOrFail($id);
         
+        // Paramètres de filtrage
+        $period = $request->input('period', 'day'); // day, week, month
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 10);
+        
         // Récupérer toutes les transactions du PDV
-        $transactions = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
-            ->orderBy('transaction_date', 'desc')
-            ->get();
+        $transactionsQuery = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
+            ->orderBy('transaction_date', 'desc');
+        
+        $allTransactions = $transactionsQuery->get();
 
-        if ($transactions->isEmpty()) {
+        if ($allTransactions->isEmpty()) {
             return response()->json([
                 'hasData' => false,
                 'message' => 'Aucune donnée de transaction disponible pour ce PDV'
             ]);
         }
 
+        // Grouper par période selon le filtre
+        $groupedTransactions = $this->groupByPeriod($allTransactions, $period);
+        
         // Calculer les statistiques globales
         $stats = [
             'hasData' => true,
@@ -36,11 +45,14 @@ class PdvStatsController extends Controller
                 'nom_point' => $pdv->nom_point,
                 'numero_flooz' => $pdv->numero_flooz,
             ],
-            'summary' => $this->calculateSummary($transactions),
-            'trends' => $this->calculateTrends($transactions),
-            'commissions' => $this->calculateCommissions($transactions),
-            'transfers' => $this->calculateTransfers($transactions),
-            'timeline' => $this->getTimeline($transactions),
+            'period' => $period,
+            'summary' => $this->calculateSummary($allTransactions),
+            'trends' => $this->calculateTrends($allTransactions),
+            'commissions' => $this->calculateCommissions($allTransactions),
+            'transfers' => $this->calculateTransfers($allTransactions),
+            'performance' => $this->calculatePerformance($groupedTransactions),
+            'charts' => $this->prepareChartData($groupedTransactions, $period),
+            'timeline' => $this->getTimelinePaginated($groupedTransactions, $page, $perPage),
         ];
 
         return response()->json($stats);
@@ -87,7 +99,8 @@ class PdvStatsController extends Controller
         ];
 
         return [
-            'latest_period' => [
+            'latest_period' => $latest->transaction_date->format('d M Y'),
+            'latest_data' => [
                 'date' => $latest->transaction_date->format('Y-m-d'),
                 'depot_count' => $latest->count_depot,
                 'retrait_count' => $latest->count_retrait,
@@ -95,14 +108,12 @@ class PdvStatsController extends Controller
                 'retrait_amount' => $latest->sum_retrait,
             ],
             'average' => $average,
-            'performance' => [
-                'depot_count_vs_avg' => $average['depot_count'] > 0 
-                    ? (($latest->count_depot - $average['depot_count']) / $average['depot_count'] * 100) 
-                    : 0,
-                'retrait_count_vs_avg' => $average['retrait_count'] > 0 
-                    ? (($latest->count_retrait - $average['retrait_count']) / $average['retrait_count'] * 100) 
-                    : 0,
-            ],
+            'depot_vs_average' => $average['depot_amount'] > 0 
+                ? (($latest->sum_depot - $average['depot_amount']) / $average['depot_amount'] * 100) 
+                : 0,
+            'retrait_vs_average' => $average['retrait_amount'] > 0 
+                ? (($latest->sum_retrait - $average['retrait_amount']) / $average['retrait_amount'] * 100) 
+                : 0,
         ];
     }
 
@@ -179,5 +190,149 @@ class PdvStatsController extends Controller
                 'transfers_received' => $transaction->count_give_receive,
             ];
         })->values();
+    }
+
+    /**
+     * Grouper les transactions par période
+     */
+    private function groupByPeriod($transactions, $period)
+    {
+        return $transactions->groupBy(function($transaction) use ($period) {
+            $date = $transaction->transaction_date;
+            switch ($period) {
+                case 'week':
+                    return $date->format('Y') . '-W' . $date->format('W');
+                case 'month':
+                    return $date->format('Y-m');
+                default: // day
+                    return $date->format('Y-m-d');
+            }
+        })->map(function($group, $key) use ($period) {
+            return [
+                'period' => $key,
+                'label' => $this->formatPeriodLabel($key, $period),
+                'depot_count' => $group->sum('count_depot'),
+                'depot_amount' => $group->sum('sum_depot'),
+                'retrait_count' => $group->sum('count_retrait'),
+                'retrait_amount' => $group->sum('sum_retrait'),
+                'pdv_commission' => $group->sum('pdv_depot_commission') + $group->sum('pdv_retrait_commission'),
+                'dealer_commission' => $group->sum('dealer_depot_commission') + $group->sum('dealer_retrait_commission'),
+                'transfers_sent' => $group->sum('count_give_send'),
+                'transfers_received' => $group->sum('count_give_receive'),
+                'total_volume' => $group->sum('sum_depot') + $group->sum('sum_retrait'),
+            ];
+        });
+    }
+
+    /**
+     * Formater le label de période
+     */
+    private function formatPeriodLabel($key, $period)
+    {
+        switch ($period) {
+            case 'week':
+                [$year, $week] = explode('-W', $key);
+                return "Semaine $week, $year";
+            case 'month':
+                return \Carbon\Carbon::createFromFormat('Y-m', $key)->format('M Y');
+            default:
+                return \Carbon\Carbon::parse($key)->format('d M Y');
+        }
+    }
+
+    /**
+     * Timeline paginée
+     */
+    private function getTimelinePaginated($groupedTransactions, $page, $perPage)
+    {
+        $items = $groupedTransactions->sortKeysDesc()->values();
+        $total = $items->count();
+        $lastPage = ceil($total / $perPage);
+        
+        $paginatedItems = $items->slice(($page - 1) * $perPage, $perPage)->values();
+        
+        return [
+            'data' => $paginatedItems,
+            'current_page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'last_page' => $lastPage,
+            'from' => ($page - 1) * $perPage + 1,
+            'to' => min($page * $perPage, $total),
+        ];
+    }
+
+    /**
+     * Calculer les performances
+     */
+    private function calculatePerformance($groupedTransactions)
+    {
+        if ($groupedTransactions->isEmpty()) {
+            return null;
+        }
+
+        $items = $groupedTransactions->sortKeysDesc()->values();
+        $latest = $items->first();
+        $volumes = $items->pluck('total_volume');
+        
+        return [
+            'best_period' => $items->sortByDesc('total_volume')->first(),
+            'worst_period' => $items->sortBy('total_volume')->first(),
+            'average_volume' => $volumes->average(),
+            'median_volume' => $volumes->median(),
+            'consistency' => $this->calculateConsistency($volumes),
+        ];
+    }
+
+    /**
+     * Calculer la consistance (écart-type / moyenne)
+     */
+    private function calculateConsistency($values)
+    {
+        if ($values->isEmpty()) return 0;
+        
+        $mean = $values->average();
+        if ($mean == 0) return 0;
+        
+        $variance = $values->map(function($value) use ($mean) {
+            return pow($value - $mean, 2);
+        })->average();
+        
+        $stdDev = sqrt($variance);
+        
+        // Coefficient de variation (inversé pour que plus haut = plus consistant)
+        return $mean > 0 ? max(0, 100 - ($stdDev / $mean * 100)) : 0;
+    }
+
+    /**
+     * Préparer les données pour les graphiques
+     */
+    private function prepareChartData($groupedTransactions, $period)
+    {
+        $items = $groupedTransactions->sortKeys()->values();
+        
+        return [
+            'labels' => $items->pluck('label'),
+            'volumes' => [
+                'labels' => $items->pluck('label'),
+                'depot' => $items->pluck('depot_amount'),
+                'retrait' => $items->pluck('retrait_amount'),
+            ],
+            'transactions' => [
+                'labels' => $items->pluck('label'),
+                'depot' => $items->pluck('depot_count'),
+                'retrait' => $items->pluck('retrait_count'),
+            ],
+            'commissions' => [
+                'labels' => $items->pluck('label'),
+                'pdv' => $items->pluck('pdv_commission'),
+                'dealer' => $items->pluck('dealer_commission'),
+            ],
+            'transfers' => [
+                'labels' => $items->pluck('label'),
+                'sent' => $items->pluck('transfers_sent'),
+                'received' => $items->pluck('transfers_received'),
+            ],
+        ];
     }
 }

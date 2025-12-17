@@ -21,7 +21,7 @@ export default {
   /**
    * Get transaction stats for a specific PDV
    */
-  async getStats(pdvId) {
-    return api.get(`/pdv/${pdvId}/stats`);
+  async getStats(pdvId, params = {}) {
+    return api.get(`/pdv/${pdvId}/stats`, { params });
   },
 };

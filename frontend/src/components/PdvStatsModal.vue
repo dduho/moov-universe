@@ -7,7 +7,7 @@
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="close"></div>
           
           <!-- Modal -->
-          <div class="relative bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
+          <div class="relative bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden">
             <!-- Header -->
             <div class="sticky top-0 bg-gradient-to-r from-moov-orange to-orange-600 px-6 py-4 flex items-center justify-between z-10">
               <div class="flex items-center gap-3">
@@ -38,15 +38,33 @@
                 </svg>
                 <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucune donnée disponible</h3>
                 <p class="text-gray-600">{{ stats.message }}</p>
-                <p class="text-sm text-gray-500 mt-2">Importez des fichiers de transactions depuis les paramètres système</p>
               </div>
 
               <!-- Stats Content -->
               <div v-else class="space-y-6">
-                <!-- PDV Info -->
-                <div class="bg-gradient-to-r from-moov-orange/10 to-orange-100/50 rounded-lg p-4">
-                  <h3 class="font-bold text-gray-900 text-lg">{{ stats.pdv.nom_point }}</h3>
-                  <p class="text-sm text-gray-600">Numéro Flooz: {{ stats.pdv.numero_flooz }}</p>
+                <!-- PDV Info & Period Filter -->
+                <div class="bg-gradient-to-r from-moov-orange/10 to-orange-100/50 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h3 class="font-bold text-gray-900 text-lg">{{ stats.pdv.nom_point }}</h3>
+                    <p class="text-sm text-gray-600">Numéro Flooz: {{ stats.pdv.numero_flooz }}</p>
+                  </div>
+                  
+                  <!-- Period Selector -->
+                  <div class="flex gap-2">
+                    <button 
+                      v-for="p in periods" 
+                      :key="p.value"
+                      @click="changePeriod(p.value)"
+                      :class="[
+                        'px-4 py-2 rounded-lg font-medium transition-all',
+                        selectedPeriod === p.value 
+                          ? 'bg-moov-orange text-white shadow-lg' 
+                          : 'bg-white text-gray-700 hover:bg-gray-100'
+                      ]"
+                    >
+                      {{ p.label }}
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Key Metrics -->
@@ -102,186 +120,254 @@
                   </div>
                 </div>
 
-                <!-- Dépôts vs Retraits -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div class="bg-white rounded-lg border-2 border-green-200 p-4">
-                    <h4 class="text-lg font-bold text-green-700 mb-3 flex items-center gap-2">
-                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
-                      </svg>
-                      Dépôts
-                    </h4>
-                    <div class="space-y-2">
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Nombre:</span>
-                        <span class="font-bold text-gray-900">{{ formatNumber(stats.summary.total_depot_count) }}</span>
-                      </div>
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Montant total:</span>
-                        <span class="font-bold text-gray-900">{{ formatCurrency(stats.summary.total_depot_amount) }}</span>
-                      </div>
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Montant moyen:</span>
-                        <span class="font-bold text-gray-900">{{ formatCurrency(stats.summary.avg_depot) }}</span>
-                      </div>
-                      <div class="pt-2 border-t">
-                        <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-600">Commission PDV:</span>
-                          <span class="font-semibold text-green-600">{{ formatCurrency(stats.commissions.pdv.depot) }}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-600">Commission Dealer:</span>
-                          <span class="font-semibold text-green-600">{{ formatCurrency(stats.commissions.dealer.depot) }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="bg-white rounded-lg border-2 border-red-200 p-4">
-                    <h4 class="text-lg font-bold text-red-700 mb-3 flex items-center gap-2">
-                      <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" transform="rotate(180 10 10)" />
-                      </svg>
-                      Retraits
-                    </h4>
-                    <div class="space-y-2">
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Nombre:</span>
-                        <span class="font-bold text-gray-900">{{ formatNumber(stats.summary.total_retrait_count) }}</span>
-                      </div>
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Montant total:</span>
-                        <span class="font-bold text-gray-900">{{ formatCurrency(stats.summary.total_retrait_amount) }}</span>
-                      </div>
-                      <div class="flex justify-between items-center">
-                        <span class="text-gray-600">Montant moyen:</span>
-                        <span class="font-bold text-gray-900">{{ formatCurrency(stats.summary.avg_retrait) }}</span>
-                      </div>
-                      <div class="pt-2 border-t">
-                        <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-600">Commission PDV:</span>
-                          <span class="font-semibold text-red-600">{{ formatCurrency(stats.commissions.pdv.retrait) }}</span>
-                        </div>
-                        <div class="flex justify-between items-center text-sm">
-                          <span class="text-gray-600">Commission Dealer:</span>
-                          <span class="font-semibold text-red-600">{{ formatCurrency(stats.commissions.dealer.retrait) }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Transferts -->
-                <div class="bg-white rounded-lg border-2 border-blue-200 p-4">
-                  <h4 class="text-lg font-bold text-blue-700 mb-3 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <!-- GIVE Transfers Stats -->
+                <div v-if="stats.transfers" class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg p-6 border border-indigo-200">
+                  <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-6 h-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                     </svg>
-                    Transferts
-                  </h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <h5 class="font-semibold text-gray-900 mb-2">Envoyés</h5>
-                      <div class="space-y-1 text-sm">
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Total:</span>
-                          <span class="font-semibold">{{ formatNumber(stats.transfers.sent.total_count) }} ({{ formatCurrency(stats.transfers.sent.total_amount) }})</span>
+                    Transferts GIVE
+                  </h3>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- GIVE Envoyés -->
+                    <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                      <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-semibold text-blue-900 flex items-center gap-2">
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+                          </svg>
+                          GIVE Envoyés
+                        </h4>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                          <span class="text-sm text-gray-600">Total:</span>
+                          <div class="text-right">
+                            <p class="font-bold text-blue-900">{{ formatNumber(stats.transfers.sent.total_count) }}</p>
+                            <p class="text-xs text-gray-500">{{ formatCurrency(stats.transfers.sent.total_amount) }}</p>
+                          </div>
                         </div>
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Dans le réseau:</span>
-                          <span>{{ formatNumber(stats.transfers.sent.in_network_count) }} ({{ formatCurrency(stats.transfers.sent.in_network_amount) }})</span>
+                        
+                        <div class="flex justify-between items-center bg-green-50 p-2 rounded">
+                          <span class="text-sm text-green-700">Dans le réseau:</span>
+                          <div class="text-right">
+                            <p class="font-semibold text-green-900">{{ formatNumber(stats.transfers.sent.in_network_count) }}</p>
+                            <p class="text-xs text-green-600">{{ formatCurrency(stats.transfers.sent.in_network_amount) }}</p>
+                          </div>
                         </div>
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Hors réseau:</span>
-                          <span>{{ formatNumber(stats.transfers.sent.out_network_count) }} ({{ formatCurrency(stats.transfers.sent.out_network_amount) }})</span>
+                        
+                        <div class="flex justify-between items-center bg-orange-50 p-2 rounded">
+                          <span class="text-sm text-orange-700">Hors réseau:</span>
+                          <div class="text-right">
+                            <p class="font-semibold text-orange-900">{{ formatNumber(stats.transfers.sent.out_network_count) }}</p>
+                            <p class="text-xs text-orange-600">{{ formatCurrency(stats.transfers.sent.out_network_amount) }}</p>
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <h5 class="font-semibold text-gray-900 mb-2">Reçus</h5>
-                      <div class="space-y-1 text-sm">
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Total:</span>
-                          <span class="font-semibold">{{ formatNumber(stats.transfers.received.total_count) }} ({{ formatCurrency(stats.transfers.received.total_amount) }})</span>
+
+                    <!-- GIVE Reçus -->
+                    <div class="bg-white rounded-lg p-4 border-l-4 border-cyan-500">
+                      <div class="flex items-center justify-between mb-3">
+                        <h4 class="font-semibold text-cyan-900 flex items-center gap-2">
+                          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clip-rule="evenodd" />
+                          </svg>
+                          GIVE Reçus
+                        </h4>
+                      </div>
+                      
+                      <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                          <span class="text-sm text-gray-600">Total:</span>
+                          <div class="text-right">
+                            <p class="font-bold text-cyan-900">{{ formatNumber(stats.transfers.received.total_count) }}</p>
+                            <p class="text-xs text-gray-500">{{ formatCurrency(stats.transfers.received.total_amount) }}</p>
+                          </div>
                         </div>
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Dans le réseau:</span>
-                          <span>{{ formatNumber(stats.transfers.received.in_network_count) }} ({{ formatCurrency(stats.transfers.received.in_network_amount) }})</span>
+                        
+                        <div class="flex justify-between items-center bg-green-50 p-2 rounded">
+                          <span class="text-sm text-green-700">Dans le réseau:</span>
+                          <div class="text-right">
+                            <p class="font-semibold text-green-900">{{ formatNumber(stats.transfers.received.in_network_count) }}</p>
+                            <p class="text-xs text-green-600">{{ formatCurrency(stats.transfers.received.in_network_amount) }}</p>
+                          </div>
                         </div>
-                        <div class="flex justify-between">
-                          <span class="text-gray-600">Hors réseau:</span>
-                          <span>{{ formatNumber(stats.transfers.received.out_network_count) }} ({{ formatCurrency(stats.transfers.received.out_network_amount) }})</span>
+                        
+                        <div class="flex justify-between items-center bg-orange-50 p-2 rounded">
+                          <span class="text-sm text-orange-700">Hors réseau:</span>
+                          <div class="text-right">
+                            <p class="font-semibold text-orange-900">{{ formatNumber(stats.transfers.received.out_network_count) }}</p>
+                            <p class="text-xs text-orange-600">{{ formatCurrency(stats.transfers.received.out_network_amount) }}</p>
+                          </div>
                         </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Résumé -->
+                  <div class="mt-4 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-lg p-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p class="text-sm text-indigo-700 font-semibold">Total Transferts</p>
+                        <p class="text-2xl font-bold text-indigo-900">
+                          {{ formatNumber((stats.transfers.sent.total_count || 0) + (stats.transfers.received.total_count || 0)) }}
+                        </p>
+                      </div>
+                      <div>
+                        <p class="text-sm text-purple-700 font-semibold">Volume Total</p>
+                        <p class="text-2xl font-bold text-purple-900">
+                          {{ formatCurrency((stats.transfers.sent.total_amount || 0) + (stats.transfers.received.total_amount || 0)) }}
+                        </p>
+                      </div>
+                      <div>
+                        <p class="text-sm text-pink-700 font-semibold">Ratio Env/Reç</p>
+                        <p class="text-2xl font-bold text-pink-900">
+                          {{ stats.transfers.received.total_count > 0 ? (stats.transfers.sent.total_count / stats.transfers.received.total_count).toFixed(2) : 'N/A' }}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <!-- Performance Trend -->
-                <div v-if="stats.trends" class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg border-2 border-indigo-200 p-4">
-                  <h4 class="text-lg font-bold text-indigo-700 mb-3 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <!-- Performance Cards -->
+                <div v-if="stats.performance" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200">
+                    <p class="text-sm text-green-700 font-semibold mb-2">🏆 Meilleure Performance</p>
+                    <p class="text-lg font-bold text-green-900">{{ stats.performance?.best_period?.label || 'N/A' }}</p>
+                    <p class="text-sm text-green-600">{{ formatCurrency(stats.performance?.best_period?.total_volume || 0) }}</p>
+                  </div>
+
+                  <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                    <p class="text-sm text-blue-700 font-semibold mb-2">📊 Volume Moyen</p>
+                    <p class="text-lg font-bold text-blue-900">{{ formatCurrency(stats.performance?.average_volume || 0) }}</p>
+                    <p class="text-sm text-blue-600">Médiane: {{ formatCurrency(stats.performance?.median_volume || 0) }}</p>
+                  </div>
+
+                  <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg p-4 border border-purple-200">
+                    <p class="text-sm text-purple-700 font-semibold mb-2">🎯 Consistance</p>
+                    <p class="text-lg font-bold text-purple-900">{{ (stats.performance?.consistency || 0).toFixed(1) }}%</p>
+                    <p class="text-sm text-purple-600">Régularité des performances</p>
+                  </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" v-if="stats.charts">
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-900 mb-4">📈 Évolution du Volume</h3>
+                    <Line :data="volumeChartData" :options="chartOptions" />
+                  </div>
+
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-900 mb-4">💰 Commissions</h3>
+                    <Bar :data="commissionsChartData" :options="chartOptions" />
+                  </div>
+
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-900 mb-4">📊 Nombre de Transactions</h3>
+                    <Bar :data="transactionsChartData" :options="chartOptions" />
+                  </div>
+
+                  <div class="bg-white rounded-lg border border-gray-200 p-4">
+                    <h3 class="font-bold text-gray-900 mb-4">🔄 Transferts</h3>
+                    <Line :data="transfersChartData" :options="chartOptions" />
+                  </div>
+                </div>
+
+                <!-- Performance vs Moyenne -->
+                <div v-if="stats.trends" class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+                  <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-moov-orange" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M12 7a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0V8.414l-4.293 4.293a1 1 0 01-1.414 0L8 10.414l-4.293 4.293a1 1 0 01-1.414-1.414l5-5a1 1 0 011.414 0L11 10.586 14.586 7H12z" clip-rule="evenodd" />
                     </svg>
                     Performance vs Moyenne
-                  </h4>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="flex items-center justify-between">
-                      <span class="text-gray-700">Dépôts:</span>
-                      <span 
-                        class="px-3 py-1 rounded-full text-sm font-bold"
-                        :class="stats.trends.performance.depot_count_vs_avg >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                      >
-                        {{ stats.trends.performance.depot_count_vs_avg >= 0 ? '+' : '' }}{{ stats.trends.performance.depot_count_vs_avg.toFixed(1) }}%
-                      </span>
+                  </h3>
+                  <p class="text-sm text-gray-600 mb-4">Dernière période: {{ stats.trends?.latest_period || 'N/A' }}</p>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p class="text-sm text-gray-600">Dépôts:</p>
+                      <p :class="['text-lg font-bold', (stats.trends?.depot_vs_average || 0) >= 0 ? 'text-green-600' : 'text-red-600']">
+                        {{ (stats.trends?.depot_vs_average || 0) >= 0 ? '+' : '' }}{{ (stats.trends?.depot_vs_average || 0).toFixed(1) }}%
+                      </p>
                     </div>
-                    <div class="flex items-center justify-between">
-                      <span class="text-gray-700">Retraits:</span>
-                      <span 
-                        class="px-3 py-1 rounded-full text-sm font-bold"
-                        :class="stats.trends.performance.retrait_count_vs_avg >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'"
-                      >
-                        {{ stats.trends.performance.retrait_count_vs_avg >= 0 ? '+' : '' }}{{ stats.trends.performance.retrait_count_vs_avg.toFixed(1) }}%
-                      </span>
+                    <div>
+                      <p class="text-sm text-gray-600">Retraits:</p>
+                      <p :class="['text-lg font-bold', (stats.trends?.retrait_vs_average || 0) >= 0 ? 'text-green-600' : 'text-red-600']">
+                        {{ (stats.trends?.retrait_vs_average || 0) >= 0 ? '+' : '' }}{{ (stats.trends?.retrait_vs_average || 0).toFixed(1) }}%
+                      </p>
                     </div>
                   </div>
-                  <p class="text-xs text-gray-600 mt-2">Dernière période: {{ stats.trends.latest_period.date }}</p>
                 </div>
 
-                <!-- Timeline (dernières périodes) -->
-                <div v-if="stats.timeline && stats.timeline.length > 0" class="bg-white rounded-lg border-2 border-gray-200 p-4">
-                  <h4 class="text-lg font-bold text-gray-900 mb-3">Évolution temporelle</h4>
+                <!-- Évolution Temporelle with Pagination -->
+                <div class="bg-white rounded-lg border border-gray-200">
+                  <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="font-bold text-gray-900">Évolution temporelle</h3>
+                  </div>
                   <div class="overflow-x-auto">
-                    <table class="min-w-full text-sm">
+                    <table class="min-w-full divide-y divide-gray-200">
                       <thead class="bg-gray-50">
                         <tr>
-                          <th class="px-3 py-2 text-left text-xs font-semibold text-gray-700">Date</th>
-                          <th class="px-3 py-2 text-right text-xs font-semibold text-gray-700">Dépôts</th>
-                          <th class="px-3 py-2 text-right text-xs font-semibold text-gray-700">Retraits</th>
-                          <th class="px-3 py-2 text-right text-xs font-semibold text-gray-700">Commissions</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dépôts</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Retraits</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commissions</th>
                         </tr>
                       </thead>
-                      <tbody class="divide-y divide-gray-200">
-                        <tr v-for="period in stats.timeline.slice(-10)" :key="period.date" class="hover:bg-gray-50">
-                          <td class="px-3 py-2 text-gray-900 font-medium">{{ formatDate(period.date) }}</td>
-                          <td class="px-3 py-2 text-right text-gray-700">
-                            {{ formatNumber(period.depot_count) }}
-                            <span class="text-xs text-gray-500">({{ formatCurrency(period.depot_amount) }})</span>
+                      <tbody class="bg-white divide-y divide-gray-200">
+                        <tr v-for="item in (stats.timeline?.data || [])" :key="item.period" class="hover:bg-gray-50">
+                          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ item.label }}</td>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <div>{{ item.depot_count || 0 }} <span class="text-gray-400">({{ formatCurrency(item.depot_amount) }})</span></div>
                           </td>
-                          <td class="px-3 py-2 text-right text-gray-700">
-                            {{ formatNumber(period.retrait_count) }}
-                            <span class="text-xs text-gray-500">({{ formatCurrency(period.retrait_amount) }})</span>
+                          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            <div>{{ item.retrait_count || 0 }} <span class="text-gray-400">({{ formatCurrency(item.retrait_amount) }})</span></div>
                           </td>
-                          <td class="px-3 py-2 text-right text-green-600 font-semibold">
-                            {{ formatCurrency(period.pdv_commission) }}
+                          <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-semibold text-green-600">{{ formatCurrency(item.pdv_commission) }}</span>
                           </td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
-                  <p v-if="stats.timeline.length > 10" class="text-xs text-gray-500 mt-2 text-center">
-                    Affichage des 10 dernières périodes ({{ stats.timeline.length }} au total)
-                  </p>
+
+                  <!-- Pagination -->
+                  <div v-if="stats.timeline?.last_page > 1" class="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                    <div class="text-sm text-gray-700">
+                      Affichage <span class="font-medium">{{ stats.timeline?.from || 0 }}</span> à <span class="font-medium">{{ stats.timeline?.to || 0 }}</span> sur <span class="font-medium">{{ stats.timeline?.total || 0 }}</span> résultats
+                    </div>
+                    <div class="flex gap-2">
+                      <button 
+                        @click="changePage(currentPage - 1)"
+                        :disabled="currentPage === 1"
+                        :class="[
+                          'px-3 py-1 rounded border',
+                          currentPage === 1 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-white text-gray-700 hover:bg-gray-50'
+                        ]"
+                      >
+                        Précédent
+                      </button>
+                      <span class="px-3 py-1 text-sm text-gray-700">
+                        Page {{ currentPage }} / {{ stats.timeline?.last_page || 1 }}
+                      </span>
+                      <button 
+                        @click="changePage(currentPage + 1)"
+                        :disabled="currentPage === (stats.timeline?.last_page || 1)"
+                        :class="[
+                          'px-3 py-1 rounded border',
+                          currentPage === (stats.timeline?.last_page || 1)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-white text-gray-700 hover:bg-gray-50'
+                        ]"
+                      >
+                        Suivant
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -293,9 +379,35 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { Line, Bar } from 'vue-chartjs';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
 import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const props = defineProps({
   isOpen: {
@@ -317,12 +429,26 @@ const stats = ref({
   message: ''
 });
 
+const periods = [
+  { value: 'day', label: 'Jour' },
+  { value: 'week', label: 'Semaine' },
+  { value: 'month', label: 'Mois' }
+];
+
+const selectedPeriod = ref('day');
+const currentPage = ref(1);
+const perPage = ref(10);
+
 const loadStats = async () => {
   if (!props.isOpen || !props.pdvId) return;
   
   try {
     loading.value = true;
-    const response = await TransactionService.getStats(props.pdvId);
+    const response = await TransactionService.getStats(props.pdvId, {
+      period: selectedPeriod.value,
+      page: currentPage.value,
+      per_page: perPage.value
+    });
     stats.value = response.data;
   } catch (error) {
     console.error('Error loading stats:', error);
@@ -336,14 +462,130 @@ const loadStats = async () => {
   }
 };
 
+const changePeriod = (period) => {
+  selectedPeriod.value = period;
+  currentPage.value = 1;
+  loadStats();
+};
+
+const changePage = (page) => {
+  currentPage.value = page;
+  loadStats();
+};
+
 watch(() => props.isOpen, (newValue) => {
   if (newValue) {
+    currentPage.value = 1;
     loadStats();
   }
 });
 
 const close = () => {
   emit('close');
+};
+
+// Chart data
+const volumeChartData = computed(() => {
+  if (!stats.value.charts) return { labels: [], datasets: [] };
+  return {
+    labels: stats.value.charts.volumes.labels,
+    datasets: [
+      {
+        label: 'Dépôts',
+        data: stats.value.charts.volumes.depot,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'Retraits',
+        data: stats.value.charts.volumes.retrait,
+        borderColor: '#ef4444',
+        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+        fill: true,
+        tension: 0.4
+      }
+    ]
+  };
+});
+
+const commissionsChartData = computed(() => {
+  if (!stats.value.charts) return { labels: [], datasets: [] };
+  return {
+    labels: stats.value.charts.commissions.labels,
+    datasets: [
+      {
+        label: 'PDV',
+        data: stats.value.charts.commissions.pdv,
+        backgroundColor: '#8b5cf6',
+      },
+      {
+        label: 'Dealer',
+        data: stats.value.charts.commissions.dealer,
+        backgroundColor: '#f97316',
+      }
+    ]
+  };
+});
+
+const transactionsChartData = computed(() => {
+  if (!stats.value.charts) return { labels: [], datasets: [] };
+  return {
+    labels: stats.value.charts.transactions.labels,
+    datasets: [
+      {
+        label: 'Dépôts',
+        data: stats.value.charts.transactions.depot,
+        backgroundColor: '#10b981',
+      },
+      {
+        label: 'Retraits',
+        data: stats.value.charts.transactions.retrait,
+        backgroundColor: '#ef4444',
+      }
+    ]
+  };
+});
+
+const transfersChartData = computed(() => {
+  if (!stats.value.charts) return { labels: [], datasets: [] };
+  return {
+    labels: stats.value.charts.transfers.labels,
+    datasets: [
+      {
+        label: 'Envoyés',
+        data: stats.value.charts.transfers.sent,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4
+      },
+      {
+        label: 'Reçus',
+        data: stats.value.charts.transfers.received,
+        borderColor: '#06b6d4',
+        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+        fill: true,
+        tension: 0.4
+      }
+    ]
+  };
+});
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: true,
+  plugins: {
+    legend: {
+      position: 'bottom',
+    },
+  },
+  scales: {
+    y: {
+      beginAtZero: true
+    }
+  }
 };
 
 const formatNumber = (num) => {
@@ -357,14 +599,6 @@ const formatCurrency = (amount) => {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount || 0);
-};
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 };
 </script>
 

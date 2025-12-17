@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
+
+class Setting extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['key', 'value', 'type', 'description'];
+
+    /**
+     * Récupérer une valeur de paramètre avec cache
+     */
+    public static function get($key, $default = null)
+    {
+        return Cache::remember("setting_{$key}", 3600, function () use ($key, $default) {
+            $setting = self::where('key', $key)->first();
+            
+            if (!$setting) {
+                return $default;
+            }
+
+            return self::castValue($setting->value, $setting->type);
+        });
+    }
+
+    /**
+     * Définir une valeur de paramètre
+     */
+    public static function set($key, $value)
+    {
+        $setting = self::updateOrCreate(
+            ['key' => $key],
+            ['value' => $value]
+        );
+
+        Cache::forget("setting_{$key}");
+        
+        return $setting;
+    }
+
+    /**
+     * Convertir la valeur selon le type
+     */
+    public static function castValue($value, $type)
+    {
+        switch ($type) {
+            case 'boolean':
+                return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            case 'json':
+                return json_decode($value, true);
+            case 'integer':
+                return (int) $value;
+            case 'float':
+                return (float) $value;
+            default:
+                return $value;
+        }
+    }
+}
