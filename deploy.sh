@@ -88,6 +88,34 @@ check_requirements() {
     log_success "Tous les prérequis sont installés"
 }
 
+check_php_config() {
+    log_info "Vérification de la configuration PHP..."
+    
+    # Vérifier les limites PHP nécessaires pour l'import de transactions
+    UPLOAD_MAX=$(php -r "echo ini_get('upload_max_filesize');")
+    POST_MAX=$(php -r "echo ini_get('post_max_size');")
+    MEMORY_LIMIT=$(php -r "echo ini_get('memory_limit');")
+    
+    log_info "Configuration PHP actuelle:"
+    log_info "  - upload_max_filesize: $UPLOAD_MAX"
+    log_info "  - post_max_size: $POST_MAX"
+    log_info "  - memory_limit: $MEMORY_LIMIT"
+    
+    # Avertir si les valeurs sont trop basses (pour fichiers 30000+ lignes)
+    if [[ "$UPLOAD_MAX" != *"500M"* ]] && [[ "$UPLOAD_MAX" != *"512M"* ]] && [[ "$UPLOAD_MAX" != *"1G"* ]]; then
+        log_warning "⚠️  upload_max_filesize est à $UPLOAD_MAX (recommandé: 500M minimum)"
+        log_warning "    Voir PHP_CONFIG_PRODUCTION.md pour les configurations requises"
+    fi
+    
+    if [[ "$POST_MAX" != *"500M"* ]] && [[ "$POST_MAX" != *"512M"* ]] && [[ "$POST_MAX" != *"1G"* ]]; then
+        log_warning "⚠️  post_max_size est à $POST_MAX (recommandé: 500M minimum)"
+    fi
+    
+    if [[ "$MEMORY_LIMIT" != *"512M"* ]] && [[ "$MEMORY_LIMIT" != *"1G"* ]] && [[ "$MEMORY_LIMIT" != *"2G"* ]]; then
+        log_warning "⚠️  memory_limit est à $MEMORY_LIMIT (recommandé: 512M minimum)"
+    fi
+}
+
 pull_latest_code() {
     log_info "Récupération du code depuis Git..."
     
@@ -327,6 +355,7 @@ done
 show_banner
 
 check_requirements
+check_php_config
 pull_latest_code
 
 if [[ "$FRONTEND_ONLY" == "true" ]]; then

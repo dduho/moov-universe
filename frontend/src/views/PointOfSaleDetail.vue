@@ -41,6 +41,17 @@
             </div>
           </div>
           <div class="flex items-center gap-3">
+            <!-- Bouton Statistiques -->
+            <button
+              @click="showStatsModal = true"
+              class="inline-flex items-center gap-2 px-4 py-2 sm:px-5 sm:py-3 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 text-sm sm:text-base"
+            >
+              <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+              </svg>
+              Statistiques
+            </button>
+            
             <!-- Bouton Modifier (visible si pending ou tâche active) -->
             <router-link
               v-if="canEdit"
@@ -688,6 +699,13 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Stats Modal -->
+    <PdvStatsModal
+      :is-open="showStatsModal"
+      :pdv-id="Number(route.params.id)"
+      @close="showStatsModal = false"
+    />
   </div>
 </template>
 
@@ -697,6 +715,7 @@ import { useRoute, useRouter } from 'vue-router';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Navbar from '../components/Navbar.vue';
+import PdvStatsModal from '../components/PdvStatsModal.vue';
 import RejectionModal from '../components/RejectionModal.vue';
 import TaskList from '../components/TaskList.vue';
 import NotesSection from '../components/NotesSection.vue';
@@ -729,6 +748,7 @@ const proximityAlert = ref(null);
 const showRejectModal = ref(false);
 const mapInstance = ref(null);
 const showFileModal = ref(false);
+const showStatsModal = ref(false);
 const selectedFile = ref(null);
 const fileLoading = ref(true);
 const gpsAccuracyThreshold = ref(30); // Valeur par défaut 30m

@@ -16,6 +16,8 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MailTestController;
+use App\Http\Controllers\TransactionImportController;
+use App\Http\Controllers\PdvStatsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -174,5 +176,15 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{id}', [TaskController::class, 'destroy']);
             Route::get('/commercials/{pointOfSaleId}', [TaskController::class, 'getCommercialsByDealer']);
         });
+    });
+
+    // Transaction import routes (Admin only)
+    Route::prefix('transactions')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::post('/import', [TransactionImportController::class, 'import']);
+    });
+
+    // PDV Stats routes
+    Route::prefix('pdv')->group(function () {
+        Route::get('/{id}/stats', [PdvStatsController::class, 'getStats']);
     });
 });

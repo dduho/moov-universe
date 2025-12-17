@@ -192,6 +192,156 @@
           </div>
         </div>
 
+        <!-- Transaction Import Setting -->
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Import de Données Transactionnelles</h3>
+              <p class="text-xs sm:text-sm text-gray-600">Charger les fichiers Excel (.xls, .xlsx) contenant les données de transactions des PDV</p>
+            </div>
+            <span class="self-start px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+              Analytique
+            </span>
+          </div>
+
+          <div class="space-y-4">
+            <!-- File Upload Area -->
+            <div 
+              @dragover.prevent="isDragging = true"
+              @dragleave.prevent="isDragging = false"
+              @drop.prevent="handleFileDrop"
+              class="border-2 border-dashed rounded-lg p-6 transition-all"
+              :class="isDragging ? 'border-moov-orange bg-orange-50' : 'border-gray-300 hover:border-moov-orange'"
+            >
+              <input
+                ref="fileInput"
+                type="file"
+                multiple
+                accept=".xls,.xlsx"
+                @change="handleFileSelect"
+                class="hidden"
+              />
+              
+              <div class="text-center">
+                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                  <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="mt-2 text-sm text-gray-600">
+                  <button @click="$refs.fileInput.click()" type="button" class="font-semibold text-moov-orange hover:text-orange-600">
+                    Cliquez pour sélectionner
+                  </button>
+                  ou glissez-déposez vos fichiers
+                </p>
+                <p class="mt-1 text-xs text-gray-500">Fichiers Excel (.xls, .xlsx) jusqu'à 500MB chacun</p>
+              </div>
+            </div>
+
+            <!-- Selected Files List -->
+            <div v-if="selectedFiles.length > 0" class="space-y-2">
+              <h4 class="text-sm font-semibold text-gray-900">Fichiers sélectionnés ({{ selectedFiles.length }})</h4>
+              <ul class="space-y-2">
+                <li v-for="(file, index) in selectedFiles" :key="index" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div class="flex items-center gap-3 flex-1 min-w-0">
+                    <svg class="w-8 h-8 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd" />
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-gray-900 truncate">{{ file.name }}</p>
+                      <p class="text-xs text-gray-500">{{ formatFileSize(file.size) }}</p>
+                    </div>
+                  </div>
+                  <button 
+                    @click="removeFile(index)"
+                    class="ml-2 text-red-600 hover:text-red-800 flex-shrink-0"
+                    :disabled="uploading"
+                  >
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                  </button>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Upload Button -->
+            <button
+              @click="uploadTransactionFiles"
+              :disabled="selectedFiles.length === 0 || uploading"
+              class="w-full py-3 px-4 rounded-lg font-semibold text-white transition-all"
+              :class="selectedFiles.length === 0 || uploading 
+                ? 'bg-gray-300 cursor-not-allowed' 
+                : 'bg-moov-orange hover:bg-orange-600 shadow-lg hover:shadow-xl'"
+            >
+              <span v-if="uploading" class="flex items-center justify-center gap-2">
+                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Importation en cours...
+              </span>
+              <span v-else>
+                Importer {{ selectedFiles.length }} fichier(s)
+              </span>
+            </button>
+
+            <!-- Import Results -->
+            <div v-if="importResults" class="space-y-3">
+              <!-- Success -->
+              <div v-if="importResults.success.length > 0" class="p-4 bg-green-50 rounded-lg border border-green-200">
+                <h4 class="text-sm font-semibold text-green-900 mb-2">✅ Import réussi ({{ importResults.success.length }} fichier(s))</h4>
+                <ul class="space-y-1 text-sm text-green-800">
+                  <li v-for="(result, index) in importResults.success" :key="index">
+                    <strong>{{ result.filename }}</strong>: {{ result.imported }} nouvelles entrées, {{ result.updated }} mises à jour (Date: {{ result.date }})
+                  </li>
+                </ul>
+                <p class="mt-2 text-sm font-semibold text-green-900">
+                  Total: {{ importResults.total_imported }} nouvelles entrées, {{ importResults.total_updated }} mises à jour
+                </p>
+              </div>
+
+              <!-- Errors -->
+              <div v-if="importResults.errors.length > 0" class="p-4 bg-red-50 rounded-lg border border-red-200">
+                <h4 class="text-sm font-semibold text-red-900 mb-2">❌ Erreurs ({{ importResults.errors.length }} fichier(s))</h4>
+                <ul class="space-y-1 text-sm text-red-800">
+                  <li v-for="(error, index) in importResults.errors" :key="index">
+                    <strong>{{ error.filename }}</strong>: {{ error.error }}
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Information box -->
+            <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                </svg>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-blue-900 mb-2">Format attendu des fichiers :</p>
+                  <ul class="space-y-1 text-sm text-blue-800">
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Date de la période dans la cellule A6 (ex: "Start Date: 15/12/2025")</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>En-têtes des colonnes à la ligne 11</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Données à partir de la ligne 12</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="text-moov-orange">•</span>
+                      <span>Colonne PDV_NUMERO obligatoire (numéro Flooz du PDV)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Email Notifications Setting -->
         <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
@@ -319,6 +469,7 @@ import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import SystemSettingService from '../services/systemSettingService';
+import TransactionService from '../services/transactionService';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 
@@ -337,6 +488,13 @@ const mailNotificationsEnabled = ref(true);
 const savingMailNotifications = ref(false);
 const smtpConfigured = ref(false);
 const checkingSmtp = ref(false);
+
+// Transaction import
+const fileInput = ref(null);
+const selectedFiles = ref([]);
+const isDragging = ref(false);
+const uploading = ref(false);
+const importResults = ref(null);
 
 const loadSettings = async () => {
   try {
@@ -438,6 +596,67 @@ const toggleEmailNotifications = async () => {
     toast.error('Erreur lors de la modification du paramètre');
   } finally {
     savingMailNotifications.value = false;
+  }
+};
+
+// Transaction import functions
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files);
+  addFiles(files);
+};
+
+const handleFileDrop = (event) => {
+  isDragging.value = false;
+  const files = Array.from(event.dataTransfer.files);
+  addFiles(files);
+};
+
+const addFiles = (files) => {
+  const xlsFiles = files.filter(file => 
+    file.name.endsWith('.xls') || file.name.endsWith('.xlsx')
+  );
+  
+  if (xlsFiles.length < files.length) {
+    toast.warning('Seuls les fichiers .xls et .xlsx sont acceptés');
+  }
+  
+  selectedFiles.value.push(...xlsFiles);
+};
+
+const removeFile = (index) => {
+  selectedFiles.value.splice(index, 1);
+};
+
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+};
+
+const uploadTransactionFiles = async () => {
+  if (selectedFiles.value.length === 0) return;
+  
+  try {
+    uploading.value = true;
+    importResults.value = null;
+    
+    const response = await TransactionService.uploadFiles(selectedFiles.value);
+    importResults.value = response.data;
+    
+    // Clear selected files if all were successful
+    if (response.data.errors.length === 0) {
+      selectedFiles.value = [];
+      toast.success(`${response.data.total_imported} nouvelles entrées importées avec succès!`);
+    } else {
+      toast.warning('Import partiellement réussi. Consultez les détails ci-dessous.');
+    }
+  } catch (error) {
+    console.error('Error uploading files:', error);
+    toast.error('Erreur lors de l\'importation des fichiers');
+  } finally {
+    uploading.value = false;
   }
 };
 
