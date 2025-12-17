@@ -16,46 +16,60 @@ class TransactionImportController extends Controller
      */
     public function import(Request $request)
     {
-        $request->validate([
-            'files.*' => 'required|file|mimes:xls,xlsx|max:512000', // Max 500MB par fichier
-        ]);
+        try {
+            $request->validate([
+                'files.*' => 'required|file|mimes:xls,xlsx|max:512000', // Max 500MB par fichier
+            ]);
 
-        $results = [
-            'success' => [],
-            'errors' => [],
-            'total_imported' => 0,
-            'total_skipped' => 0,
-        ];
+            $results = [
+                'success' => [],
+                'errors' => [],
+                'total_imported' => 0,
+                'total_skipped' => 0,
+            ];
 
-        if (!$request->hasFile('files')) {
-            return response()->json(['error' => 'Aucun fichier fourni'], 400);
-        }
-
-        foreach ($request->file('files') as $file) {
-            try {
-                $result = $this->processFile($file);
-                $results['success'][] = [
-                    'filename' => $file->getClientOriginalName(),
-                    'imported' => $result['imported'],
-                    'skipped' => $result['skipped'],
-                    'date' => $result['date'],
-                ];
-                $results['total_imported'] += $result['imported'];
-                $results['total_skipped'] += $result['skipped'];
-            } catch (\Exception $e) {
-                Log::error('Erreur import transaction: ' . $e->getMessage(), [
-                    'file' => $file->getClientOriginalName(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                
-                $results['errors'][] = [
-                    'filename' => $file->getClientOriginalName(),
-                    'error' => $e->getMessage(),
-                ];
+            if (!$request->hasFile('files')) {
+                return response()->json(['error' => 'Aucun fichier fourni'], 400);
             }
-        }
 
-        return response()->json($results);
+            foreach ($request->file('files') as $file) {
+                try {
+                    $result = $this->processFile($file);
+                    $results['success'][] = [
+                        'filename' => $file->getClientOriginalName(),
+                        'imported' => $result['imported'],
+                        'skipped' => $result['skipped'],
+                        'date' => $result['date'],
+                    ];
+                    $results['total_imported'] += $result['imported'];
+                    $results['total_skipped'] += $result['skipped'];
+                } catch (\Exception $e) {
+                    Log::error('Erreur import transaction: ' . $e->getMessage(), [
+                        'file' => $file->getClientOriginalName(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    
+                    $results['errors'][] = [
+                        'filename' => $file->getClientOriginalName(),
+                        'error' => $e->getMessage(),
+                    ];
+                }
+            }
+
+            return response()->json($results);
+        } catch (\Exception $e) {
+            Log::error('Erreur générale import transactions: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Erreur lors de l\'import: ' . $e->getMessage(),
+                'success' => [],
+                'errors' => [],
+                'total_imported' => 0,
+                'total_skipped' => 0,
+            ], 500);
+        }
     }
 
     /**
