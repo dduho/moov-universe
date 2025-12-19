@@ -36,7 +36,7 @@ WEB_USER="www-data"
 WEB_GROUP="www-data"
 
 # URL de l'API pour le frontend
-API_URL="https://universe.moov-africa.tg/api"
+API_URL="/api"
 
 # Désactiver PWA (true si certificat SSL auto-signé)
 DISABLE_PWA="true"
