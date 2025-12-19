@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'transactions_import' => [
+        // Chemin distant sur le disque SFTP/FTP configuré dans config/filesystems.php
+        'disk' => env('TRANSACTIONS_DISK', 'sftp'),
+        'sftp_path' => env('SFTP_TRANSACTIONS_PATH', 'transactions'),
+    ],
+
 ];

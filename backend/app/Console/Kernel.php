@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Import des transactions chaque jour à 06:00
+        $schedule->command('transactions:import-sftp')->dailyAt('08:30');
     }
 
     /**

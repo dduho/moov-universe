@@ -56,6 +56,33 @@ return [
             'throw' => false,
         ],
 
+        'sftp' => [
+            'driver' => 'sftp',
+            'host' => env('SFTP_HOST'),
+            'username' => env('SFTP_USERNAME'),
+            // Si l'env est vide, on passe explicitement null pour éviter un load de clé
+            'password' => env('SFTP_PASSWORD') ?: null,
+            'privateKey' => env('SFTP_PRIVATE_KEY') ?: null,
+            'passphrase' => env('SFTP_PASSPHRASE') ?: null,
+            'port' => (int) env('SFTP_PORT', 22),
+            'root' => env('SFTP_ROOT', '/'),
+            'timeout' => (int) env('SFTP_TIMEOUT', 30),
+            'throw' => true,
+        ],
+
+        'ftp' => [
+            'driver' => 'ftp',
+            'host' => env('FTP_HOST'),
+            'username' => env('FTP_USERNAME'),
+            'password' => env('FTP_PASSWORD'),
+            'port' => (int) env('FTP_PORT', 21),
+            'root' => env('FTP_ROOT', '/'),
+            'passive' => (bool) env('FTP_PASSIVE', true),
+            'ssl' => (bool) env('FTP_SSL', true),
+            'timeout' => (int) env('FTP_TIMEOUT', 30),
+            'throw' => true,
+        ],
+
     ],
 
     /*

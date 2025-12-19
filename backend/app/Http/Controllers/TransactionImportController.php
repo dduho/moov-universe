@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PdvTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Support\Facades\Log;
@@ -73,9 +74,17 @@ class TransactionImportController extends Controller
     }
 
     /**
+     * Exposé pour usage programmatique (cron, jobs...)
+     */
+    public function importUploadedFile(UploadedFile $file): array
+    {
+        return $this->processFile($file);
+    }
+
+    /**
      * Traiter un fichier Excel
      */
-    private function processFile($file)
+    private function processFile(UploadedFile $file)
     {
         // Augmenter temporairement la limite mémoire pour ce processus
         ini_set('memory_limit', '2G');
