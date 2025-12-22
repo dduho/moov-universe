@@ -888,46 +888,45 @@
 
               <div class="space-y-3">
                 <div
-                  v-for="(org, index) in byOrganization.slice(0, 5)"
-                  :key="org.id"
+                  v-for="(dealer, index) in topDealers.slice(0, 5)"
+                  :key="dealer.id"
                   class="group relative overflow-hidden rounded-xl bg-gradient-to-r from-white/50 to-white/30 border border-gray-200 hover:border-moov-orange hover:shadow-lg transition-all duration-300 cursor-pointer"
-                  @click="$router.push(`/dealers/${org.id}`)"
+                  @click="$router.push(`/dealers/${dealer.id}`)"
                 >
                   <div class="p-4">
                     <div class="flex items-center justify-between mb-3">
                       <div class="flex items-center gap-3">
                         <div class="relative">
                           <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center shadow-lg">
-                            <span class="text-white font-bold">{{ org.code?.substring(0, 2) || 'XX' }}</span>
+                            <span class="text-white font-bold">{{ dealer.code?.substring(0, 2) || 'XX' }}</span>
                           </div>
                           <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-white border-2 border-moov-orange flex items-center justify-center">
                             <span class="text-xs font-bold text-moov-orange">{{ index + 1 }}</span>
                           </div>
                         </div>
                         <div>
-                          <h4 class="font-bold text-gray-900">{{ org.name }}</h4>
-                          <p class="text-xs text-gray-500">{{ org.code }}</p>
+                          <h4 class="font-bold text-gray-900">{{ dealer.name }}</h4>
+                          <p class="text-xs text-gray-500">{{ dealer.code }}</p>
                         </div>
                       </div>
                       <div class="text-right">
-                        <p class="text-2xl font-bold text-gray-900">{{ org.point_of_sales_count || 0 }}</p>
-                        <p class="text-xs text-gray-500">PDV</p>
+                        <p class="text-sm font-semibold text-gray-600">CA annuel</p>
+                        <p class="text-lg font-bold text-moov-orange">{{ formatCurrency(dealer.revenue || 0) }}</p>
                       </div>
                     </div>
 
-                    <!-- Mini chart -->
                     <div class="grid grid-cols-3 gap-2">
-                      <div class="text-center p-2 rounded-lg bg-green-50">
-                        <p class="text-lg font-bold text-green-600">{{ org.validated_count || 0 }}</p>
-                        <p class="text-xs text-green-700">Validés</p>
+                      <div class="text-center p-2 rounded-lg bg-orange-50">
+                        <p class="text-lg font-bold text-orange-700">{{ formatCurrency(dealer.revenue_yesterday || 0) }}</p>
+                        <p class="text-xs text-orange-700">Chiffre d'affaires J-1</p>
                       </div>
-                      <div class="text-center p-2 rounded-lg bg-yellow-50">
-                        <p class="text-lg font-bold text-yellow-600">{{ org.pending_count || 0 }}</p>
-                        <p class="text-xs text-yellow-700">En attente</p>
+                      <div class="text-center p-2 rounded-lg bg-purple-50">
+                        <p class="text-lg font-bold text-purple-700">{{ formatCurrency(dealer.dealer_commissions || 0) }}</p>
+                        <p class="text-xs text-purple-700">Commissions dealer</p>
                       </div>
-                      <div class="text-center p-2 rounded-lg bg-gray-50">
-                        <p class="text-lg font-bold text-gray-600">{{ org.rejected_count || 0 }}</p>
-                        <p class="text-xs text-gray-700">Rejetés</p>
+                      <div class="text-center p-2 rounded-lg bg-blue-50">
+                        <p class="text-lg font-bold text-blue-700">{{ formatNumber(dealer.total_pdv || 0) }}</p>
+                        <p class="text-xs text-blue-700">Total PDV</p>
                       </div>
                     </div>
                   </div>
@@ -1101,6 +1100,7 @@ const stats = ref({
 const recentPdvs = ref([]);
 const byOrganization = ref([]);
 const byRegion = ref([]);
+const topDealers = ref([]);
 const loading = ref(true);
 const expandedRegions = ref({});
 const gpsStats = ref({
@@ -1178,6 +1178,19 @@ const toggleRegionDealers = (regionName) => {
   expandedRegions.value[regionName] = !expandedRegions.value[regionName];
 };
 
+const formatNumber = (num) => {
+  return new Intl.NumberFormat('fr-FR').format(num || 0);
+};
+
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+};
+
 const formatMissingFields = (pdv) => {
   return (pdv?.missing_required_fields || []).map((label) => {
     // Capitaliser la première lettre pour rester cohérent avec les autres cartes
@@ -1202,6 +1215,7 @@ const fetchDashboardData = async () => {
     stats.value = data.stats;
     recentPdvs.value = data.recent_pdvs || [];
     byOrganization.value = data.by_organization || [];
+    topDealers.value = data.top_dealers || data.topDealers || [];
     byRegion.value = data.by_region || [
       { name: 'Maritime', count: 45, validated: 35, pending: 8, rejected: 2, cities: ['Lomé', 'Aného', 'Tsévié'] },
       { name: 'Plateaux', count: 32, validated: 28, pending: 3, rejected: 1, cities: ['Atakpamé', 'Kpalimé'] },
@@ -1327,5 +1341,3 @@ const XIcon = {
   }
 };
 </script>
-
-

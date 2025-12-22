@@ -6,6 +6,7 @@ use App\Models\PointOfSale;
 use App\Models\Organization;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class StatisticsController extends Controller
 {
@@ -133,12 +134,59 @@ class StatisticsController extends Controller
             ->values()
             ->take(10);
 
+        // Top dealers classés par chiffre d'affaires annuel (retrait_keycost)
+        $now = Carbon::now();
+        $yearStart = $now->copy()->startOfYear();
+        $yearEnd = $now->copy()->endOfYear();
+        $yesterdayDate = $now->copy()->subDay()->toDateString();
+
+        $txQuery = DB::table('pdv_transactions as t')
+            ->join('point_of_sales as p', 'p.numero_flooz', '=', 't.pdv_numero')
+            ->join('organizations as o', 'o.id', '=', 'p.organization_id')
+            ->whereBetween('t.transaction_date', [$yearStart, $yearEnd])
+            ->select(
+                'p.organization_id',
+                'o.name',
+                'o.code',
+                DB::raw('SUM(t.retrait_keycost) as revenue'),
+                DB::raw("SUM(CASE WHEN DATE(t.transaction_date) = '{$yesterdayDate}' THEN t.retrait_keycost ELSE 0 END) as revenue_yesterday"),
+                DB::raw('SUM(t.dealer_depot_commission + t.dealer_retrait_commission) as dealer_commissions')
+            )
+            ->groupBy('p.organization_id', 'o.name', 'o.code');
+
+        if (!$user->isAdmin()) {
+            $txQuery->where('p.organization_id', $user->organization_id);
+        }
+
+        $pdvCounts = PointOfSale::select('organization_id', DB::raw('count(*) as total_pdv'))
+            ->when(!$user->isAdmin(), fn ($q) => $q->where('organization_id', $user->organization_id))
+            ->groupBy('organization_id')
+            ->pluck('total_pdv', 'organization_id');
+
+        $topDealers = collect($txQuery->get())
+            ->map(function ($item) use ($pdvCounts) {
+                $orgId = $item->organization_id;
+                return [
+                    'id' => $orgId,
+                    'name' => $item->name,
+                    'code' => $item->code,
+                    'revenue' => (float) $item->revenue,
+                    'revenue_yesterday' => (float) $item->revenue_yesterday,
+                    'dealer_commissions' => (float) $item->dealer_commissions,
+                    'total_pdv' => (int) ($pdvCounts[$orgId] ?? 0),
+                ];
+            })
+            ->sortByDesc('revenue')
+            ->values()
+            ->take(5);
+
         return response()->json([
             'stats' => $stats,
             'by_region' => $byRegion,
             'by_organization' => $byOrganization,
             'recent_pdvs' => $recentPdvs,
             'incomplete_pdvs' => $incompletePdvs,
+            'top_dealers' => $topDealers,
         ]);
     }
 
@@ -294,4 +342,3 @@ class StatisticsController extends Controller
         ]);
     }
 }
-

@@ -6,6 +6,12 @@ export default {
     return response.data;
   },
 
+  // Alias utilisé par la vue Statistics
+  async getOverview(periodDays = 30) {
+    const response = await api.get('/statistics/dashboard', { params: { days: periodDays } });
+    return response.data;
+  },
+
   async getByRegion() {
     const response = await api.get('/statistics/by-region');
     return response.data;

@@ -6,7 +6,7 @@
       <!-- Header -->
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Statistiques & Rapports</h1>
-        
+        S
         <!-- Period Selector -->
         <div class="flex items-center gap-2 sm:gap-3">
           <FormSelect
@@ -313,10 +313,11 @@ const loadStatistics = async () => {
   loading.value = true;
   try {
     const data = await StatisticsService.getOverview(selectedPeriod.value);
-    // Merge with mock data
+    // Merge with defaults
     stats.value = {
       ...stats.value,
-      ...data
+      ...data,
+      topDealers: data.top_dealers || data.topDealers || []
     };
   } catch (error) {
     console.error('Error loading statistics:', error);
@@ -332,6 +333,5 @@ const exportData = () => {
 onMounted(() => {
   loadStatistics();
 });
+
 </script>
-
-

@@ -6,6 +6,7 @@ use App\Models\PointOfSale;
 use App\Models\PdvTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class PdvStatsController extends Controller
 {
@@ -21,8 +22,17 @@ class PdvStatsController extends Controller
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
         
-        // Récupérer toutes les transactions du PDV
+        // Définir la fenêtre temporelle selon la période sélectionnée
+        $now = Carbon::now();
+        [$startDate, $endDate] = match ($period) {
+            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            default => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+        };
+
+        // Récupérer les transactions du PDV filtrées par période
         $transactionsQuery = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
+            ->whereBetween('transaction_date', [$startDate, $endDate])
             ->orderBy('transaction_date', 'desc');
         
         $allTransactions = $transactionsQuery->get();
@@ -70,6 +80,8 @@ class PdvStatsController extends Controller
                                    $transactions->sum('count_give_receive'),
             'total_volume' => $transactions->sum('sum_depot') + 
                              $transactions->sum('sum_retrait'),
+            // Chiffre d'affaires généré (RETRAIT_KEYCOST)
+            'chiffre_affaire' => $transactions->sum('retrait_keycost'),
             'total_depot_count' => $transactions->sum('count_depot'),
             'total_depot_amount' => $transactions->sum('sum_depot'),
             'total_retrait_count' => $transactions->sum('count_retrait'),

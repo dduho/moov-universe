@@ -68,7 +68,7 @@
                 </div>
 
                 <!-- Key Metrics -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                   <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
                     <div class="flex items-center justify-between">
                       <div>
@@ -115,6 +115,18 @@
                       </div>
                       <svg class="w-10 h-10 text-orange-500" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 2a4 4 0 00-4 4v1H5a1 1 0 00-.994.89l-1 9A1 1 0 004 18h12a1 1 0 00.994-1.11l-1-9A1 1 0 0015 7h-1V6a4 4 0 00-4-4zm2 5V6a2 2 0 10-4 0v1h4zm-6 3a1 1 0 112 0 1 1 0 01-2 0zm7-1a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div class="bg-teal-50 rounded-lg p-4 border border-teal-200">
+                    <div class="flex items-center justify-between">
+                      <div>
+                        <p class="text-sm text-teal-600 font-semibold">Chiffre d'affaires</p>
+                        <p class="text-2xl font-bold text-teal-900">{{ formatCurrency(stats.summary.chiffre_affaire) }}</p>
+                      </div>
+                      <svg class="w-10 h-10 text-teal-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M2 5a2 2 0 012-2h2a2 2 0 012 2v1h2a2 2 0 012 2v1h2a2 2 0 012 2v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-1H2a2 2 0 01-2-2V7a2 2 0 012-2h2V5zm2 2H2v8h2V7zm4-2H6v12h12V10h-2v7H8V5z" clip-rule="evenodd"/>
                       </svg>
                     </div>
                   </div>
