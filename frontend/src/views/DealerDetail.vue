@@ -117,12 +117,12 @@
               <div v-if="dealerStats">
                 <!-- Summary Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div class="p-4 rounded-xl border border-orange-100 bg-orange-50">
+                  <div v-if="showCa" class="p-4 rounded-xl border border-orange-100 bg-orange-50">
                     <p class="text-sm font-semibold text-orange-700">Chiffre d'affaires (CA)</p>
                     <p class="text-2xl font-bold text-orange-900">{{ formatCurrency(dealerStats.summary.ca) }}</p>
                     <p class="text-xs text-gray-500">Total transactions: {{ formatNumber(dealerStats.summary.total_transactions) }}</p>
                   </div>
-                  <div class="p-4 rounded-xl border border-purple-100 bg-purple-50">
+                  <div class="p-4 rounded-xl border border-purple-100 bg-purple-50" :class="!showCa ? 'md:col-span-2 lg:col-span-2' : ''">
                     <p class="text-sm font-semibold text-purple-700">Commissions dealer</p>
                     <p class="text-2xl font-bold text-purple-900">{{ formatCurrency(dealerStats.summary.dealer_commissions) }}</p>
                     <p class="text-xs text-gray-500">Commissions PDV: {{ formatCurrency(dealerStats.summary.pdv_commissions) }}</p>
@@ -184,7 +184,9 @@
                   </div>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     <div class="p-3 rounded-xl border border-orange-100 bg-orange-50/50" style="height: 320px;">
-                      <p class="text-sm font-semibold text-orange-700 mb-2">CA, depots, retraits (journalier)</p>
+                      <p class="text-sm font-semibold text-orange-700 mb-2">
+                        {{ showCa ? 'CA, depots, retraits (journalier)' : 'Depots, retraits (journalier)' }}
+                      </p>
                       <Line v-if="dealerStats.chart.labels.length" :data="amountsChartData" :options="chartOptions" />
                       <p v-else class="text-xs text-gray-500 text-center py-6">Pas de donnees pour tracer le graphe</p>
                     </div>
@@ -198,14 +200,16 @@
 
                 <!-- Top PDV -->
                 <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
-                  <h3 class="text-lg font-bold text-gray-900 mb-4">Top PDV (CA sur la periode)</h3>
+                  <h3 class="text-lg font-bold text-gray-900 mb-4">
+                    {{ showCa ? 'Top PDV (CA sur la periode)' : 'Top PDV (depots/retraits sur la periode)' }}
+                  </h3>
                   <div class="overflow-x-auto">
                     <table class="w-full">
                       <thead>
                         <tr class="border-b border-gray-200">
                           <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">PDV</th>
                           <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Region / Prefecture</th>
-                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">CA</th>
+                          <th v-if="showCa" class="px-4 py-3 text-right text-sm font-bold text-gray-700">CA</th>
                           <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Depots</th>
                           <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Retraits</th>
                           <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Transactions</th>
@@ -219,7 +223,7 @@
                         >
                           <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ pdv.nom_point }}</td>
                           <td class="px-4 py-3 text-sm text-gray-700">{{ pdv.region }} / {{ pdv.prefecture }}</td>
-                          <td class="px-4 py-3 text-sm text-right font-bold text-moov-orange">{{ formatCurrency(pdv.ca) }}</td>
+                          <td v-if="showCa" class="px-4 py-3 text-sm text-right font-bold text-moov-orange">{{ formatCurrency(pdv.ca) }}</td>
                           <td class="px-4 py-3 text-sm text-right text-green-700">{{ formatCurrency(pdv.depot_amount) }}</td>
                           <td class="px-4 py-3 text-sm text-right text-red-700">{{ formatCurrency(pdv.retrait_amount) }}</td>
                           <td class="px-4 py-3 text-sm text-right text-gray-700">{{ formatNumber(pdv.tx_count) }}</td>
@@ -411,6 +415,7 @@ import {
 import { Line, Bar } from 'vue-chartjs';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrganizationStore } from '../stores/organization';
+import { useAuthStore } from '../stores/auth';
 import Navbar from '../components/Navbar.vue';
 import DealerModal from '../components/DealerModal.vue';
 import FormInput from '../components/FormInput.vue';
@@ -422,6 +427,7 @@ import { formatPhone } from '../utils/formatters';
 const route = useRoute();
 const router = useRouter();
 const organizationStore = useOrganizationStore();
+const authStore = useAuthStore();
 
 ChartJS.register(
   CategoryScale,
@@ -458,6 +464,7 @@ const periods = [
 
 const organization = computed(() => organizationStore.currentOrganization);
 const loading = computed(() => organizationStore.loading);
+const showCa = computed(() => authStore.isAdmin);
 
 const chartOptions = {
   responsive: true,
@@ -493,14 +500,18 @@ const chartOptions = {
 const amountsChartData = computed(() => ({
   labels: dealerStats.value?.chart?.labels || [],
   datasets: [
-    {
-      label: 'CA',
-      data: dealerStats.value?.chart?.ca || [],
-      borderColor: '#f97316',
-      backgroundColor: 'rgba(249, 115, 22, 0.15)',
-      tension: 0.3,
-      fill: true,
-    },
+    ...(
+      showCa.value
+        ? [{
+            label: 'CA',
+            data: dealerStats.value?.chart?.ca || [],
+            borderColor: '#f97316',
+            backgroundColor: 'rgba(249, 115, 22, 0.15)',
+            tension: 0.3,
+            fill: true,
+          }]
+        : []
+    ),
     {
       label: 'Depots',
       data: dealerStats.value?.chart?.depot || [],
