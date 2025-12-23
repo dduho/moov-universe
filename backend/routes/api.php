@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\GeographyController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\StatisticsController;
+use App\Http\Controllers\DealerStatsController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UploadController;
 use App\Http\Controllers\SystemSettingController;
@@ -134,6 +135,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/by-organization', [StatisticsController::class, 'byOrganization']);
         });
     });
+
+    // Dealer stats
+    Route::get('/dealers/{id}/stats', [DealerStatsController::class, 'stats']);
 
     // Export routes
     Route::prefix('export')->group(function () {

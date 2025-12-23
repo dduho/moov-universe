@@ -30,6 +30,11 @@ class OrganizationService {
     const response = await api.get(`/organizations/${id}/stats`);
     return response.data;
   }
+
+  async getDealerStats(id, params = {}) {
+    const response = await api.get(`/dealers/${id}/stats`, { params });
+    return response.data;
+  }
 }
 
 export default new OrganizationService();

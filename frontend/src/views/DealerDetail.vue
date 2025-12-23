@@ -12,7 +12,7 @@
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
           </svg>
-          Retour à la liste
+          Retour a la liste
         </button>
 
         <div v-if="!loading && organization" class="space-y-6">
@@ -66,7 +66,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
                   </svg>
                   <div>
-                    <p class="text-sm text-gray-500 font-medium">Téléphone</p>
+                    <p class="text-sm text-gray-500 font-medium">Telephone</p>
                     <p class="text-gray-900 font-semibold">{{ organization.contact_phone }}</p>
                   </div>
                 </div>
@@ -84,32 +84,156 @@
             </div>
           </div>
 
-          <!-- Stats Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <StatsCard 
-              label="Total PDV"
-              :value="stats.total || 0"
-              :icon="HomeIcon"
-              color="orange"
-            />
-            <StatsCard 
-              label="En attente"
-              :value="stats.pending || 0"
-              :icon="ClockIcon"
-              color="yellow"
-            />
-            <StatsCard 
-              label="Validés"
-              :value="stats.validated || 0"
-              :icon="CheckIcon"
-              color="green"
-            />
-            <StatsCard 
-              label="Utilisateurs"
-              :value="organization.users_count || 0"
-              :icon="UserIcon"
-              color="blue"
-            />
+          <!-- Dealer Stats -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 class="text-xl font-bold text-gray-900">Statistiques Dealer</h2>
+                <p class="text-sm text-gray-600">Transactions et performances sur la periode selectionnee</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="opt in periods"
+                  :key="opt.value"
+                  @click="changePeriod(opt.value)"
+                  :class="[
+                    'px-3 py-2 rounded-lg text-sm font-semibold transition-all',
+                    selectedPeriod === opt.value
+                      ? 'bg-moov-orange text-white shadow-lg'
+                      : 'bg-white text-gray-700 border border-gray-200 hover:border-moov-orange'
+                  ]"
+                >
+                  {{ opt.label }}
+                </button>
+              </div>
+            </div>
+
+            <div v-if="statsLoading" class="py-8 text-center">
+              <div class="animate-spin rounded-full h-10 w-10 border-b-4 border-moov-orange mx-auto mb-3"></div>
+              <p class="text-gray-600 font-semibold">Chargement des statistiques...</p>
+            </div>
+
+            <template v-else>
+              <div v-if="dealerStats">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div class="p-4 rounded-xl border border-orange-100 bg-orange-50">
+                    <p class="text-sm font-semibold text-orange-700">Chiffre d'affaires (CA)</p>
+                    <p class="text-2xl font-bold text-orange-900">{{ formatCurrency(dealerStats.summary.ca) }}</p>
+                    <p class="text-xs text-gray-500">Total transactions: {{ formatNumber(dealerStats.summary.total_transactions) }}</p>
+                  </div>
+                  <div class="p-4 rounded-xl border border-purple-100 bg-purple-50">
+                    <p class="text-sm font-semibold text-purple-700">Commissions dealer</p>
+                    <p class="text-2xl font-bold text-purple-900">{{ formatCurrency(dealerStats.summary.dealer_commissions) }}</p>
+                    <p class="text-xs text-gray-500">Commissions PDV: {{ formatCurrency(dealerStats.summary.pdv_commissions) }}</p>
+                  </div>
+                  <div class="p-4 rounded-xl border border-green-100 bg-green-50">
+                    <p class="text-sm font-semibold text-green-700">Depots</p>
+                    <p class="text-2xl font-bold text-green-900">{{ formatCurrency(dealerStats.summary.depot_amount) }}</p>
+                    <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.summary.depot_count) }} operations</p>
+                  </div>
+                  <div class="p-4 rounded-xl border border-red-100 bg-red-50">
+                    <p class="text-sm font-semibold text-red-700">Retraits</p>
+                    <p class="text-2xl font-bold text-red-900">{{ formatCurrency(dealerStats.summary.retrait_amount) }}</p>
+                    <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.summary.retrait_count) }} operations</p>
+                  </div>
+                </div>
+
+                <!-- GIVE + Actifs -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                  <div class="p-4 rounded-xl border border-indigo-100 bg-indigo-50">
+                    <h3 class="font-bold text-gray-900 mb-3">Transferts GIVE</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div class="p-3 rounded-lg bg-white border border-gray-100">
+                        <p class="text-sm font-semibold text-blue-700">Envoyes</p>
+                        <p class="text-lg font-bold text-blue-900">{{ formatCurrency(dealerStats.transfers.sent.amount) }}</p>
+                        <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.transfers.sent.count) }} operations</p>
+                        <p class="text-[11px] text-gray-500">Dans reseau: {{ formatCurrency(dealerStats.transfers.sent.in_amount) }} / Hors: {{ formatCurrency(dealerStats.transfers.sent.out_amount) }}</p>
+                      </div>
+                      <div class="p-3 rounded-lg bg-white border border-gray-100">
+                        <p class="text-sm font-semibold text-cyan-700">Recus</p>
+                        <p class="text-lg font-bold text-cyan-900">{{ formatCurrency(dealerStats.transfers.received.amount) }}</p>
+                        <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.transfers.received.count) }} operations</p>
+                        <p class="text-[11px] text-gray-500">Dans reseau: {{ formatCurrency(dealerStats.transfers.received.in_amount) }} / Hors: {{ formatCurrency(dealerStats.transfers.received.out_amount) }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="p-4 rounded-xl border border-teal-100 bg-teal-50">
+                    <h3 class="font-bold text-gray-900 mb-3">PDV actifs</h3>
+                    <p class="text-3xl font-bold text-teal-900">{{ formatNumber(dealerStats.summary.active_pdvs) }}</p>
+                    <p class="text-sm text-gray-500 mb-3">PDV ayant au moins un depot ou retrait sur la periode</p>
+                    <div class="grid grid-cols-5 gap-2">
+                      <div
+                        v-for="item in dealerStats.actives.breakdown"
+                        :key="item.days"
+                        class="p-2 rounded-lg bg-white border border-gray-100 text-center"
+                      >
+                        <p class="text-xs font-semibold text-gray-700">J-{{ item.days }}</p>
+                        <p class="text-sm font-bold text-moov-orange">{{ formatNumber(item.count) }}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl mb-4 space-y-6">
+                  <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-900">Evolution</h3>
+                    <p class="text-xs text-gray-500">Du {{ dealerStats.period.start }} au {{ dealerStats.period.end }}</p>
+                  </div>
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="p-3 rounded-xl border border-orange-100 bg-orange-50/50" style="height: 320px;">
+                      <p class="text-sm font-semibold text-orange-700 mb-2">CA, depots, retraits (journalier)</p>
+                      <Line v-if="dealerStats.chart.labels.length" :data="amountsChartData" :options="chartOptions" />
+                      <p v-else class="text-xs text-gray-500 text-center py-6">Pas de donnees pour tracer le graphe</p>
+                    </div>
+                    <div class="p-3 rounded-xl border border-blue-100 bg-blue-50/50" style="height: 320px;">
+                      <p class="text-sm font-semibold text-blue-700 mb-2">Transactions, actifs, commissions dealer</p>
+                      <Bar v-if="dealerStats.chart.labels.length" :data="activityChartData" :options="chartOptions" />
+                      <p v-else class="text-xs text-gray-500 text-center py-6">Pas de donnees pour tracer le graphe</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Top PDV -->
+                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
+                  <h3 class="text-lg font-bold text-gray-900 mb-4">Top PDV (CA sur la periode)</h3>
+                  <div class="overflow-x-auto">
+                    <table class="w-full">
+                      <thead>
+                        <tr class="border-b border-gray-200">
+                          <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">PDV</th>
+                          <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Region / Prefecture</th>
+                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">CA</th>
+                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Depots</th>
+                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Retraits</th>
+                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Transactions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="pdv in dealerStats.top_pdvs"
+                          :key="pdv.id"
+                          class="border-b border-gray-100 hover:bg-white/60 transition-colors"
+                        >
+                          <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ pdv.nom_point }}</td>
+                          <td class="px-4 py-3 text-sm text-gray-700">{{ pdv.region }} / {{ pdv.prefecture }}</td>
+                          <td class="px-4 py-3 text-sm text-right font-bold text-moov-orange">{{ formatCurrency(pdv.ca) }}</td>
+                          <td class="px-4 py-3 text-sm text-right text-green-700">{{ formatCurrency(pdv.depot_amount) }}</td>
+                          <td class="px-4 py-3 text-sm text-right text-red-700">{{ formatCurrency(pdv.retrait_amount) }}</td>
+                          <td class="px-4 py-3 text-sm text-right text-gray-700">{{ formatNumber(pdv.tx_count) }}</td>
+                        </tr>
+                        <tr v-if="dealerStats.top_pdvs.length === 0">
+                          <td colspan="6" class="px-4 py-4 text-center text-sm text-gray-500">Aucune donnee</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="text-center text-sm text-gray-500">Aucune donnee de transactions pour ce dealer.</div>
+            </template>
           </div>
 
           <!-- PDV List for this dealer -->
@@ -138,17 +262,17 @@
                 :options="[
                   { label: 'Tous les statuts', value: '' },
                   { label: 'En attente', value: 'pending' },
-                  { label: 'Validés', value: 'validated' },
-                  { label: 'Rejetés', value: 'rejected' }
+                  { label: 'Valides', value: 'validated' },
+                  { label: 'Rejetes', value: 'rejected' }
                 ]"
                 option-label="label"
                 option-value="value"
               />
               <FormSelect
                 v-model="regionFilter"
-                label="Région"
+                label="Region"
                 :options="[
-                  { label: 'Toutes régions', value: '' },
+                  { label: 'Toutes regions', value: '' },
                   { label: 'Maritime', value: 'Maritime' },
                   { label: 'Plateaux', value: 'Plateaux' },
                   { label: 'Centrale', value: 'Centrale' },
@@ -173,10 +297,10 @@
                   <tr class="border-b border-gray-200">
                     <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Nom du PDV</th>
                     <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Flooz</th>
-                    <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Région</th>
+                    <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Region</th>
                     <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Ville</th>
                     <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Statut</th>
-                    <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Date création</th>
+                    <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Date creation</th>
                     <th class="px-4 py-3 text-center text-sm font-bold text-gray-700">Actions</th>
                   </tr>
                 </thead>
@@ -205,7 +329,7 @@
                         @click="goToPOSDetail(pos.id)"
                         class="px-3 py-1 rounded-lg bg-moov-orange/10 text-moov-orange font-bold text-xs hover:bg-moov-orange hover:text-white transition-all"
                       >
-                        Détails
+                        Details
                       </button>
                     </td>
                   </tr>
@@ -215,7 +339,7 @@
               <!-- Pagination -->
               <div class="flex items-center justify-between mt-6">
                 <p class="text-sm text-gray-600">
-                  Affichage de {{ ((currentPage - 1) * perPage) + 1 }} à {{ Math.min(currentPage * perPage, filteredPOS.length) }} sur {{ filteredPOS.length }} PDV
+                  Affichage de {{ ((currentPage - 1) * perPage) + 1 }} a {{ Math.min(currentPage * perPage, filteredPOS.length) }} sur {{ filteredPOS.length }} PDV
                 </p>
                 <div class="flex items-center gap-2">
                   <button
@@ -223,7 +347,7 @@
                     :disabled="currentPage === 1"
                     class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    Précédent
+                    Precedent
                   </button>
                   <span class="px-4 py-2 text-sm font-semibold text-gray-700">
                     Page {{ currentPage }} / {{ totalPages }}
@@ -244,8 +368,8 @@
               <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
               </svg>
-              <p class="text-gray-600 font-semibold">Aucun point de vente trouvé</p>
-              <p class="text-sm text-gray-500 mt-2">{{ searchQuery || statusFilter || regionFilter ? 'Essayez de modifier vos filtres' : 'Créez votre premier PDV pour commencer' }}</p>
+              <p class="text-gray-600 font-semibold">Aucun point de vente trouve</p>
+              <p class="text-sm text-gray-500 mt-2">{{ searchQuery || statusFilter || regionFilter ? 'Essayez de modifier vos filtres' : 'Creez votre premier PDV pour commencer' }}</p>
             </div>
           </div>
         </div>
@@ -271,20 +395,45 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, h } from 'vue';
+import { ref, onMounted, computed } from 'vue';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler,
+} from 'chart.js';
+import { Line, Bar } from 'vue-chartjs';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrganizationStore } from '../stores/organization';
 import Navbar from '../components/Navbar.vue';
-import StatsCard from '../components/StatsCard.vue';
 import DealerModal from '../components/DealerModal.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
+import OrganizationService from '../services/OrganizationService';
 import { formatPhone } from '../utils/formatters';
 
 const route = useRoute();
 const router = useRouter();
 const organizationStore = useOrganizationStore();
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 const showEditModal = ref(false);
 const editingOrganization = ref(null);
@@ -296,25 +445,122 @@ const regionFilter = ref('');
 const currentPage = ref(1);
 const perPage = ref(10);
 
+const dealerStats = ref(null);
+const statsLoading = ref(false);
+const selectedPeriod = ref(30);
+const periods = [
+  { label: 'J-1', value: 1 },
+  { label: 'J-7', value: 7 },
+  { label: 'J-15', value: 15 },
+  { label: 'J-30', value: 30 },
+  { label: 'J-90', value: 90 },
+];
+
 const organization = computed(() => organizationStore.currentOrganization);
 const loading = computed(() => organizationStore.loading);
 
-const stats = computed(() => {
-  if (!organization.value) return { total: 0, pending: 0, validated: 0 };
-  
-  return {
-    total: organization.value.point_of_sales_count || 0,
-    pending: organization.value.pending_count || 0,
-    validated: organization.value.validated_count || 0,
-  };
-});
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  interaction: { intersect: false, mode: 'index' },
+  plugins: {
+    legend: { position: 'bottom', labels: { boxWidth: 12 } },
+    tooltip: {
+      callbacks: {
+        label: (ctx) => {
+          if (ctx.dataset.yAxisID === 'y1') {
+            return `${ctx.dataset.label}: ${formatNumber(ctx.raw)}`;
+          }
+          return `${ctx.dataset.label}: ${formatCurrency(ctx.raw)}`;
+        },
+      },
+    },
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: { callback: (v) => formatCurrency(v) },
+    },
+    y1: {
+      beginAtZero: true,
+      position: 'right',
+      grid: { drawOnChartArea: false },
+      ticks: { callback: (v) => formatNumber(v) },
+    },
+  },
+};
+
+const amountsChartData = computed(() => ({
+  labels: dealerStats.value?.chart?.labels || [],
+  datasets: [
+    {
+      label: 'CA',
+      data: dealerStats.value?.chart?.ca || [],
+      borderColor: '#f97316',
+      backgroundColor: 'rgba(249, 115, 22, 0.15)',
+      tension: 0.3,
+      fill: true,
+    },
+    {
+      label: 'Depots',
+      data: dealerStats.value?.chart?.depot || [],
+      borderColor: '#10b981',
+      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+      tension: 0.3,
+      fill: true,
+    },
+    {
+      label: 'Retraits',
+      data: dealerStats.value?.chart?.retrait || [],
+      borderColor: '#ef4444',
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+      tension: 0.3,
+      fill: true,
+    },
+  ],
+}));
+
+const activityChartData = computed(() => ({
+  labels: dealerStats.value?.chart?.labels || [],
+  datasets: [
+    {
+      type: 'bar',
+      label: 'Transactions',
+      data: dealerStats.value?.chart?.tx_count || [],
+      backgroundColor: 'rgba(59, 130, 246, 0.35)',
+      borderColor: '#3b82f6',
+      borderWidth: 1,
+      yAxisID: 'y',
+    },
+    {
+      type: 'bar',
+      label: 'PDV actifs',
+      data: dealerStats.value?.chart?.active_pdvs || [],
+      backgroundColor: 'rgba(16, 185, 129, 0.35)',
+      borderColor: '#10b981',
+      borderWidth: 1,
+      yAxisID: 'y1',
+    },
+    {
+      type: 'line',
+      label: 'Commissions dealer',
+      data: dealerStats.value?.chart?.commissions_dealer || [],
+      borderColor: '#a855f7',
+      backgroundColor: 'rgba(168, 85, 247, 0.15)',
+      borderWidth: 2,
+      tension: 0.3,
+      yAxisID: 'y',
+      fill: true,
+    },
+  ],
+}));
 
 const filteredPOS = computed(() => {
   let filtered = pointsOfSale.value;
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(pos =>
+    filtered = filtered.filter((pos) =>
       pos.nom_point?.toLowerCase().includes(query) ||
       pos.numero_flooz?.toLowerCase().includes(query) ||
       pos.ville?.toLowerCase().includes(query)
@@ -322,11 +568,11 @@ const filteredPOS = computed(() => {
   }
 
   if (statusFilter.value) {
-    filtered = filtered.filter(pos => pos.status === statusFilter.value);
+    filtered = filtered.filter((pos) => pos.status === statusFilter.value);
   }
 
   if (regionFilter.value) {
-    filtered = filtered.filter(pos => pos.region === regionFilter.value);
+    filtered = filtered.filter((pos) => pos.region === regionFilter.value);
   }
 
   return filtered;
@@ -344,7 +590,7 @@ const getStatusClass = (status) => {
   const classes = {
     pending: 'bg-yellow-100 text-yellow-800',
     validated: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800'
+    rejected: 'bg-red-100 text-red-800',
   };
   return classes[status] || 'bg-gray-100 text-gray-800';
 };
@@ -352,19 +598,28 @@ const getStatusClass = (status) => {
 const getStatusLabel = (status) => {
   const labels = {
     pending: 'En attente',
-    validated: 'Validé',
-    rejected: 'Rejeté'
+    validated: 'Valide',
+    rejected: 'Rejete',
   };
   return labels[status] || status;
 };
 
+const formatNumber = (num) => new Intl.NumberFormat('fr-FR').format(num || 0);
+const formatCurrency = (amount) =>
+  new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount || 0);
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
-  return date.toLocaleDateString('fr-FR', { 
-    day: '2-digit', 
-    month: 'short', 
-    year: 'numeric'
+  return date.toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 };
 
@@ -372,16 +627,32 @@ const goToPOSDetail = (posId) => {
   router.push(`/pdv/${posId}`);
 };
 
+const loadDealerStats = async () => {
+  statsLoading.value = true;
+  try {
+    const data = await OrganizationService.getDealerStats(route.params.id, { days: selectedPeriod.value });
+    dealerStats.value = data;
+  } catch (error) {
+    console.error('Error loading dealer stats:', error);
+    dealerStats.value = null;
+  } finally {
+    statsLoading.value = false;
+  }
+};
+
+const changePeriod = (val) => {
+  selectedPeriod.value = val;
+  loadDealerStats();
+};
+
 const loadPointsOfSale = async () => {
   loadingPOS.value = true;
   try {
-    const response = await PointOfSaleService.getAll({ 
+    const response = await PointOfSaleService.getAll({
       organization_id: route.params.id,
-      per_page: 100  // Charger tous les PDV du dealer
+      per_page: 100, // Charger tous les PDV du dealer
     });
-    // Le backend retourne un objet paginé : { data: [...], total: 20, ... }
     pointsOfSale.value = response.data || [];
-    console.log('PDV chargés:', pointsOfSale.value.length);
   } catch (error) {
     console.error('Error loading points of sale:', error);
     pointsOfSale.value = [];
@@ -403,41 +674,7 @@ const handleSaved = async () => {
 
 onMounted(async () => {
   await organizationStore.fetchOrganization(route.params.id);
+  await loadDealerStats();
   await loadPointsOfSale();
 });
-
-// Icon components
-const HomeIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' })
-    ]);
-  }
-};
-
-const ClockIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' })
-    ]);
-  }
-};
-
-const CheckIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M5 13l4 4L19 7' })
-    ]);
-  }
-};
-
-const UserIcon = {
-  render() {
-    return h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
-      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z' })
-    ]);
-  }
-};
 </script>
-
-
