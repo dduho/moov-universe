@@ -36,8 +36,9 @@ class DealerStatsController extends Controller
         }
 
         $now = Carbon::now();
-        $start = $now->copy()->subDays($days - 1)->startOfDay();
-        $end = $now->copy()->endOfDay();
+        // Période = derniers N jours sans inclure aujourd'hui (ex : J-1 = hier uniquement)
+        $end = $now->copy()->subDay()->endOfDay();
+        $start = $end->copy()->subDays($days - 1)->startOfDay();
 
         $base = DB::table('pdv_transactions as t')
             ->join('point_of_sales as p', 'p.numero_flooz', '=', 't.pdv_numero')
@@ -81,8 +82,8 @@ class DealerStatsController extends Controller
 
         $activeBreakdown = [];
         foreach ([1, 7, 15, 30, 90] as $d) {
-            $s = $now->copy()->subDays($d - 1)->startOfDay();
-            $e = $now->copy()->endOfDay();
+            $e = $now->copy()->subDay()->endOfDay();
+            $s = $e->copy()->subDays($d - 1)->startOfDay();
             $count = DB::table('pdv_transactions as t')
                 ->join('point_of_sales as p', 'p.numero_flooz', '=', 't.pdv_numero')
                 ->where('p.organization_id', $organization->id)
