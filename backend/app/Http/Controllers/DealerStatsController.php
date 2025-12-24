@@ -72,13 +72,14 @@ class DealerStatsController extends Controller
             + ($summary->give_sent_count ?? 0)
             + ($summary->give_received_count ?? 0);
 
+        // PDV actifs uniques sur la période (au moins un dépôt ou retrait)
         $activePdvCount = (clone $base)
             ->where(function ($q) {
                 $q->where('t.count_depot', '>', 0)
                   ->orWhere('t.count_retrait', '>', 0);
             })
-            ->distinct('t.pdv_numero')
-            ->count('t.pdv_numero');
+            ->distinct('p.id')
+            ->count('p.id');
 
         $activeBreakdown = [];
         foreach ([1, 7, 15, 30, 90] as $d) {
@@ -92,8 +93,8 @@ class DealerStatsController extends Controller
                     $q->where('t.count_depot', '>', 0)
                       ->orWhere('t.count_retrait', '>', 0);
                 })
-                ->distinct('t.pdv_numero')
-                ->count('t.pdv_numero');
+                ->distinct('p.id')
+                ->count('p.id');
             $activeBreakdown[] = ['days' => $d, 'count' => $count];
         }
 
