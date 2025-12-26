@@ -200,6 +200,16 @@
       <div v-if="filteredAlerts.length > 0" class="text-center mt-4 text-sm text-gray-600">
         Affichage de {{ startIndex + 1 }}-{{ endIndex }} sur {{ filteredAlerts.length }} alerte(s)
       </div>
+
+      <!-- Load More Button -->
+      <div v-if="hasMore && !loading" class="text-center mt-4">
+        <button
+          @click="loadMoreAlerts"
+          class="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold transition-colors"
+        >
+          Charger plus d'alertes
+        </button>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -254,7 +264,9 @@ export default {
       filterLevel: 'all',
       filterType: 'all',
       currentPage: 1,
-      itemsPerPage: 10
+      itemsPerPage: 10,
+      hasMore: false,
+      apiOffset: 0
     };
   },
   computed: {
@@ -312,7 +324,7 @@ export default {
     }
   },
   methods: {
-    async loadFraudData() {
+    async loadFraudData(loadMore = false) {
       this.loading = true;
       this.error = null;
 
@@ -321,12 +333,25 @@ export default {
           scope: this.scope,
           entity_id: this.entityId,
           start_date: this.startDate,
-          end_date: this.endDate
+          end_date: this.endDate,
+          limit: 30,
+          offset: loadMore ? this.apiOffset : 0
         };
 
         const data = await fraudDetectionService.detectFraud(params);
         this.summary = data.summary;
-        this.alerts = data.alerts || [];
+        
+        if (loadMore) {
+          // Ajouter les nouvelles alertes aux existantes
+          this.alerts = [...this.alerts, ...(data.alerts || [])];
+        } else {
+          // Remplacer les alertes
+          this.alerts = data.alerts || [];
+          this.apiOffset = 0;
+        }
+        
+        this.hasMore = data.pagination?.has_more || false;
+        this.apiOffset += 30;
         this.generatedAt = this.formatDateTime(data.generated_at);
       } catch (err) {
         console.error('Error loading fraud detection:', err);
@@ -334,6 +359,10 @@ export default {
       } finally {
         this.loading = false;
       }
+    },
+    async loadMoreAlerts() {
+      if (!this.hasMore || this.loading) return;
+      await this.loadFraudData(true);
     },
     getAlertTypeLabel(type) {
       const labels = {

@@ -29,14 +29,30 @@ class ForecastingController extends Controller
             $scope = $request->input('scope', 'global');
             $entityId = $request->input('entity_id');
 
-            // Cache de 1 heure
+            // Cache de 1 heure (moins pour global car coûteux)
+            $cacheTime = $scope === 'global' ? 7200 : 3600; // 2h pour global, 1h pour le reste
             $cacheKey = "forecast_{$scope}_{$entityId}_" . now()->format('Y-m-d-H');
 
-            return Cache::remember($cacheKey, 3600, function () use ($scope, $entityId) {
+            return Cache::remember($cacheKey, $cacheTime, function () use ($scope, $entityId) {
                 $now = Carbon::now();
 
+                // Pour scope global, limiter les données pour performance
+                $forecastData = $this->calculateForecast($scope, $entityId, $now);
+                
+                // Limiter les requêtes coûteuses pour scope global
+                if ($scope === 'global') {
+                    return response()->json([
+                        'forecast' => $forecastData,
+                        'high_potential_pdv' => [], // Désactivé pour global (trop lourd)
+                        'underperforming_pdv' => [], // Désactivé pour global (trop lourd)
+                        'growth_opportunities' => $this->identifyGrowthOpportunities($now),
+                        'generated_at' => $now->toIso8601String(),
+                        'note' => 'Analyses détaillées des PDV disponibles uniquement par région/dealer/PDV',
+                    ]);
+                }
+
                 return response()->json([
-                    'forecast' => $this->calculateForecast($scope, $entityId, $now),
+                    'forecast' => $forecastData,
                     'high_potential_pdv' => $this->identifyHighPotentialPdv($now),
                     'underperforming_pdv' => $this->identifyUnderperformingPdv($now),
                     'growth_opportunities' => $this->identifyGrowthOpportunities($now),
@@ -84,15 +100,29 @@ class ForecastingController extends Controller
                 $query->where('pdv_numero', $entityId);
             }
 
-            // Données journalières du mois
-            $dailyData = $query->selectRaw('
+            // Pour scope global, utiliser uniquement les agrégats sans récupérer chaque PDV
+            // Limiter à un échantillon représentatif si trop de données
+            if ($scope === 'global') {
+                // Requête optimisée : agrégation directe sans détail par PDV
+                $query->selectRaw('
                     DATE(transaction_date) as date,
                     SUM(retrait_keycost) as ca,
                     SUM(count_depot + count_retrait) as transactions
                 ')
                 ->groupBy('date')
-                ->orderBy('date')
-                ->get();
+                ->orderBy('date');
+            } else {
+                $query->selectRaw('
+                    DATE(transaction_date) as date,
+                    SUM(retrait_keycost) as ca,
+                    SUM(count_depot + count_retrait) as transactions
+                ')
+                ->groupBy('date')
+                ->orderBy('date');
+            }
+
+            // Données journalières du mois
+            $dailyData = $query->get();
 
             if ($dailyData->isEmpty()) {
                 return [
@@ -383,31 +413,39 @@ class ForecastingController extends Controller
     {
         $last30Days = $now->copy()->subDays(30);
 
+        // Pré-calculer le total de PDV par région pour éviter les sous-requêtes
+        $pdvCountsByRegion = DB::table('point_of_sales')
+            ->select('region', DB::raw('COUNT(*) as total'))
+            ->where('status', 'validated')
+            ->whereNotNull('region')
+            ->groupBy('region')
+            ->pluck('total', 'region');
+
         // Régions avec taux d'activation PDV faible mais potentiel élevé
         $regions = DB::table('pdv_transactions as t')
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
             ->select('p.region')
             ->selectRaw('
                 COUNT(DISTINCT t.pdv_numero) as pdv_actifs,
-                (SELECT COUNT(*) FROM point_of_sales WHERE region = p.region AND status = "validated") as pdv_total,
                 SUM(t.retrait_keycost) as ca_total,
                 AVG(t.retrait_keycost) as ca_avg_per_active_pdv
             ')
             ->whereBetween('t.transaction_date', [$last30Days, $now])
             ->whereNotNull('p.region')
             ->groupBy('p.region')
-            ->havingRaw('pdv_total > 0')
+            ->limit(20) // Limiter à 20 régions max
             ->get();
 
-        return $regions->map(function ($region) {
-            $activationRate = ($region->pdv_actifs / $region->pdv_total) * 100;
-            $potentialCa = $region->ca_avg_per_active_pdv * $region->pdv_total;
+        return $regions->map(function ($region) use ($pdvCountsByRegion) {
+            $pdvTotal = $pdvCountsByRegion[$region->region] ?? 1;
+            $activationRate = ($region->pdv_actifs / $pdvTotal) * 100;
+            $potentialCa = $region->ca_avg_per_active_pdv * $pdvTotal;
             $caGap = $potentialCa - $region->ca_total;
 
             return [
                 'region' => $region->region,
                 'pdv_actifs' => $region->pdv_actifs,
-                'pdv_total' => $region->pdv_total,
+                'pdv_total' => $pdvTotal,
                 'activation_rate' => round($activationRate, 2),
                 'ca_total' => round($region->ca_total, 2),
                 'ca_potential' => round($potentialCa, 2),

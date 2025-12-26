@@ -19,23 +19,25 @@ class FraudDetectionController extends Controller
         $entityId = $request->input('entity_id');
         $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
+        $limit = $request->input('limit', 30); // Limite par type de fraude
+        $offset = $request->input('offset', 0); // Pour pagination
 
-        $cacheKey = "fraud_detection_{$scope}_{$entityId}_{$startDate}_{$endDate}";
+        $cacheKey = "fraud_detection_{$scope}_{$entityId}_{$startDate}_{$endDate}_{$limit}_{$offset}";
 
-        return Cache::remember($cacheKey, 1800, function () use ($scope, $entityId, $startDate, $endDate) {
+        return Cache::remember($cacheKey, 1800, function () use ($scope, $entityId, $startDate, $endDate, $limit, $offset) {
             $alerts = [];
 
             // 1. Split deposit fraud - Main fraud pattern (high depot count vs retrait)
-            $alerts = array_merge($alerts, $this->detectSplitDepositFraud($scope, $entityId, $startDate, $endDate));
+            $alerts = array_merge($alerts, $this->detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, $limit, $offset));
 
             // 2. Off-hours large transactions (>500k FCFA outside 8am-8pm)
-            $alerts = array_merge($alerts, $this->detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate));
+            $alerts = array_merge($alerts, $this->detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate, $limit, $offset));
 
             // 3. Sudden activity spikes (>3x average daily volume)
-            $alerts = array_merge($alerts, $this->detectActivitySpikes($scope, $entityId, $startDate, $endDate));
+            $alerts = array_merge($alerts, $this->detectActivitySpikes($scope, $entityId, $startDate, $endDate, $limit, $offset));
 
             // 4. PDV earning more commission than generating CA (commission fraud)
-            $alerts = array_merge($alerts, $this->detectCommissionOverCa($scope, $entityId, $startDate, $endDate));
+            $alerts = array_merge($alerts, $this->detectCommissionOverCa($scope, $entityId, $startDate, $endDate, $limit, $offset));
 
             // Calculate risk scores
             foreach ($alerts as &$alert) {
@@ -58,7 +60,13 @@ class FraudDetectionController extends Controller
 
             return response()->json([
                 'summary' => $summary,
-                'alerts' => $alerts, // Return all alerts so filters stay consistent with summary counts
+                'alerts' => $alerts,
+                'pagination' => [
+                    'limit' => $limit,
+                    'offset' => $offset,
+                    'count' => count($alerts),
+                    'has_more' => count($alerts) >= ($limit * 4), // Approximation si on a le max possible
+                ],
                 'generated_at' => now()->toDateTimeString(),
             ]);
         });
@@ -68,7 +76,7 @@ class FraudDetectionController extends Controller
      * Detect split deposit fraud - PDV multiplying deposits to gain more commissions
      * Key indicators: High depot count relative to retrait count
      */
-    private function detectSplitDepositFraud($scope, $entityId, $startDate, $endDate)
+    private function detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, $limit = 30, $offset = 0)
     {
         $alerts = [];
 
@@ -78,7 +86,8 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Optimisation: limiter le nombre de PDV traités
+        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
 
         // Get top 20 performers to establish benchmark
         $topPerformers = [];
@@ -180,13 +189,14 @@ class FraudDetectionController extends Controller
             }
         }
 
-        return $alerts;
+        // Limiter le nombre de résultats retournés
+        return array_slice($alerts, 0, $limit);
     }
 
     /**
      * Detect off-hours large transactions
      */
-    private function detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate)
+    private function detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate, $limit = 30, $offset = 0)
     {
         $alerts = [];
         $threshold = 500000; // 500k FCFA
@@ -232,13 +242,14 @@ class FraudDetectionController extends Controller
             }
         }
 
-        return $alerts;
+        // Limiter le nombre de résultats retournés
+        return array_slice($alerts, 0, $limit);
     }
 
     /**
      * Detect sudden activity spikes
      */
-    private function detectActivitySpikes($scope, $entityId, $startDate, $endDate)
+    private function detectActivitySpikes($scope, $entityId, $startDate, $endDate, $limit = 30, $offset = 0)
     {
         $alerts = [];
 
@@ -248,7 +259,8 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Optimisation: limiter le nombre de PDV traités
+        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
 
         foreach ($pdvs as $pdv) {
             // Get daily transaction volumes
@@ -289,14 +301,15 @@ class FraudDetectionController extends Controller
             }
         }
 
-        return $alerts;
+        // Limiter le nombre de résultats retournés
+        return array_slice($alerts, 0, $limit);
     }
 
     /**
      * Detect PDV earning more in commissions than generating CA
      * This indicates excessive deposits (free for customer) vs retraits (generate CA)
      */
-    private function detectCommissionOverCa($scope, $entityId, $startDate, $endDate)
+    private function detectCommissionOverCa($scope, $entityId, $startDate, $endDate, $limit = 30, $offset = 0)
     {
         $alerts = [];
 
@@ -306,7 +319,8 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Optimisation: limiter le nombre de PDV traités
+        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
 
         foreach ($pdvs as $pdv) {
             $stats = DB::table('pdv_transactions')
@@ -365,7 +379,8 @@ class FraudDetectionController extends Controller
             }
         }
 
-        return $alerts;
+        // Limiter le nombre de résultats retournés
+        return array_slice($alerts, 0, $limit);
     }
 
     /**
