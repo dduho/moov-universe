@@ -41,7 +41,7 @@ class CacheDailyAnalytics extends Command
                 SUM(retrait_keycost) as total_ca,
                 SUM(count_depot + count_retrait) as total_transactions,
                 SUM(sum_depot + sum_retrait) as total_volume,
-                COUNT(DISTINCT pdv_numero) as pdv_actifs,
+                COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs,
                 SUM(count_depot) as total_depots,
                 SUM(sum_depot) as total_depots_amount,
                 SUM(count_retrait) as total_retraits,

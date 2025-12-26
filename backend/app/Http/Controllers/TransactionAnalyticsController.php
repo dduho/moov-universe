@@ -102,7 +102,7 @@ class TransactionAnalyticsController extends Controller
                 SUM(retrait_keycost) as total_ca,
                 SUM(count_depot + count_retrait) as total_transactions,
                 SUM(sum_depot + sum_retrait) as total_volume,
-                COUNT(DISTINCT pdv_numero) as pdv_actifs,
+                COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs,
                 SUM(count_depot) as total_depot_count,
                 SUM(sum_depot) as total_depot_amount,
                 SUM(count_retrait) as total_retrait_count,
@@ -209,7 +209,7 @@ class TransactionAnalyticsController extends Controller
                 SUM(t.retrait_keycost) as chiffre_affaire,
                 SUM(t.sum_depot + t.sum_retrait) as volume_total,
                 SUM(t.count_depot + t.count_retrait) as total_transactions,
-                COUNT(DISTINCT t.pdv_numero) as pdv_count
+                COUNT(DISTINCT CASE WHEN t.count_depot > 0 OR t.count_retrait > 0 THEN t.pdv_numero END) as pdv_count
             ')
             ->groupBy('p.dealer_name')
             ->orderByDesc('chiffre_affaire')
@@ -244,7 +244,7 @@ class TransactionAnalyticsController extends Controller
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
                     SUM(count_depot + count_retrait) as transactions,
-                    COUNT(DISTINCT pdv_numero) as pdv_actifs
+                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
@@ -258,7 +258,7 @@ class TransactionAnalyticsController extends Controller
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
                     SUM(count_depot + count_retrait) as transactions,
-                    COUNT(DISTINCT pdv_numero) as pdv_actifs
+                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
@@ -272,7 +272,7 @@ class TransactionAnalyticsController extends Controller
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
                     SUM(count_depot + count_retrait) as transactions,
-                    COUNT(DISTINCT pdv_numero) as pdv_actifs
+                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
