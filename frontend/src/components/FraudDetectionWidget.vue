@@ -82,9 +82,9 @@
       </div>
 
       <!-- Alerts List -->
-      <div class="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+      <div class="space-y-4">
         <div
-          v-for="alert in filteredAlerts"
+          v-for="alert in paginatedAlerts"
           :key="`${alert.pdv_id}-${alert.date}-${alert.type}`"
           class="rounded-xl border-2 p-5 transition-all hover:shadow-lg"
           :class="{
@@ -146,6 +146,60 @@
           <p class="text-gray-600">Aucune alerte pour ce filtre</p>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+        <button
+          @click="currentPage = 1"
+          :disabled="currentPage === 1"
+          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+        >
+          ‹‹
+        </button>
+        <button
+          @click="currentPage--"
+          :disabled="currentPage === 1"
+          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+        >
+          ‹
+        </button>
+        
+        <div class="flex gap-1">
+          <button
+            v-for="page in visiblePages"
+            :key="page"
+            @click="currentPage = page"
+            class="w-10 h-10 rounded-lg text-sm font-semibold transition-all"
+            :class="currentPage === page ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+          >
+            {{ page }}
+          </button>
+        </div>
+        
+        <button
+          @click="currentPage++"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+        >
+          ›
+        </button>
+        <button
+          @click="currentPage = totalPages"
+          :disabled="currentPage === totalPages"
+          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          :class="currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
+        >
+          ››
+        </button>
+      </div>
+
+      <!-- Pagination Info -->
+      <div v-if="filteredAlerts.length > 0" class="text-center mt-4 text-sm text-gray-600">
+        Affichage de {{ startIndex + 1 }}-{{ endIndex }} sur {{ filteredAlerts.length }} alerte(s)
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -198,7 +252,9 @@ export default {
       alerts: [],
       generatedAt: null,
       filterLevel: 'all',
-      filterType: 'all'
+      filterType: 'all',
+      currentPage: 1,
+      itemsPerPage: 10
     };
   },
   computed: {
@@ -215,10 +271,45 @@ export default {
     availableTypes() {
       const types = new Set(this.alerts.map(a => a.type));
       return ['all', ...types];
+    },
+    totalPages() {
+      return Math.ceil(this.filteredAlerts.length / this.itemsPerPage);
+    },
+    startIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage;
+    },
+    endIndex() {
+      return Math.min(this.startIndex + this.itemsPerPage, this.filteredAlerts.length);
+    },
+    paginatedAlerts() {
+      return this.filteredAlerts.slice(this.startIndex, this.endIndex);
+    },
+    visiblePages() {
+      const pages = [];
+      const maxVisible = 5;
+      let start = Math.max(1, this.currentPage - Math.floor(maxVisible / 2));
+      let end = Math.min(this.totalPages, start + maxVisible - 1);
+      
+      if (end - start < maxVisible - 1) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      return pages;
     }
   },
   mounted() {
     this.loadFraudData();
+  },
+  watch: {
+    filterLevel() {
+      this.currentPage = 1;
+    },
+    filterType() {
+      this.currentPage = 1;
+    }
   },
   methods: {
     async loadFraudData() {

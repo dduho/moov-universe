@@ -15,33 +15,46 @@ class ForecastingController extends Controller
      */
     public function getForecast(Request $request)
     {
-        // Vérifier que l'utilisateur est admin
-        if (!$request->user()->isAdmin()) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
+        try {
+            // Vérifier que l'utilisateur est admin
+            if (!$request->user()->isAdmin()) {
+                return response()->json(['error' => 'Unauthorized'], 403);
+            }
 
-        $request->validate([
-            'scope' => 'nullable|in:global,region,dealer,pdv',
-            'entity_id' => 'nullable|string',
-        ]);
-
-        $scope = $request->input('scope', 'global');
-        $entityId = $request->input('entity_id');
-
-        // Cache de 1 heure
-        $cacheKey = "forecast_{$scope}_{$entityId}_" . now()->format('Y-m-d-H');
-
-        return Cache::remember($cacheKey, 3600, function () use ($scope, $entityId) {
-            $now = Carbon::now();
-
-            return response()->json([
-                'forecast' => $this->calculateForecast($scope, $entityId, $now),
-                'high_potential_pdv' => $this->identifyHighPotentialPdv($now),
-                'underperforming_pdv' => $this->identifyUnderperformingPdv($now),
-                'growth_opportunities' => $this->identifyGrowthOpportunities($now),
-                'generated_at' => $now->toIso8601String(),
+            $request->validate([
+                'scope' => 'nullable|in:global,region,dealer,pdv',
+                'entity_id' => 'nullable|string',
             ]);
-        });
+
+            $scope = $request->input('scope', 'global');
+            $entityId = $request->input('entity_id');
+
+            // Cache de 1 heure
+            $cacheKey = "forecast_{$scope}_{$entityId}_" . now()->format('Y-m-d-H');
+
+            return Cache::remember($cacheKey, 3600, function () use ($scope, $entityId) {
+                $now = Carbon::now();
+
+                return response()->json([
+                    'forecast' => $this->calculateForecast($scope, $entityId, $now),
+                    'high_potential_pdv' => $this->identifyHighPotentialPdv($now),
+                    'underperforming_pdv' => $this->identifyUnderperformingPdv($now),
+                    'growth_opportunities' => $this->identifyGrowthOpportunities($now),
+                    'generated_at' => $now->toIso8601String(),
+                ]);
+            });
+        } catch (\Exception $e) {
+            \Log::error('Forecasting error: ' . $e->getMessage(), [
+                'scope' => $request->input('scope'),
+                'entity_id' => $request->input('entity_id'),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'error' => 'Une erreur est survenue lors du calcul des prévisions',
+                'message' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
     }
 
     /**
@@ -49,47 +62,48 @@ class ForecastingController extends Controller
      */
     private function calculateForecast($scope, $entityId, $now)
     {
-        $monthStart = $now->copy()->startOfMonth();
-        $monthEnd = $now->copy()->endOfMonth();
-        $daysInMonth = $monthEnd->day;
-        $daysPassed = $now->day;
-        $daysRemaining = $daysInMonth - $daysPassed;
+        try {
+            $monthStart = $now->copy()->startOfMonth();
+            $monthEnd = $now->copy()->endOfMonth();
+            $daysInMonth = $monthEnd->day;
+            $daysPassed = $now->day;
+            $daysRemaining = $daysInMonth - $daysPassed;
 
-        // Récupérer les données du mois en cours
-        $query = DB::table('pdv_transactions')
-            ->whereBetween('transaction_date', [$monthStart, $now]);
+            // Récupérer les données du mois en cours
+            $query = DB::table('pdv_transactions')
+                ->whereBetween('transaction_date', [$monthStart, $now]);
 
-        // Appliquer les filtres selon le scope
-        if ($scope === 'region' && $entityId) {
-            $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                  ->where('p.region', $entityId);
-        } elseif ($scope === 'dealer' && $entityId) {
-            $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                  ->where('p.dealer_name', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $query->where('pdv_numero', $entityId);
-        }
+            // Appliquer les filtres selon le scope
+            if ($scope === 'region' && $entityId) {
+                $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
+                      ->where('p.region', $entityId);
+            } elseif ($scope === 'dealer' && $entityId) {
+                $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
+                      ->where('p.dealer_name', $entityId);
+            } elseif ($scope === 'pdv' && $entityId) {
+                $query->where('pdv_numero', $entityId);
+            }
 
-        // Données journalières du mois
-        $dailyData = $query->selectRaw('
-                DATE(transaction_date) as date,
-                SUM(retrait_keycost) as ca,
-                SUM(count_depot + count_retrait) as transactions
-            ')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
+            // Données journalières du mois
+            $dailyData = $query->selectRaw('
+                    DATE(transaction_date) as date,
+                    SUM(retrait_keycost) as ca,
+                    SUM(count_depot + count_retrait) as transactions
+                ')
+                ->groupBy('date')
+                ->orderBy('date')
+                ->get();
 
-        if ($dailyData->isEmpty()) {
-            return [
-                'method' => 'insufficient_data',
-                'current_ca' => 0,
-                'projected_ca' => 0,
-                'confidence' => 0,
-                'daily_average' => 0,
-                'days_remaining' => $daysRemaining,
-            ];
-        }
+            if ($dailyData->isEmpty()) {
+                return [
+                    'method' => 'insufficient_data',
+                    'current_ca' => 0,
+                    'projected_ca' => 0,
+                    'confidence' => 0,
+                    'daily_average' => 0,
+                    'days_remaining' => $daysRemaining,
+                ];
+            }
 
         // Calculer la moyenne mobile et la tendance
         $caData = $dailyData->pluck('ca')->toArray();
@@ -152,6 +166,24 @@ class ForecastingController extends Controller
                 $growthRate
             ),
         ];
+        } catch (\Exception $e) {
+            \Log::error('Calculate forecast error: ' . $e->getMessage(), [
+                'scope' => $scope,
+                'entity_id' => $entityId,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return minimal data on error
+            return [
+                'method' => 'error',
+                'current_ca' => 0,
+                'projected_ca' => 0,
+                'confidence' => 0,
+                'daily_average' => 0,
+                'days_remaining' => 0,
+                'error' => 'Erreur lors du calcul des prévisions'
+            ];
+        }
     }
 
     /**
@@ -326,7 +358,7 @@ class ForecastingController extends Controller
             ->limit(10)
             ->get();
 
-        return $pdvs->map(function ($pdv) {
+        return $pdvs->map(function ($pdv) use ($now) {
             $declineRate = (($pdv->ca_recent - $pdv->ca_previous) / $pdv->ca_previous) * 100;
             return [
                 'pdv_numero' => $pdv->pdv_numero,

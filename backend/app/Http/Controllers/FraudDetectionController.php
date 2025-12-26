@@ -333,8 +333,8 @@ class FraudDetectionController extends Controller
                 $estimatedCommission = $totalDepot * 100;
                 $commissionToCaRatio = $estimatedCommission / $totalCa;
 
-                // Flag if estimated commission > CA (ratio > 1)
-                if ($commissionToCaRatio > 1) {
+                // Flag if estimated commission >= 100% of CA (ratio >= 2, meaning commission equals or exceeds 100% of CA)
+                if ($commissionToCaRatio >= 2) {
                     $alerts[] = [
                         'type' => 'commission_over_ca',
                         'pdv_id' => $pdv->id,
@@ -411,7 +411,7 @@ class FraudDetectionController extends Controller
                 break;
         }
 
-        return min(max($score, 0), 100);
+        return round(min(max($score, 0), 100));
     }
 
     /**
