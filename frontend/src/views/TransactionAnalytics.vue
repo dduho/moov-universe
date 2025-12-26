@@ -277,6 +277,13 @@
           </div>
         </div>
 
+        <!-- Forecasting Widget -->
+        <ForecastWidget 
+          scope="global" 
+          :autoRefresh="true" 
+          :refreshInterval="300000"
+        />
+
         <!-- AI Insights Section -->
         <div v-if="insights && insights.length > 0" class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 shadow-2xl rounded-2xl p-6">
           <div class="flex items-center gap-3 mb-6">
@@ -387,6 +394,20 @@
           </div>
         </div>
       </div>
+
+      <!-- AI Recommendations Widget -->
+      <RecommendationsWidget 
+        class="mt-8"
+        scope="global" 
+        :limit="10"
+        :autoRefresh="false"
+      />
+
+      <!-- Fraud Detection Widget -->
+      <FraudDetectionWidget 
+        class="mt-8"
+        scope="global"
+      />
     </div>
   </div>
 </template>
@@ -406,6 +427,9 @@ import {
   Filler
 } from 'chart.js';
 import Navbar from '../components/Navbar.vue';
+import ForecastWidget from '../components/ForecastWidget.vue';
+import RecommendationsWidget from '../components/RecommendationsWidget.vue';
+import FraudDetectionWidget from '../components/FraudDetectionWidget.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
 import { useToast } from '../composables/useToast';
 

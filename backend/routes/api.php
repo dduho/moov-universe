@@ -23,6 +23,9 @@ use App\Http\Controllers\TransactionAnalyticsController;
 use App\Http\Controllers\AnalyticsInsightsController;
 use App\Http\Controllers\ComparatorController;
 use App\Http\Controllers\GlobalSearchController;
+use App\Http\Controllers\ForecastingController;
+use App\Http\Controllers\RecommendationsController;
+use App\Http\Controllers\FraudDetectionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -217,5 +220,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('search')->group(function () {
         Route::get('/', [GlobalSearchController::class, 'search']);
         Route::get('/suggestions', [GlobalSearchController::class, 'suggestions']);
+    });
+
+    // Forecasting routes (Admin only)
+    Route::prefix('forecasting')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/', [ForecastingController::class, 'getForecast']);
+    });
+
+    // Recommendations routes (Admin only)
+    Route::prefix('recommendations')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/', [RecommendationsController::class, 'getRecommendations']);
+    });
+
+    // Fraud Detection routes (Admin only)
+    Route::prefix('fraud-detection')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/', [FraudDetectionController::class, 'detect']);
     });
 });
