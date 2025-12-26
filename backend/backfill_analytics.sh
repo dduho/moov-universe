@@ -4,6 +4,10 @@
 
 DAYS=${1:-30}  # Par défaut 30 jours
 
+# Déterminer le répertoire du script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd "$SCRIPT_DIR"
+
 echo "🔄 Pré-calcul des analytics pour les $DAYS derniers jours..."
 
 for i in $(seq 0 $DAYS); do

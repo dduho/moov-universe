@@ -8,6 +8,8 @@ use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Artisan;
 use Carbon\Carbon;
 
 class TransactionImportController extends Controller
@@ -44,6 +46,9 @@ class TransactionImportController extends Controller
                     ];
                     $results['total_imported'] += $result['imported'];
                     $results['total_skipped'] += $result['skipped'];
+                    
+                    // Invalider le cache analytics pour cette date
+                    $this->invalidateAnalyticsCache($result['date']);
                 } catch (\Exception $e) {
                     Log::error('Erreur import transaction: ' . $e->getMessage(), [
                         'file' => $file->getClientOriginalName(),
@@ -257,6 +262,27 @@ class TransactionImportController extends Controller
         $value = str_replace(',', '', $value);
 
         return is_numeric($value) ? $value : 0;
+    }
+
+    /**
+     * Invalider le cache analytics après import et recalculer en arrière-plan
+     */
+    private function invalidateAnalyticsCache($date)
+    {
+        try {
+            // Vider tous les caches analytics (ils contiennent la date dans la clé)
+            Cache::flush();
+            
+            // Recalculer les analytics pour cette date en arrière-plan
+            // On utilise call() qui exécute de manière asynchrone si un queue worker est configuré
+            Artisan::call('analytics:cache-daily', [
+                'date' => $date
+            ]);
+            
+            Log::info("Cache analytics invalidé et recalcul lancé pour la date: {$date}");
+        } catch (\Exception $e) {
+            Log::error("Erreur lors de l'invalidation du cache analytics: " . $e->getMessage());
+        }
     }
 
     /**
