@@ -235,30 +235,44 @@ class TransactionAnalyticsController extends Controller
      */
     private function getEvolution($period, $startDate, $endDate)
     {
-        // Pour le graphique, on affiche toujours par jour pour avoir plus de points
-        // Sauf pour trimestre où on groupe par semaine
         if ($period === 'quarter') {
-            // Pour trimestre: grouper par semaine
+            // Pour trimestre: grouper par mois (3 mois)
             $evolution = DB::table('pdv_transactions')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
-                    DATE_FORMAT(transaction_date, '%Y-W%u') as period,
+                    DATE_FORMAT(transaction_date, '%Y-%m') as period,
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
-                    SUM(count_depot + count_retrait) as transactions
+                    SUM(count_depot + count_retrait) as transactions,
+                    COUNT(DISTINCT pdv_numero) as pdv_actifs
+                ")
+                ->groupBy('period')
+                ->orderBy('period')
+                ->get();
+        } elseif ($period === 'week') {
+            // Pour semaine: grouper par semaine (début de semaine)
+            $evolution = DB::table('pdv_transactions')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->selectRaw("
+                    DATE_SUB(DATE(transaction_date), INTERVAL WEEKDAY(transaction_date) DAY) as period,
+                    SUM(retrait_keycost) as chiffre_affaire,
+                    SUM(sum_depot + sum_retrait) as volume,
+                    SUM(count_depot + count_retrait) as transactions,
+                    COUNT(DISTINCT pdv_numero) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
                 ->get();
         } else {
-            // Pour jour, semaine, mois: grouper par jour
+            // Pour jour et mois: grouper par jour
             $evolution = DB::table('pdv_transactions')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
                     DATE(transaction_date) as period,
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
-                    SUM(count_depot + count_retrait) as transactions
+                    SUM(count_depot + count_retrait) as transactions,
+                    COUNT(DISTINCT pdv_numero) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
@@ -272,6 +286,7 @@ class TransactionAnalyticsController extends Controller
                 'chiffre_affaire' => round($item->chiffre_affaire, 2),
                 'volume' => round($item->volume, 2),
                 'transactions' => $item->transactions,
+                'pdv_actifs' => $item->pdv_actifs,
             ];
         });
     }
@@ -325,7 +340,7 @@ class TransactionAnalyticsController extends Controller
     {
         return match ($period) {
             'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
-            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
+            'week' => [$now->copy()->subWeeks(8)->startOfDay(), $now->copy()->endOfDay()],
             'quarter' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
             default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
         };
@@ -336,10 +351,10 @@ class TransactionAnalyticsController extends Controller
      */
     private function formatPeriodLabel($key, $period)
     {
-        // Pour les semaines (format: 2025-W51)
-        if (str_contains($key, '-W')) {
-            [$year, $week] = explode('-W', $key);
-            return "S$week $year";
+        // Pour les mois (format: 2025-12)
+        if (preg_match('/^\d{4}-\d{2}$/', $key)) {
+            $date = Carbon::createFromFormat('Y-m', $key);
+            return $date->format('M Y');  // Dec 2025
         }
         
         // Pour les dates complètes (format: 2025-12-26)
@@ -348,10 +363,10 @@ class TransactionAnalyticsController extends Controller
             
             // Format selon la période
             return match($period) {
-                'day' => $date->format('d M'),          // 26 Dec
-                'week' => $date->format('d M'),         // 26 Dec
-                'month' => $date->format('d M'),        // 26 Dec
-                'quarter' => $date->format('d M'),      // 26 Dec
+                'day' => $date->format('d M'),                    // 26 Dec
+                'week' => 'Semaine du ' . $date->format('d/m'),  // Semaine du 22/12
+                'month' => $date->format('d M'),                  // 26 Dec
+                'quarter' => $date->format('M Y'),                // Dec 2025 (pour les mois)
                 default => $date->format('d M Y'),
             };
         } catch (\Exception $e) {

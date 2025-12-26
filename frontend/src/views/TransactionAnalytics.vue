@@ -159,11 +159,34 @@
           </div>
         </div>
 
-        <!-- Evolution Chart -->
+        <!-- Message si pas de données d'évolution -->
+        <div v-if="!analytics.evolution || analytics.evolution.length === 0" class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg">
+          <div class="flex items-start">
+            <svg class="w-6 h-6 text-yellow-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+            </svg>
+            <div class="ml-3">
+              <h3 class="text-sm font-medium text-yellow-800">Aucune donnée d'évolution disponible</h3>
+              <p class="mt-1 text-sm text-yellow-700">
+                Il n'y a pas encore de transactions pour cette période. Les données seront disponibles après l'import.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evolution Chart - CA -->
         <div v-if="analytics.evolution && analytics.evolution.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-4">Évolution du Chiffre d'Affaires</h3>
           <div class="h-64">
-            <Line :data="evolutionChartData" :options="evolutionChartOptions" />
+            <Line :data="caChartData" :options="caChartOptions" />
+          </div>
+        </div>
+
+        <!-- Evolution Chart - PDV Actifs -->
+        <div v-if="analytics.evolution && analytics.evolution.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Évolution des PDV Actifs</h3>
+          <div class="h-64">
+            <Line :data="pdvChartData" :options="pdvChartOptions" />
           </div>
         </div>
 
@@ -323,8 +346,8 @@ watch(selectedPeriod, () => {
 // Initial load
 loadAnalytics();
 
-// Chart data
-const evolutionChartData = computed(() => {
+// Chart data - CA
+const caChartData = computed(() => {
   if (!analytics.value || !analytics.value.evolution) return null;
 
   return {
@@ -342,7 +365,7 @@ const evolutionChartData = computed(() => {
   };
 });
 
-const evolutionChartOptions = {
+const caChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -360,6 +383,48 @@ const evolutionChartOptions = {
       beginAtZero: true,
       ticks: {
         callback: (value) => formatCurrency(value)
+      }
+    }
+  }
+};
+
+// Chart data - PDV Actifs
+const pdvChartData = computed(() => {
+  if (!analytics.value || !analytics.value.evolution) return null;
+
+  return {
+    labels: analytics.value.evolution.map(e => e.label),
+    datasets: [
+      {
+        label: 'PDV Actifs',
+        data: analytics.value.evolution.map(e => e.pdv_actifs),
+        borderColor: '#8B5CF6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  };
+});
+
+const pdvChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      callbacks: {
+        label: (context) => `PDV Actifs: ${formatNumber(context.parsed.y)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: false,
+      ticks: {
+        callback: (value) => formatNumber(value)
       }
     }
   }
