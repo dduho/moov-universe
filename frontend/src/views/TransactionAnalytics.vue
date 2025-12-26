@@ -1,0 +1,389 @@
+<template>
+  <div class="min-h-screen bg-gradient-mesh">
+    <Navbar />
+    
+    <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <!-- Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Tableau de Bord Transactionnel</h1>
+          <p class="text-sm text-gray-600 mt-1">Vue d'ensemble et analyse des transactions importées</p>
+        </div>
+        
+        <!-- Period Selector -->
+        <div class="flex items-center gap-2">
+          <button
+            v-for="period in periods"
+            :key="period.value"
+            @click="selectedPeriod = period.value"
+            :class="[
+              'px-4 py-2 rounded-xl font-semibold text-sm transition-all',
+              selectedPeriod === period.value
+                ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg'
+                : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'
+            ]"
+          >
+            {{ period.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-2xl p-8 sm:p-12 text-center">
+        <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
+        <p class="text-sm sm:text-base text-gray-600 font-semibold">Chargement des analytics...</p>
+      </div>
+
+      <!-- Content -->
+      <div v-else-if="analytics" class="space-y-6">
+        <!-- Date Range Info -->
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4">
+          <div class="flex items-center gap-2 text-gray-600">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span class="font-semibold">Période :</span>
+            <span>{{ formatDate(analytics.date_range.start) }} - {{ formatDate(analytics.date_range.end) }}</span>
+          </div>
+        </div>
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <!-- Chiffre d'Affaires -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-600 mb-1">Chiffre d'Affaires</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.chiffre_affaire) }}</p>
+            <p class="text-xs text-gray-500 mt-1">RETRAIT_KEYCOST</p>
+          </div>
+
+          <!-- Volume Total -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-600 mb-1">Volume Total</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.volume_total) }}</p>
+            <p class="text-xs text-gray-500 mt-1">Dépôts + Retraits</p>
+          </div>
+
+          <!-- Total Transactions -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-600 mb-1">Total Transactions</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ formatNumber(analytics.kpi.total_transactions) }}</p>
+            <p class="text-xs text-gray-500 mt-1">Toutes opérations</p>
+          </div>
+
+          <!-- PDV Actifs -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
+            <div class="flex items-center justify-between mb-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+            </div>
+            <h3 class="text-sm font-semibold text-gray-600 mb-1">PDV Actifs</h3>
+            <p class="text-2xl font-bold text-gray-900">{{ formatNumber(analytics.kpi.pdv_actifs) }}</p>
+            <p class="text-xs text-gray-500 mt-1">Avec transactions</p>
+          </div>
+        </div>
+
+        <!-- Transactions Detail -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Dépôts & Retraits -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Détail des Transactions</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-green-50 rounded-xl">
+                <div>
+                  <p class="text-sm font-semibold text-gray-600">Dépôts</p>
+                  <p class="text-xl font-bold text-green-600">{{ formatNumber(analytics.kpi.transactions_detail.depots.count) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-600">Montant</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatCurrency(analytics.kpi.transactions_detail.depots.amount) }}</p>
+                  <p class="text-xs text-gray-500">Moy: {{ formatCurrency(analytics.kpi.transactions_detail.depots.average) }}</p>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between p-4 bg-red-50 rounded-xl">
+                <div>
+                  <p class="text-sm font-semibold text-gray-600">Retraits</p>
+                  <p class="text-xl font-bold text-red-600">{{ formatNumber(analytics.kpi.transactions_detail.retraits.count) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-600">Montant</p>
+                  <p class="text-lg font-bold text-gray-900">{{ formatCurrency(analytics.kpi.transactions_detail.retraits.amount) }}</p>
+                  <p class="text-xs text-gray-500">Moy: {{ formatCurrency(analytics.kpi.transactions_detail.retraits.average) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Commissions -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4">Commissions</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-blue-50 rounded-xl">
+                <p class="text-sm font-semibold text-gray-600">PDV</p>
+                <p class="text-xl font-bold text-blue-600">{{ formatCurrency(analytics.kpi.commissions.pdv) }}</p>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-purple-50 rounded-xl">
+                <p class="text-sm font-semibold text-gray-600">Dealers</p>
+                <p class="text-xl font-bold text-purple-600">{{ formatCurrency(analytics.kpi.commissions.dealers) }}</p>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-gradient-to-r from-moov-orange/10 to-moov-orange-dark/10 rounded-xl border-2 border-moov-orange/30">
+                <p class="text-sm font-bold text-gray-700">Total</p>
+                <p class="text-2xl font-bold text-moov-orange">{{ formatCurrency(analytics.kpi.commissions.total) }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evolution Chart -->
+        <div v-if="analytics.evolution && analytics.evolution.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Évolution du Chiffre d'Affaires</h3>
+          <div class="h-64">
+            <Line :data="evolutionChartData" :options="evolutionChartOptions" />
+          </div>
+        </div>
+
+        <!-- Top PDV & Top Dealers -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <!-- Top PDV -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-6 h-6 text-moov-orange" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Top 10 PDV (par CA)
+            </h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div
+                v-for="(pdv, index) in analytics.top_pdv"
+                :key="pdv.pdv_numero"
+                class="flex items-center gap-4 p-4 rounded-xl hover:bg-moov-orange/5 transition-colors border border-gray-100"
+              >
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-moov-orange to-moov-orange-dark text-white flex items-center justify-center font-bold text-sm">
+                  {{ index + 1 }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-gray-900 truncate">{{ pdv.nom_point }}</p>
+                  <p class="text-xs text-gray-500">{{ pdv.pdv_numero }}</p>
+                  <p class="text-xs text-gray-500">Dealer: {{ pdv.dealer_name }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-moov-orange">{{ formatCurrency(pdv.chiffre_affaire) }}</p>
+                  <p class="text-xs text-gray-500">{{ formatNumber(pdv.total_transactions) }} tx</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Top Dealers -->
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <svg class="w-6 h-6 text-moov-orange" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+              </svg>
+              Top 10 Dealers (par CA)
+            </h3>
+            <div class="space-y-3 max-h-96 overflow-y-auto">
+              <div
+                v-for="(dealer, index) in analytics.top_dealers"
+                :key="dealer.dealer_name"
+                class="flex items-center gap-4 p-4 rounded-xl hover:bg-moov-orange/5 transition-colors border border-gray-100"
+              >
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm">
+                  {{ index + 1 }}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-gray-900 truncate">{{ dealer.dealer_name }}</p>
+                  <p class="text-xs text-gray-500">{{ dealer.pdv_count }} PDV</p>
+                  <p class="text-xs text-gray-500">CA/PDV: {{ formatCurrency(dealer.ca_par_pdv) }}</p>
+                </div>
+                <div class="text-right">
+                  <p class="font-bold text-purple-600">{{ formatCurrency(dealer.chiffre_affaire) }}</p>
+                  <p class="text-xs text-gray-500">{{ formatNumber(dealer.total_transactions) }} tx</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Distribution -->
+        <div v-if="analytics.distribution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <h3 class="text-lg font-bold text-gray-900 mb-4">Distribution des Transactions par Type</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div class="p-4 bg-green-50 rounded-xl border-2 border-green-200">
+              <p class="text-sm font-semibold text-gray-600 mb-1">Dépôts</p>
+              <p class="text-2xl font-bold text-green-600">{{ analytics.distribution.par_type.depots.percentage }}%</p>
+              <p class="text-xs text-gray-500">{{ formatNumber(analytics.distribution.par_type.depots.count) }} opérations</p>
+            </div>
+            <div class="p-4 bg-red-50 rounded-xl border-2 border-red-200">
+              <p class="text-sm font-semibold text-gray-600 mb-1">Retraits</p>
+              <p class="text-2xl font-bold text-red-600">{{ analytics.distribution.par_type.retraits.percentage }}%</p>
+              <p class="text-xs text-gray-500">{{ formatNumber(analytics.distribution.par_type.retraits.count) }} opérations</p>
+            </div>
+            <div class="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
+              <p class="text-sm font-semibold text-gray-600 mb-1">Transferts</p>
+              <p class="text-2xl font-bold text-blue-600">{{ analytics.distribution.par_type.transfers.percentage }}%</p>
+              <p class="text-xs text-gray-500">{{ formatNumber(analytics.distribution.par_type.transfers.count) }} opérations</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, watch } from 'vue';
+import { Line } from 'vue-chartjs';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import Navbar from '../components/Navbar.vue';
+import TransactionAnalyticsService from '../services/transactionAnalyticsService';
+import { useToast } from '../composables/useToast';
+
+// Register ChartJS components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
+
+const { toast } = useToast();
+const loading = ref(false);
+const analytics = ref(null);
+
+const periods = [
+  { value: 'day', label: 'Jour' },
+  { value: 'week', label: 'Semaine' },
+  { value: 'month', label: 'Mois' },
+  { value: 'quarter', label: 'Trimestre' }
+];
+
+const selectedPeriod = ref('month');
+
+// Load analytics
+const loadAnalytics = async () => {
+  try {
+    loading.value = true;
+    const response = await TransactionAnalyticsService.getAnalytics({
+      period: selectedPeriod.value
+    });
+    analytics.value = response.data;
+  } catch (error) {
+    console.error('Error loading analytics:', error);
+    toast.error('Erreur lors du chargement des analytics');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// Watch period changes
+watch(selectedPeriod, () => {
+  loadAnalytics();
+});
+
+// Initial load
+loadAnalytics();
+
+// Chart data
+const evolutionChartData = computed(() => {
+  if (!analytics.value || !analytics.value.evolution) return null;
+
+  return {
+    labels: analytics.value.evolution.map(e => e.label),
+    datasets: [
+      {
+        label: 'Chiffre d\'Affaires',
+        data: analytics.value.evolution.map(e => e.chiffre_affaire),
+        borderColor: '#FF6B00',
+        backgroundColor: 'rgba(255, 107, 0, 0.1)',
+        fill: true,
+        tension: 0.4,
+      }
+    ]
+  };
+});
+
+const evolutionChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      callbacks: {
+        label: (context) => `CA: ${formatCurrency(context.parsed.y)}`
+      }
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      ticks: {
+        callback: (value) => formatCurrency(value)
+      }
+    }
+  }
+};
+
+// Formatters
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'XOF',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+
+const formatNumber = (value) => {
+  return new Intl.NumberFormat('fr-FR').format(value);
+};
+
+const formatDate = (dateString) => {
+  return new Date(dateString).toLocaleDateString('fr-FR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+};
+</script>

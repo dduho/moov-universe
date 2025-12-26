@@ -50,6 +50,37 @@ services:
         php artisan serve --host=0.0.0.0 --port=8000
       "
 
+  # Laravel Scheduler (Cron)
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: moov_scheduler
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./backend:/var/www
+      - ./backend/vendor:/var/www/vendor
+    depends_on:
+      - db
+      - backend
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: moov_universe
+      DB_USERNAME: moov_user
+      DB_PASSWORD: moov_password
+    networks:
+      - moov_network
+    command: >
+      sh -c "
+        echo '* * * * * cd /var/www && php artisan schedule:run >> /dev/null 2>&1' > /etc/cron.d/laravel-scheduler &&
+        chmod 0644 /etc/cron.d/laravel-scheduler &&
+        crontab /etc/cron.d/laravel-scheduler &&
+        cron -f
+      "
+
   # Vue.js Frontend
   frontend:
     build:

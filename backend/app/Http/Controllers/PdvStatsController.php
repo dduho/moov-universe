@@ -18,16 +18,16 @@ class PdvStatsController extends Controller
         $pdv = PointOfSale::findOrFail($id);
         
         // Paramètres de filtrage
-        $period = $request->input('period', 'day'); // day, week, month
+        $period = $request->input('period', 'month'); // day, week, month (défaut: month)
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
         
         // Définir la fenêtre temporelle selon la période sélectionnée
         $now = Carbon::now();
         [$startDate, $endDate] = match ($period) {
+            'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()], // J-1
             'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
-            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
-            default => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()], // month par défaut
         };
 
         // Récupérer les transactions du PDV filtrées par période
@@ -37,13 +37,7 @@ class PdvStatsController extends Controller
         
         $allTransactions = $transactionsQuery->get();
 
-        if ($allTransactions->isEmpty()) {
-            return response()->json([
-                'hasData' => false,
-                'message' => 'Aucune donnée de transaction disponible pour ce PDV'
-            ]);
-        }
-
+        // Toujours retourner des données pour un PDV existant, même sans transactions
         // Grouper par période selon le filtre
         $groupedTransactions = $this->groupByPeriod($allTransactions, $period);
         
@@ -102,6 +96,27 @@ class PdvStatsController extends Controller
      */
     private function calculateTrends($transactions)
     {
+        if ($transactions->isEmpty()) {
+            return [
+                'latest_period' => null,
+                'latest_data' => [
+                    'date' => null,
+                    'depot_count' => 0,
+                    'retrait_count' => 0,
+                    'depot_amount' => 0,
+                    'retrait_amount' => 0,
+                ],
+                'average' => [
+                    'depot_count' => 0,
+                    'retrait_count' => 0,
+                    'depot_amount' => 0,
+                    'retrait_amount' => 0,
+                ],
+                'depot_vs_average' => 0,
+                'retrait_vs_average' => 0,
+            ];
+        }
+
         $latest = $transactions->first();
         $average = [
             'depot_count' => $transactions->avg('count_depot'),

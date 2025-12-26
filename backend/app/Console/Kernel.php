@@ -12,8 +12,18 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Import des transactions chaque jour à 06:00
-        $schedule->command('transactions:import-sftp')->dailyAt('08:30');
+        // Import des transactions chaque jour à 08:30
+        $schedule->command('transactions:import-sftp')
+                 ->dailyAt('08:30')
+                 ->withoutOverlapping()
+                 ->onOneServer();
+
+        // Calculer les analytics de J-1 après l'import (à 09:00)
+        $schedule->command('analytics:cache-daily')
+                 ->dailyAt('09:00')
+                 ->withoutOverlapping()
+                 ->onOneServer()
+                 ->appendOutputTo(storage_path('logs/analytics-cache.log'));
     }
 
     /**

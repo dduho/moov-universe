@@ -447,7 +447,7 @@ const periods = [
   { value: 'month', label: 'Mois' }
 ];
 
-const selectedPeriod = ref('day');
+const selectedPeriod = ref('month');
 const currentPage = ref(1);
 const perPage = ref(10);
 

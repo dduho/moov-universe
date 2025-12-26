@@ -8,6 +8,7 @@
 #   --frontend-only   Déploie uniquement le frontend
 #   --no-migrate      Ne pas exécuter les migrations
 #   --fresh-migrate   Réinitialise la base de données (ATTENTION: perte de données)
+#   --init-analytics  Pré-calcule les analytics des 30 derniers jours
 #=============================================================================
 
 set -e  # Arrêter le script en cas d'erreur
@@ -216,6 +217,57 @@ deploy_backend() {
     log_success "Backend déployé avec succès"
 }
 
+setup_scheduler() {
+    log_info "Configuration du scheduler Laravel..."
+    
+    cd "$BACKEND_DIR"
+    
+    # Vérifier que le scheduler est listé
+    log_info "Tâches planifiées:"
+    php artisan schedule:list
+    
+    # Déterminer le binaire PHP
+    PHP_BIN=$(which php)
+    
+    # Créer la ligne crontab
+    CRON_LINE="* * * * * cd $BACKEND_DIR && $PHP_BIN artisan schedule:run >> /dev/null 2>&1"
+    
+    # Vérifier si le cron existe déjà
+    if crontab -l 2>/dev/null | grep -q "artisan schedule:run"; then
+        log_info "Cron Laravel déjà configuré"
+    else
+        log_info "Ajout du cron Laravel..."
+        (crontab -l 2>/dev/null; echo "$CRON_LINE") | crontab -
+        log_success "Cron configuré: Laravel Scheduler actif"
+    fi
+    
+    # Pré-calculer les analytics pour les 7 derniers jours (première fois)
+    if [ ! -f "$BACKEND_DIR/storage/.analytics-initialized" ]; then
+        log_info "Initialisation du cache analytics (7 derniers jours)..."
+        for i in {1..7}; do
+            DATE=$(date -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -v-${i}d +%Y-%m-%d)
+            php artisan analytics:cache-daily $DATE 2>/dev/null || true
+        done
+        touch "$BACKEND_DIR/storage/.analytics-initialized"
+        log_success "Cache analytics initialisé"
+    fi
+    
+    # Pré-calculer 30 jours si option --init-analytics
+    if [[ "$INIT_ANALYTICS" == "true" ]]; then
+        log_info "Initialisation complète du cache analytics (30 jours)..."
+        for i in {1..30}; do
+            DATE=$(date -d "$i days ago" +%Y-%m-%d 2>/dev/null || date -v-${i}d +%Y-%m-%d)
+            echo "  📊 Calcul pour $DATE..."
+            php artisan analytics:cache-daily $DATE 2>/dev/null || true
+        done
+        log_success "Cache analytics complet initialisé (30 jours)"
+    fi
+    
+    log_success "Scheduler configuré avec succès"
+    log_info "  ⏰ Import SFTP: 08:30 quotidien"
+    log_info "  ⏰ Cache Analytics: 09:00 quotidien"
+}
+
 deploy_frontend() {
     log_info "Déploiement du frontend Vue.js..."
     
@@ -301,6 +353,15 @@ show_summary() {
     echo -e "🌿 Branche: ${BLUE}$GIT_BRANCH${NC}"
     echo -e "🕐 Date: ${BLUE}$(date '+%Y-%m-%d %H:%M:%S')${NC}"
     echo ""
+    echo -e "${YELLOW}📊 Scheduler Laravel:${NC}"
+    echo -e "  ⏰ Import SFTP: Tous les jours à 08:30"
+    echo -e "  ⏰ Cache Analytics: Tous les jours à 09:00"
+    echo -e "  📝 Logs: ${BLUE}$BACKEND_DIR/storage/logs/analytics-cache.log${NC}"
+    echo ""
+    echo -e "${YELLOW}🔍 Vérifications:${NC}"
+    echo -e "  Cron: ${BLUE}crontab -l | grep schedule:run${NC}"
+    echo -e "  Test: ${BLUE}cd $BACKEND_DIR && php artisan schedule:run${NC}"
+    echo ""
 }
 
 # ============================================
@@ -311,6 +372,7 @@ BACKEND_ONLY=false
 FRONTEND_ONLY=false
 NO_MIGRATE=false
 FRESH_MIGRATE=false
+INIT_ANALYTICS=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -330,6 +392,10 @@ while [[ $# -gt 0 ]]; do
             FRESH_MIGRATE=true
             shift
             ;;
+        --init-analytics)
+            INIT_ANALYTICS=true
+            shift
+            ;;
         --help|-h)
             echo "Usage: $0 [options]"
             echo ""
@@ -338,6 +404,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --frontend-only   Déploie uniquement le frontend"
             echo "  --no-migrate      Ne pas exécuter les migrations"
             echo "  --fresh-migrate   Réinitialise la base de données (ATTENTION!)"
+            echo "  --init-analytics  Pré-calcule les analytics des 30 derniers jours"
             echo "  --help, -h        Affiche cette aide"
             exit 0
             ;;
@@ -362,8 +429,10 @@ if [[ "$FRONTEND_ONLY" == "true" ]]; then
     deploy_frontend
 elif [[ "$BACKEND_ONLY" == "true" ]]; then
     deploy_backend
+    setup_scheduler
 else
     deploy_backend
+    setup_scheduler
     deploy_frontend
 fi
 
