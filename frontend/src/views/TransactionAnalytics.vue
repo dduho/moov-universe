@@ -482,9 +482,6 @@ watch(selectedPeriod, () => {
   loadInsights();
 });
 
-// Initial load
-loadAnalytics();
-
 // Chart data - CA
 const caChartData = computed(() => {
   if (!analytics.value || !analytics.value.evolution) return null;
