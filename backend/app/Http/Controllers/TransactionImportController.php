@@ -133,6 +133,13 @@ class TransactionImportController extends Controller
                 $columnIndexes[$columnMapping[$header]] = $index;
             }
         }
+        
+        // Log des en-têtes pour debug
+        Log::info("Import Excel - En-têtes détectés", [
+            'headers' => $headers,
+            'mapped_columns' => array_keys($columnIndexes),
+            'missing_columns' => array_diff(array_keys($columnMapping), $headers)
+        ]);
 
         // Vérifier que PDV_NUMERO existe
         if (!isset($columnIndexes['pdv_numero'])) {
@@ -153,6 +160,7 @@ class TransactionImportController extends Controller
         $skipped = 0;
         $batchData = [];
         $batchSize = 500; // Insérer par lots de 500
+        $debugFirstRow = true; // Debug mode pour la première ligne
 
         for ($row = 12; $row <= $highestRow; $row++) {
             $pdvNumeroRef = Coordinate::stringFromColumnIndex($columnIndexes['pdv_numero']) . $row;
@@ -182,9 +190,33 @@ class TransactionImportController extends Controller
             foreach ($columnIndexes as $dbColumn => $excelIndex) {
                 if ($dbColumn !== 'pdv_numero') {
                     $cellRef = Coordinate::stringFromColumnIndex($excelIndex) . $row;
-                    $value = $worksheet->getCell($cellRef)->getValue();
-                    $data[$dbColumn] = $this->normalizeValue($value);
+                    $cell = $worksheet->getCell($cellRef);
+                    
+                    // Essayer d'obtenir la valeur calculée si c'est une formule
+                    try {
+                        $value = $cell->getCalculatedValue();
+                    } catch (\Exception $e) {
+                        $value = $cell->getValue();
+                    }
+                    
+                    $normalizedValue = $this->normalizeValue($value);
+                    $data[$dbColumn] = $normalizedValue;
+                    
+                    // Debug pour la première ligne
+                    if ($debugFirstRow && $row == 12 && in_array($dbColumn, ['count_depot', 'sum_depot', 'count_retrait', 'retrait_keycost'])) {
+                        Log::info("DEBUG Excel extraction ligne 12", [
+                            'column' => $dbColumn,
+                            'cell_ref' => $cellRef,
+                            'raw_value' => $value,
+                            'raw_type' => gettype($value),
+                            'normalized' => $normalizedValue
+                        ]);
+                    }
                 }
+            }
+            
+            if ($debugFirstRow && $row == 12) {
+                $debugFirstRow = false; // Ne logger que la première ligne
             }
 
             $data['created_at'] = now();
@@ -247,8 +279,24 @@ class TransactionImportController extends Controller
             return 0;
         }
 
+        // Convertir en string si c'est un objet (PhpSpreadsheet peut retourner des objets RichText)
+        if (is_object($value)) {
+            if (method_exists($value, '__toString')) {
+                $value = (string) $value;
+            } else if (method_exists($value, 'getPlainText')) {
+                $value = $value->getPlainText();
+            } else {
+                return 0;
+            }
+        }
+
         // Supprimer les espaces
         $value = trim($value);
+
+        // Si c'est vide après trim
+        if ($value === '') {
+            return 0;
+        }
 
         // Si c'est déjà un nombre, le retourner
         if (is_numeric($value)) {
@@ -265,21 +313,32 @@ class TransactionImportController extends Controller
     }
 
     /**
-     * Invalider le cache analytics après import et recalculer en arrière-plan
+     * Invalider le cache analytics après import et recalculer immédiatement
      */
     private function invalidateAnalyticsCache($date)
     {
         try {
-            // Vider tous les caches analytics (ils contiennent la date dans la clé)
-            Cache::flush();
+            $carbonDate = Carbon::parse($date);
             
-            // Recalculer les analytics pour cette date en arrière-plan
-            // On utilise call() qui exécute de manière asynchrone si un queue worker est configuré
+            // Invalider les clés de cache qui pourraient contenir cette date
+            // Format: analytics_{period}_{start}_{end}
+            $periods = ['day', 'week', 'month', 'quarter'];
+            $dateStr = $carbonDate->format('Y-m-d');
+            
+            foreach ($periods as $period) {
+                // Chercher et supprimer toutes les clés contenant cette date
+                // Comme on ne peut pas lister les clés facilement, on vide tout le cache analytics
+                Cache::flush();
+                break; // Une fois suffit
+            }
+            
+            // Recalculer IMMÉDIATEMENT les analytics pour cette date (synchrone)
+            // Ceci garantit que les données sont disponibles avant que la réponse ne soit renvoyée
             Artisan::call('analytics:cache-daily', [
                 'date' => $date
             ]);
             
-            Log::info("Cache analytics invalidé et recalcul lancé pour la date: {$date}");
+            Log::info("Cache analytics invalidé et recalculé pour la date: {$date}");
         } catch (\Exception $e) {
             Log::error("Erreur lors de l'invalidation du cache analytics: " . $e->getMessage());
         }
