@@ -6,9 +6,40 @@
       <!-- Header -->
       <div class="mb-6 sm:mb-8">
         <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2">Carte Interactive</h1>
-        <p class="text-sm sm:text-base text-gray-600">Visualisez tous les points de vente sur la carte du Togo</p>
+        <p class="text-sm sm:text-base text-gray-600">Visualisez tous les points de vente sur la carte</p>
       </div>
 
+      <!-- Tabs -->
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-2 mb-6">
+        <div class="flex gap-2">
+          <button
+            @click="activeTab = 'basic'"
+            :class="[
+              'flex-1 px-4 py-3 rounded-xl font-semibold transition-all',
+              activeTab === 'basic'
+                ? 'bg-gradient-to-r from-moov-orange to-orange-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            ]"
+          >
+            📍 Carte Basique
+          </button>
+          <button
+            v-if="authStore.isAdmin"
+            @click="activeTab = 'advanced'"
+            :class="[
+              'flex-1 px-4 py-3 rounded-xl font-semibold transition-all',
+              activeTab === 'advanced'
+                ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            ]"
+          >
+            🔥 Géolocalisation Avancée
+          </button>
+        </div>
+      </div>
+
+      <!-- Basic Map Tab -->
+      <div v-show="activeTab === 'basic'">
       <!-- Proximity Alerts Loading -->
       <div v-if="loadingProximityAlerts" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-4 sm:mb-6 border-2 border-orange-300">
         <div class="flex items-center gap-3">
@@ -222,6 +253,12 @@
           </div>
         </div>
       </div>
+      </div>
+
+      <!-- Advanced Geolocation Tab -->
+      <div v-show="activeTab === 'advanced'">
+        <GeolocationWidget :isActive="activeTab === 'advanced'" />
+      </div>
     </div>
   </div>
 </template>
@@ -237,6 +274,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import Navbar from '../components/Navbar.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
+import GeolocationWidget from '../components/GeolocationWidget.vue';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import PointOfSaleService from '../services/PointOfSaleService';
@@ -245,6 +283,9 @@ import SystemSettingService from '../services/systemSettingService';
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
+
+// Tab state
+const activeTab = ref('basic');
 
 // Map refs
 const mapContainer = ref(null);

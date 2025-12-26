@@ -19,6 +19,7 @@
     "jspdf": "^2.5.2",
     "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
     "leaflet.markercluster": "^1.5.3",
     "pinia": "^3.0.4",
     "postcss": "^8.5.6",

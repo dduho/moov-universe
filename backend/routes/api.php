@@ -26,6 +26,7 @@ use App\Http\Controllers\GlobalSearchController;
 use App\Http\Controllers\ForecastingController;
 use App\Http\Controllers\RecommendationsController;
 use App\Http\Controllers\FraudDetectionController;
+use App\Http\Controllers\GeolocationController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -235,5 +236,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Fraud Detection routes (Admin only)
     Route::prefix('fraud-detection')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/', [FraudDetectionController::class, 'detect']);
+    });
+
+    // Geolocation routes (Admin only)
+    Route::prefix('geolocation')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/pdv', [GeolocationController::class, 'getPdvGeoData']);
+        Route::get('/potential-zones', [GeolocationController::class, 'getPotentialZones']);
     });
 });
