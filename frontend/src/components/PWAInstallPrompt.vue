@@ -10,7 +10,7 @@
           <div class="flex items-center gap-4">
             <!-- Icône de l'app -->
             <div class="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-md">
-              <img src="/icon.svg" alt="Moov Universe" class="w-8 h-8" />
+              <img src="/logo.svg" alt="Moov Universe" class="w-8 h-8" />
             </div>
             
             <div class="flex-1 min-w-0">

@@ -6,7 +6,7 @@
           <!-- Logo -->
           <div class="shrink-0 flex items-center gap-2 sm:gap-3">
             <div class="inline-flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10">
-              <img src="/icon.svg" alt="Moov Logo" class="w-8 h-8 sm:w-10 sm:h-10" />
+              <img src="/logo.svg" alt="Moov Logo" class="w-8 h-8 sm:w-10 sm:h-10" />
             </div>
             <div class="hidden sm:block whitespace-nowrap">
               <h1 class="text-lg sm:text-xl font-bold font-oughter bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange bg-clip-text text-transparent leading-tight">
