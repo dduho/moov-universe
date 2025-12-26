@@ -32,6 +32,8 @@
       <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-2xl p-8 sm:p-12 text-center">
         <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
         <p class="text-sm sm:text-base text-gray-600 font-semibold">Chargement des analytics...</p>
+        <p class="text-xs text-gray-500 mt-2">Analyse de ~27 000 PDV en cours...</p>
+        <p class="text-xs text-gray-400 mt-1">Première charge : ~10s • Ensuite : &lt;1s (cache)</p>
       </div>
 
       <!-- Content -->

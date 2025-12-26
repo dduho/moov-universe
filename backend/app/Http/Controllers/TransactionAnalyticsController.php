@@ -26,8 +26,9 @@ class TransactionAnalyticsController extends Controller
         // Clé de cache unique par période et dates
         $cacheKey = "analytics_{$period}_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}";
         
-        // Cache de 15 minutes pour éviter les recalculs constants
-        $data = Cache::remember($cacheKey, 900, function () use ($period, $startDate, $endDate) {
+        // Cache de 1 heure (3600s) - les données changent peu fréquemment
+        // Le cache sera invalidé automatiquement lors de l'import de nouvelles transactions
+        $data = Cache::remember($cacheKey, 3600, function () use ($period, $startDate, $endDate) {
             return [
                 'period' => $period,
                 'date_range' => [
