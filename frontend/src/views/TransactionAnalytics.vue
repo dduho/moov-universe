@@ -274,13 +274,123 @@
             </div>
           </div>
         </div>
+
+        <!-- AI Insights Section -->
+        <div v-if="insights && insights.length > 0" class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 shadow-2xl rounded-2xl p-6">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-xl font-bold text-gray-900">🤖 Insights & Recommandations</h3>
+              <p class="text-sm text-gray-600">Analyse intelligente de vos données</p>
+            </div>
+            <button 
+              @click="refreshInsights" 
+              :disabled="loadingInsights"
+              class="ml-auto px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-all text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+            >
+              <svg v-if="!loadingInsights" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              <span class="animate-spin inline-block" v-else>⟳</span>
+              {{ loadingInsights ? 'Analyse...' : 'Actualiser' }}
+            </button>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div 
+              v-for="(insight, index) in insights" 
+              :key="index"
+              :class="[
+                'p-5 rounded-xl border-l-4 transition-all hover:shadow-lg',
+                insight.severity === 'high' && insight.type === 'alert' ? 'bg-red-50 border-red-500' : '',
+                insight.severity === 'high' && insight.type !== 'alert' ? 'bg-orange-50 border-orange-500' : '',
+                insight.severity === 'medium' ? 'bg-yellow-50 border-yellow-500' : '',
+                insight.type === 'success' ? 'bg-green-50 border-green-500' : '',
+                insight.type === 'recommendation' && insight.severity !== 'medium' ? 'bg-blue-50 border-blue-500' : '',
+              ]"
+            >
+              <div class="flex items-start gap-3">
+                <div class="flex-1">
+                  <h4 class="font-bold text-gray-900 text-lg mb-2">{{ insight.title }}</h4>
+                  <p class="text-gray-700 mb-3">{{ insight.message }}</p>
+                  
+                  <!-- Details -->
+                  <div v-if="insight.details && insight.details.length > 0" class="mb-3">
+                    <button 
+                      @click="insight.showDetails = !insight.showDetails"
+                      class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                    >
+                      <span>{{ insight.showDetails ? '▼' : '▶' }} Voir les détails ({{ insight.details.length }})</span>
+                    </button>
+                    <div v-if="insight.showDetails" class="mt-2 space-y-2">
+                      <div 
+                        v-for="(detail, idx) in insight.details.slice(0, 5)" 
+                        :key="idx"
+                        class="p-3 bg-white/70 rounded-lg text-sm"
+                      >
+                        <p><strong>PDV:</strong> {{ detail.pdv }} - {{ detail.nom }}</p>
+                        <p v-if="detail.dealer" class="text-gray-600"><strong>Dealer:</strong> {{ detail.dealer }}</p>
+                        <p v-if="detail.region" class="text-gray-600"><strong>Région:</strong> {{ detail.region }}</p>
+                        <p v-if="detail.drop_percent" class="text-red-600 font-semibold">
+                          <strong>Baisse:</strong> {{ detail.drop_percent }}%
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Recommendation -->
+                  <div class="flex items-start gap-2 p-3 bg-white/70 rounded-lg border border-indigo-200">
+                    <svg class="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                    </svg>
+                    <div>
+                      <p class="font-semibold text-indigo-900 text-sm">Recommandation :</p>
+                      <p class="text-gray-700 text-sm mt-1">{{ insight.recommendation }}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Badge -->
+                <div class="flex-shrink-0">
+                  <span 
+                    :class="[
+                      'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase',
+                      insight.category === 'inactivity' ? 'bg-red-200 text-red-800' : '',
+                      insight.category === 'trend' ? 'bg-purple-200 text-purple-800' : '',
+                      insight.category === 'anomaly' ? 'bg-orange-200 text-orange-800' : '',
+                      insight.category === 'optimization' ? 'bg-blue-200 text-blue-800' : '',
+                      insight.category === 'regional' ? 'bg-yellow-200 text-yellow-800' : '',
+                      insight.category === 'best_practice' ? 'bg-green-200 text-green-800' : '',
+                    ]"
+                  >
+                    {{ insight.category }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 p-4 bg-white/50 rounded-lg border border-indigo-100">
+            <p class="text-xs text-gray-600 text-center">
+              <svg class="w-4 h-4 inline text-indigo-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+              Ces insights sont générés automatiquement par analyse des données transactionnelles.
+              Dernière mise à jour : {{ insightsGeneratedAt }}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { Line } from 'vue-chartjs';
 import {
   Chart as ChartJS,
@@ -312,6 +422,9 @@ ChartJS.register(
 const { toast } = useToast();
 const loading = ref(false);
 const analytics = ref(null);
+const insights = ref([]);
+const loadingInsights = ref(false);
+const insightsGeneratedAt = ref('');
 
 const periods = [
   { value: 'day', label: 'Jour' },
@@ -338,9 +451,35 @@ const loadAnalytics = async () => {
   }
 };
 
+// Load AI insights
+const loadInsights = async () => {
+  try {
+    loadingInsights.value = true;
+    const response = await TransactionAnalyticsService.getInsights({
+      period: selectedPeriod.value
+    });
+    insights.value = response.data.insights.map(insight => ({
+      ...insight,
+      showDetails: false
+    }));
+    insightsGeneratedAt.value = new Date(response.data.generated_at).toLocaleString('fr-FR');
+  } catch (error) {
+    console.error('Error loading insights:', error);
+    // Don't show error toast, insights are optional
+  } finally {
+    loadingInsights.value = false;
+  }
+};
+
+// Refresh insights manually
+const refreshInsights = () => {
+  loadInsights();
+};
+
 // Watch period changes
 watch(selectedPeriod, () => {
   loadAnalytics();
+  loadInsights();
 });
 
 // Initial load
@@ -432,16 +571,23 @@ const pdvChartOptions = {
 
 // Formatters
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: 'XOF',
+  if (!value && value !== 0) return '0 FCFA';
+  
+  const formatted = new Intl.NumberFormat('fr-FR', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
+    useGrouping: true,
   }).format(value);
+  
+  return `${formatted} FCFA`;
 };
 
 const formatNumber = (value) => {
-  return new Intl.NumberFormat('fr-FR').format(value);
+  if (!value && value !== 0) return '0';
+  
+  return new Intl.NumberFormat('fr-FR', {
+    useGrouping: true,
+  }).format(value);
 };
 
 const formatDate = (dateString) => {
@@ -451,4 +597,10 @@ const formatDate = (dateString) => {
     year: 'numeric'
   });
 };
+
+// Initial load
+onMounted(() => {
+  loadAnalytics();
+  loadInsights();
+});
 </script>

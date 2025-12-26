@@ -20,6 +20,7 @@ use App\Http\Controllers\MailTestController;
 use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\PdvStatsController;
 use App\Http\Controllers\TransactionAnalyticsController;
+use App\Http\Controllers\AnalyticsInsightsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -191,6 +192,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Transaction Analytics routes (Admin only)
     Route::prefix('analytics')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/transactions', [TransactionAnalyticsController::class, 'getAnalytics']);
+        Route::get('/insights', [AnalyticsInsightsController::class, 'getInsights']);
     });
 
     // PDV Stats routes
