@@ -245,7 +245,7 @@
               <p class="text-xs text-gray-500">{{ formatNumber(analytics.distribution.par_type.retraits.count) }} opérations</p>
             </div>
             <div class="p-4 bg-blue-50 rounded-xl border-2 border-blue-200">
-              <p class="text-sm font-semibold text-gray-600 mb-1">Transferts</p>
+              <p class="text-sm font-semibold text-gray-600 mb-1">Transferts GIVE</p>
               <p class="text-2xl font-bold text-blue-600">{{ analytics.distribution.par_type.transfers.percentage }}%</p>
               <p class="text-xs text-gray-500">{{ formatNumber(analytics.distribution.par_type.transfers.count) }} opérations</p>
             </div>
