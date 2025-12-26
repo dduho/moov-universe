@@ -13,6 +13,11 @@ export default {
           dark: '#E55A00',
         },
       },
+      fontFamily: {
+        'oughter': ['Oughter', 'sans-serif'],
+        'klaxon-crunchy': ['Klaxon-Crunchy', 'sans-serif'],
+        'klaxon-smooth': ['Klaxon-Smooth', 'sans-serif'],
+      },
     },
   },
   plugins: [],

@@ -1,10 +1,44 @@
 @import "tailwindcss";
 @import "./tailwind.css";
 
+/* Custom Fonts */
+@font-face {
+  font-family: 'Oughter';
+  src: url('/fonts/Oughter.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Klaxon-Crunchy';
+  src: url('/fonts/Klaxon-Crunchy.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Klaxon-Smooth';
+  src: url('/fonts/Klaxon-Smooth.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   font-family: 'Lexend', system-ui, -apple-system, sans-serif;
   /* Désactiver le zoom sur iOS lors du focus sur les inputs */
   touch-action: manipulation;
+}
+
+.font-oughter {
+  font-family: 'Oughter', system-ui, -apple-system, sans-serif;
+}
+
+.font-klaxon-crunchy {
+  font-family: 'Klaxon-Crunchy', system-ui, -apple-system, sans-serif;
+}
+
+.font-klaxon-smooth {
+  font-family: 'Klaxon-Smooth', system-ui, -apple-system, sans-serif;
 }
 
 body {

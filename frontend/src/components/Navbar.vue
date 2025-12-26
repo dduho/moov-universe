@@ -9,10 +9,10 @@
               <img src="/icon.svg" alt="Moov Logo" class="w-8 h-8 sm:w-10 sm:h-10" />
             </div>
             <div class="hidden sm:block whitespace-nowrap">
-              <h1 class="text-lg sm:text-xl font-bold bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange bg-clip-text text-transparent leading-tight">
+              <h1 class="text-lg sm:text-xl font-bold font-oughter bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange bg-clip-text text-transparent leading-tight">
                 Moov Money
               </h1>
-              <p class="text-xs font-semibold text-gray-600 leading-tight">Universe</p>
+              <p class="text-xs font-semibold text-gray-600 font-oughter leading-tight">Universe</p>
             </div>
           </div>
 

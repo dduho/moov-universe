@@ -31,11 +31,11 @@
           </div>
           
           <h2 class="text-4xl font-bold mb-3">
-            <span class="bg-gradient-moov bg-clip-text text-transparent">
+            <span class="bg-clip-text font-oughter bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange bg-clip-text text-transparent leading-tight">
               Moov Money
             </span>
           </h2>
-          <h3 class="text-2xl font-semibold text-gray-800 mb-2">
+          <h3 class="text-2xl font-oughter text-gray-800 mb-2">
             Universe
           </h3>
           <div class="flex items-center justify-center gap-2 text-gray-600">
