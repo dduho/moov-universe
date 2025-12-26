@@ -443,6 +443,11 @@ const adminNavigation = [
     icon: ChartBarIcon,
   },
   {
+    name: 'Comparateur',
+    path: '/comparator',
+    icon: ChartBarIcon,
+  },
+  {
     name: 'Paramètres',
     path: '/settings',
     icon: SettingsIcon,

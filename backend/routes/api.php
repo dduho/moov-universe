@@ -21,6 +21,8 @@ use App\Http\Controllers\TransactionImportController;
 use App\Http\Controllers\PdvStatsController;
 use App\Http\Controllers\TransactionAnalyticsController;
 use App\Http\Controllers\AnalyticsInsightsController;
+use App\Http\Controllers\ComparatorController;
+use App\Http\Controllers\GlobalSearchController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -195,8 +197,25 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/insights', [AnalyticsInsightsController::class, 'getInsights']);
     });
 
+    // Comparator routes (Admin only)
+    Route::prefix('comparator')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::post('/compare', [ComparatorController::class, 'compare']);
+    });
+
+    // Search endpoints for comparator (Admin only)
+    Route::middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/pdv', [ComparatorController::class, 'searchPdvs']);
+        Route::get('/dealers', [ComparatorController::class, 'searchDealers']);
+    });
+
     // PDV Stats routes
     Route::prefix('pdv')->group(function () {
         Route::get('/{id}/stats', [PdvStatsController::class, 'getStats']);
+    });
+
+    // Global Search routes (Available for all authenticated users)
+    Route::prefix('search')->group(function () {
+        Route::get('/', [GlobalSearchController::class, 'search']);
+        Route::get('/suggestions', [GlobalSearchController::class, 'suggestions']);
     });
 });

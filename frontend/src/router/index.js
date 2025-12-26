@@ -136,6 +136,12 @@ const routes = [
     component: () => import('../views/TransactionAnalytics.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/comparator',
+    name: 'Comparator',
+    component: () => import('../views/Comparator.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ];
 
 const router = createRouter({

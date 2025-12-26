@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
 
 // Désactiver PWA si VITE_DISABLE_PWA est défini
 const disablePWA = process.env.VITE_DISABLE_PWA === 'true'
@@ -103,4 +104,9 @@ export default defineConfig({
       }
     })
   ].filter(Boolean),
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
 })
