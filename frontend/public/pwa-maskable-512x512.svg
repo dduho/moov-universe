@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8C42;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FF6B00;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFF8F0;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background with gradient (safe zone for masking) -->
+  <rect width="512" height="512" fill="url(#bgGradient)"/>
+
+  <!-- Main map pin / location marker - centered and scaled -->
+  <g transform="translate(256, 200)">
+    <!-- Pin body -->
+    <path d="M 0,-86 C -48,-86 -86,-48 -86,0 C -86,32 -43,75 0,128 C 43,75 86,32 86,0 C 86,-48 48,-86 0,-86 Z"
+          fill="url(#iconGradient)"
+          stroke="rgba(255,255,255,0.5)"
+          stroke-width="5"/>
+
+    <!-- Inner circle -->
+    <circle cx="0" cy="0" r="24" fill="#FF6B00"/>
+
+    <!-- Lightning bolt -->
+    <path d="M 5,-16 L -6,0 L 0,0 L -5,16 L 6,0 L 0,0 Z"
+          fill="#FFFFFF"/>
+  </g>
+
+  <!-- Network connection dots - subtle on gradient background -->
+  <g opacity="0.4">
+    <!-- Top right dot -->
+    <circle cx="358" cy="154" r="11" fill="white"/>
+    <line x1="307" y1="180" x2="358" y2="154" stroke="white" stroke-width="4" stroke-dasharray="5,5"/>
+
+    <!-- Right dot -->
+    <circle cx="410" cy="256" r="11" fill="white"/>
+    <line x1="320" y1="246" x2="410" y2="256" stroke="white" stroke-width="4" stroke-dasharray="5,5"/>
+
+    <!-- Bottom right dot -->
+    <circle cx="345" cy="358" r="11" fill="white"/>
+    <line x1="290" y1="315" x2="345" y2="358" stroke="white" stroke-width="4" stroke-dasharray="5,5"/>
+
+    <!-- Left dot -->
+    <circle cx="102" cy="256" r="11" fill="white"/>
+    <line x1="192" y1="246" x2="102" y2="256" stroke="white" stroke-width="4" stroke-dasharray="5,5"/>
+
+    <!-- Top left dot -->
+    <circle cx="154" cy="154" r="11" fill="white"/>
+    <line x1="205" y1="180" x2="154" y2="154" stroke="white" stroke-width="4" stroke-dasharray="5,5"/>
+  </g>
+</svg>
