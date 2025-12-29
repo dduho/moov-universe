@@ -198,6 +198,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Transaction Analytics routes (Admin only)
     Route::prefix('analytics')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/transactions', [TransactionAnalyticsController::class, 'getAnalytics']);
+        Route::get('/monthly-revenue', [TransactionAnalyticsController::class, 'getMonthlyRevenue']);
         Route::get('/insights', [AnalyticsInsightsController::class, 'getInsights']);
     });
 

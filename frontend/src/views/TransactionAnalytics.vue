@@ -192,6 +192,117 @@
           </div>
         </div>
 
+        <!-- CA Mensuel - Année Courante -->
+        <div v-if="monthlyRevenue" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Chiffre d'Affaires Mensuel {{ monthlyRevenue.year }}</h3>
+            <div class="text-sm text-gray-600">
+              Total année: <span class="font-bold text-moov-orange">{{ formatCurrency(monthlyRevenue.total_ca) }}</span>
+            </div>
+          </div>
+          
+          <!-- Grille 6 mois par ligne -->
+          <div class="space-y-4">
+            <!-- Première ligne: Jan-Juin -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <div
+                v-for="month in monthlyRevenue.months.slice(0, 6)"
+                :key="month.month"
+                class="bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl p-4 hover:shadow-lg transition-all"
+                :class="month.has_data ? 'border-moov-orange/20 hover:border-moov-orange/50' : 'border-gray-200 opacity-60'"
+              >
+                <div class="text-center">
+                  <p class="text-xs font-semibold text-gray-500 uppercase mb-1">{{ month.month_name }}</p>
+                  <p class="text-xl font-bold text-gray-900 mb-3">{{ formatCurrencyShort(month.ca) }}</p>
+                  
+                  <!-- Performance vs mois précédent -->
+                  <div class="flex items-center justify-center gap-1 mb-2">
+                    <span class="text-xs text-gray-500">vs mois préc:</span>
+                    <span 
+                      class="text-xs font-bold flex items-center gap-0.5"
+                      :class="month.vs_last_month >= 0 ? 'text-green-600' : 'text-red-600'"
+                    >
+                      <svg v-if="month.vs_last_month >= 0" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      {{ Math.abs(month.vs_last_month) }}%
+                    </span>
+                  </div>
+                  
+                  <!-- Performance vs même mois année N-1 -->
+                  <div class="flex items-center justify-center gap-1">
+                    <span class="text-xs text-gray-500">vs N-1:</span>
+                    <span 
+                      class="text-xs font-bold flex items-center gap-0.5"
+                      :class="month.vs_last_year >= 0 ? 'text-green-600' : 'text-red-600'"
+                    >
+                      <svg v-if="month.vs_last_year >= 0" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      {{ Math.abs(month.vs_last_year) }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Deuxième ligne: Juil-Déc -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              <div
+                v-for="month in monthlyRevenue.months.slice(6, 12)"
+                :key="month.month"
+                class="bg-gradient-to-br from-gray-50 to-white border-2 rounded-xl p-4 hover:shadow-lg transition-all"
+                :class="month.has_data ? 'border-moov-orange/20 hover:border-moov-orange/50' : 'border-gray-200 opacity-60'"
+              >
+                <div class="text-center">
+                  <p class="text-xs font-semibold text-gray-500 uppercase mb-1">{{ month.month_name }}</p>
+                  <p class="text-xl font-bold text-gray-900 mb-3">{{ formatCurrencyShort(month.ca) }}</p>
+                  
+                  <!-- Performance vs mois précédent -->
+                  <div class="flex items-center justify-center gap-1 mb-2">
+                    <span class="text-xs text-gray-500">vs mois préc:</span>
+                    <span 
+                      class="text-xs font-bold flex items-center gap-0.5"
+                      :class="month.vs_last_month >= 0 ? 'text-green-600' : 'text-red-600'"
+                    >
+                      <svg v-if="month.vs_last_month >= 0" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      {{ Math.abs(month.vs_last_month) }}%
+                    </span>
+                  </div>
+                  
+                  <!-- Performance vs même mois année N-1 -->
+                  <div class="flex items-center justify-center gap-1">
+                    <span class="text-xs text-gray-500">vs N-1:</span>
+                    <span 
+                      class="text-xs font-bold flex items-center gap-0.5"
+                      :class="month.vs_last_year >= 0 ? 'text-green-600' : 'text-red-600'"
+                    >
+                      <svg v-if="month.vs_last_year >= 0" class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5.293 7.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L6.707 7.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      <svg v-else class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M14.707 12.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 14.586V3a1 1 0 012 0v11.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                      {{ Math.abs(month.vs_last_year) }}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Top PDV & Top Dealers -->
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
           <!-- Top PDV -->
@@ -431,6 +542,7 @@ import ForecastWidget from '../components/ForecastWidget.vue';
 import RecommendationsWidget from '../components/RecommendationsWidget.vue';
 import FraudDetectionWidget from '../components/FraudDetectionWidget.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
+import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';
 
 // Register ChartJS components
@@ -446,11 +558,14 @@ ChartJS.register(
 );
 
 const { toast } = useToast();
+
+// State
 const loading = ref(false);
 const analytics = ref(null);
 const insights = ref([]);
 const loadingInsights = ref(false);
 const insightsGeneratedAt = ref('');
+const monthlyRevenue = ref(null);
 
 const periods = [
   { value: 'day', label: 'Jour' },
@@ -474,6 +589,17 @@ const loadAnalytics = async () => {
     toast.error('Erreur lors du chargement des analytics');
   } finally {
     loading.value = false;
+  }
+};
+
+// Load monthly revenue
+const loadMonthlyRevenue = async () => {
+  try {
+    const response = await TransactionService.getMonthlyRevenue(new Date().getFullYear());
+    monthlyRevenue.value = response.data;
+  } catch (error) {
+    console.error('Error loading monthly revenue:', error);
+    // N'affiche pas de toast d'erreur pour ne pas polluer l'interface
   }
 };
 
@@ -621,9 +747,25 @@ const formatDate = (dateString) => {
   });
 };
 
+const formatCurrencyShort = (value) => {
+  if (!value && value !== 0) return '0';
+  
+  // Format court pour les grandes valeurs
+  if (value >= 1000000000) { // Milliards
+    return `${(value / 1000000000).toFixed(1)}B`;
+  } else if (value >= 1000000) { // Millions
+    return `${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) { // Milliers
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  
+  return formatNumber(value);
+};
+
 // Initial load
 onMounted(() => {
   loadAnalytics();
   loadInsights();
+  loadMonthlyRevenue();
 });
 </script>

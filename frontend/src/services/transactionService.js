@@ -26,4 +26,13 @@ export default {
   async getStats(pdvId, params = {}) {
     return api.get(`/pdv/${pdvId}/stats`, { params });
   },
+
+  /**
+   * Get monthly revenue data
+   */
+  async getMonthlyRevenue(year = null) {
+    return api.get('/analytics/monthly-revenue', {
+      params: { year }
+    });
+  },
 };

@@ -375,4 +375,78 @@ class TransactionAnalyticsController extends Controller
             return $key;
         }
     }
+
+    /**
+     * Récupérer le CA mensuel de l'année courante avec comparaisons
+     */
+    public function getMonthlyRevenue(Request $request)
+    {
+        $year = $request->input('year', Carbon::now()->year);
+        
+        // Clé de cache
+        $cacheKey = "monthly_revenue_{$year}";
+        
+        // Cache de 1 heure
+        $data = Cache::remember($cacheKey, 3600, function () use ($year) {
+            $months = [];
+            
+            for ($month = 1; $month <= 12; $month++) {
+                $currentMonthStart = Carbon::create($year, $month, 1)->startOfMonth();
+                $currentMonthEnd = Carbon::create($year, $month, 1)->endOfMonth();
+                
+                // CA du mois courant
+                $currentCA = DB::table('pdv_transactions')
+                    ->whereBetween('transaction_date', [$currentMonthStart, $currentMonthEnd])
+                    ->sum('retrait_keycost');
+                
+                // CA du mois précédent
+                $previousMonthStart = $currentMonthStart->copy()->subMonth()->startOfMonth();
+                $previousMonthEnd = $currentMonthStart->copy()->subMonth()->endOfMonth();
+                $previousCA = DB::table('pdv_transactions')
+                    ->whereBetween('transaction_date', [$previousMonthStart, $previousMonthEnd])
+                    ->sum('retrait_keycost');
+                
+                // CA du même mois l'année précédente
+                $lastYearMonthStart = Carbon::create($year - 1, $month, 1)->startOfMonth();
+                $lastYearMonthEnd = Carbon::create($year - 1, $month, 1)->endOfMonth();
+                $lastYearCA = DB::table('pdv_transactions')
+                    ->whereBetween('transaction_date', [$lastYearMonthStart, $lastYearMonthEnd])
+                    ->sum('retrait_keycost');
+                
+                // Convertir null en 0
+                $currentCA = $currentCA ?? 0;
+                $previousCA = $previousCA ?? 0;
+                $lastYearCA = $lastYearCA ?? 0;
+                
+                // Calculer les variations
+                $vsLastMonth = $previousCA > 0 
+                    ? round((($currentCA - $previousCA) / $previousCA) * 100, 1)
+                    : ($currentCA > 0 ? 100 : 0);
+                
+                $vsLastYear = $lastYearCA > 0 
+                    ? round((($currentCA - $lastYearCA) / $lastYearCA) * 100, 1)
+                    : ($currentCA > 0 ? 100 : 0);
+                
+                $months[] = [
+                    'month' => $month,
+                    'month_name' => Carbon::create($year, $month, 1)->format('M'),
+                    'month_full_name' => Carbon::create($year, $month, 1)->format('F'),
+                    'ca' => (float) $currentCA,
+                    'previous_month_ca' => (float) $previousCA,
+                    'last_year_ca' => (float) $lastYearCA,
+                    'vs_last_month' => $vsLastMonth,
+                    'vs_last_year' => $vsLastYear,
+                    'has_data' => $currentCA > 0,
+                ];
+            }
+            
+            return [
+                'year' => $year,
+                'months' => $months,
+                'total_ca' => array_sum(array_column($months, 'ca')),
+            ];
+        });
+        
+        return response()->json($data);
+    }
 }
