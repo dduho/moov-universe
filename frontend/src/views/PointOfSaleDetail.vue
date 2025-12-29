@@ -183,7 +183,7 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Dealer</p>
-                  <p class="text-lg font-bold text-gray-900">{{ pos.dealer_name || pos.organization?.name || 'N/A' }}</p>
+                  <p class="text-lg font-bold text-gray-900">{{ pos.organization?.name || 'N/A' }}</p>
                 </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Numéro Flooz</p>
@@ -407,7 +407,7 @@
                   </svg>
                   <div class="flex-1">
                     <p class="text-xs font-semibold text-gray-500">Dealer</p>
-                    <p class="text-sm font-bold text-gray-900">{{ pos.dealer_name || pos.organization?.name || 'N/A' }}</p>
+                    <p class="text-sm font-bold text-gray-900">{{ pos.organization?.name || 'N/A' }}</p>
                   </div>
                 </div>
                 <div class="flex items-center gap-3 pb-4 border-b border-gray-200">

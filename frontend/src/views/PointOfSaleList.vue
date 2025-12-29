@@ -278,7 +278,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Dealer</p>
-                <p class="text-sm font-bold text-gray-900 truncate">{{ pos.dealer_name || pos.organization?.name || 'N/A' }}</p>
+                <p class="text-sm font-bold text-gray-900 truncate">{{ pos.organization?.name || 'N/A' }}</p>
               </div>
             </div>
 
@@ -388,7 +388,7 @@
                 </div>
               </td>
               <td class="px-6 py-4">
-                <div class="text-sm font-bold text-gray-900">{{ pos.dealer_name || pos.organization?.name || 'N/A' }}</div>
+                <div class="text-sm font-bold text-gray-900">{{ pos.organization?.name || 'N/A' }}</div>
               </td>
               <td class="px-6 py-4">
                 <div class="text-sm font-semibold text-gray-900">{{ pos.firstname }} {{ pos.lastname }}</div>

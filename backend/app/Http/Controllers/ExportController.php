@@ -73,7 +73,7 @@ class ExportController extends Controller
                 "%d,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                 $pdv->id,
                 $pdv->numero,
-                $pdv->dealer_name,
+                $pdv->organization->name ?? 'N/A',
                 $pdv->numero_flooz,
                 $pdv->nom_point,
                 $pdv->region,

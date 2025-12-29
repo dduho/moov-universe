@@ -653,7 +653,7 @@ const dealerStats = computed(() => {
   
   filteredPointsOfSale.value.forEach(pdv => {
     const orgId = pdv.organization_id;
-    const orgName = pdv.organization?.name || pdv.dealer_name || 'Sans dealer';
+    const orgName = pdv.organization?.name || 'Sans dealer';
     
     if (!dealerMap.has(orgId)) {
       dealerMap.set(orgId, {

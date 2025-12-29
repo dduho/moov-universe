@@ -214,7 +214,7 @@
                 <div class="flex-1 min-w-0">
                   <p class="font-semibold text-gray-900 truncate">{{ pdv.nom_point }}</p>
                   <p class="text-xs text-gray-500">{{ pdv.pdv_numero }}</p>
-                  <p class="text-xs text-gray-500">Dealer: {{ pdv.dealer_name }}</p>
+                  <p class="text-xs text-gray-500">Dealer: {{ pdv.dealer_name || 'N/A' }}</p>
                 </div>
                 <div class="text-right">
                   <p class="font-bold text-moov-orange">{{ formatCurrency(pdv.chiffre_affaire) }}</p>
@@ -242,7 +242,7 @@
                   {{ index + 1 }}
                 </div>
                 <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-gray-900 truncate">{{ dealer.dealer_name }}</p>
+                  <p class="font-semibold text-gray-900 truncate">{{ dealer.dealer_name || 'N/A' }}</p>
                   <p class="text-xs text-gray-500">{{ dealer.pdv_count }} PDV</p>
                   <p class="text-xs text-gray-500">CA/PDV: {{ formatCurrency(dealer.ca_par_pdv) }}</p>
                 </div>

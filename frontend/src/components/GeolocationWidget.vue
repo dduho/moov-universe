@@ -427,7 +427,7 @@ export default {
               <p style="font-size: 12px; color: #6B7280; margin-bottom: 8px;">${pdv.pdv_numero}</p>
               <div style="font-size: 13px; line-height: 1.6; border-top: 1px solid #E5E7EB; padding-top: 8px; margin-bottom: 12px;">
                 <p><strong>Région:</strong> ${pdv.region}</p>
-                <p><strong>Dealer:</strong> ${pdv.dealer_name}</p>
+                <p><strong>Dealer:</strong> ${pdv.dealer_name || 'N/A'}</p>
                 <p><strong>CA:</strong> ${this.formatAmount(pdv.total_ca)} FCFA</p>
                 <p><strong>Transactions:</strong> ${pdv.total_transactions}</p>
                 <p><strong>Jours actifs:</strong> ${pdv.active_days}</p>

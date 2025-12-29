@@ -29,7 +29,7 @@ class PointOfSaleController extends Controller
             'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
             'profil', 'region', 'prefecture', 'commune', 'ville', 'quartier',
             'status', 'created_by', 'validated_by', 'created_at', 'updated_at',
-            'latitude', 'longitude', 'dealer_name', 'canton',
+            'latitude', 'longitude', 'canton',
             // Informations gérant
             'firstname', 'lastname', 'gender', 'sexe_gerant', 'date_of_birth',
             // Documents
@@ -212,7 +212,7 @@ class PointOfSaleController extends Controller
         $query = PointOfSale::select([
             'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
             'profil', 'region', 'prefecture', 'ville', 'quartier',
-            'status', 'latitude', 'longitude', 'dealer_name'
+            'status', 'latitude', 'longitude'
         ])->with(['organization:id,name']);
 
         // Filter based on user role
@@ -272,7 +272,6 @@ class PointOfSaleController extends Controller
 
         $validated = $request->validate([
             'organization_id' => 'required|exists:organizations,id',
-            'dealer_name' => 'required|string',
             'numero_flooz' => 'required|string|unique:point_of_sales,numero_flooz',
             'shortcode' => 'required|string|unique:point_of_sales,shortcode',
             'nom_point' => 'required|string',
@@ -310,7 +309,6 @@ class PointOfSaleController extends Controller
             'shortcode.unique' => 'Ce shortcode est déjà utilisé par un autre point de vente.',
             'organization_id.required' => 'L\'organisation est obligatoire.',
             'organization_id.exists' => 'L\'organisation sélectionnée n\'existe pas.',
-            'dealer_name.required' => 'Le nom du dealer est obligatoire.',
             'numero_flooz.required' => 'Le numéro Flooz est obligatoire.',
             'shortcode.required' => 'Le shortcode est obligatoire.',
             'nom_point.required' => 'Le nom du point de vente est obligatoire.',
@@ -456,7 +454,6 @@ class PointOfSaleController extends Controller
         }
 
         $validated = $request->validate([
-            'dealer_name' => 'sometimes|string',
             'numero_flooz' => 'sometimes|string',
             'shortcode' => 'nullable|string',
             'nom_point' => 'sometimes|string',

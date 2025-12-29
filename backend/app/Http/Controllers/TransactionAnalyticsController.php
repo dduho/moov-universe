@@ -175,6 +175,7 @@ class TransactionAnalyticsController extends Controller
         // Récupérer les infos PDV en une seule requête
         $pdvNumeros = $topPdv->pluck('pdv_numero');
         $pdvs = PointOfSale::whereIn('numero_flooz', $pdvNumeros)
+            ->with(['organization:id,name'])
             ->get()
             ->keyBy('numero_flooz');
 
@@ -184,7 +185,7 @@ class TransactionAnalyticsController extends Controller
             return [
                 'pdv_numero' => $item->pdv_numero,
                 'nom_point' => $pdv ? $pdv->nom_point : 'Inconnu',
-                'dealer_name' => $pdv ? $pdv->dealer_name : 'Non attribué',
+                'dealer_name' => $pdv ? ($pdv->organization->name ?? 'Non attribué') : 'Non attribué',
                 'chiffre_affaire' => round($item->chiffre_affaire, 2),
                 'volume_total' => round($item->volume_total, 2),
                 'total_transactions' => $item->total_transactions,
@@ -200,19 +201,19 @@ class TransactionAnalyticsController extends Controller
      */
     private function getTopDealers($startDate, $endDate, $limit = 10)
     {
-        // Récupérer les stats par PDV puis grouper par dealer_name
+        // Récupérer les stats par PDV puis grouper par organization.name
         $dealerStats = DB::table('pdv_transactions as t')
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
+            ->join('organizations as o', 'p.organization_id', '=', 'o.id')
             ->whereBetween('t.transaction_date', [$startDate, $endDate])
-            ->whereNotNull('p.dealer_name')
-            ->select('p.dealer_name')
+            ->select('o.name as dealer_name')
             ->selectRaw('
                 SUM(t.retrait_keycost) as chiffre_affaire,
                 SUM(t.sum_depot + t.sum_retrait) as volume_total,
                 SUM(t.count_depot + t.count_retrait) as total_transactions,
                 COUNT(DISTINCT CASE WHEN t.count_depot > 0 OR t.count_retrait > 0 THEN t.pdv_numero END) as pdv_count
             ')
-            ->groupBy('p.dealer_name')
+            ->groupBy('o.name')
             ->orderByDesc('chiffre_affaire')
             ->limit($limit)
             ->get();

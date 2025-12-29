@@ -389,7 +389,7 @@ const handleSearch = () => {
           id: pdv.id,
           numero: pdv.numero,
           name: pdv.nom_point,
-          subtitle: `${pdv.numero || 'N/A'} - ${pdv.dealer_name || 'Non attribué'}`,
+          subtitle: `${pdv.numero || 'N/A'} - ${pdv.organization?.name || 'Non attribué'}`,
         }));
       } else if (comparisonType.value === 'dealer') {
         const results = await ComparatorService.searchDealers(searchQuery.value);

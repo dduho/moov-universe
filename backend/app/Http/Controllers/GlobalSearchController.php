@@ -100,7 +100,7 @@ class GlobalSearchController extends Controller
     {
         $pdvQuery = PointOfSale::query()
             ->select([
-                'id', 'numero', 'nom_point', 'numero_flooz', 'shortcode', 'dealer_name',
+                'id', 'numero', 'nom_point', 'numero_flooz', 'shortcode',
                 'region', 'prefecture', 'commune', 'ville', 'quartier',
                 'status', 'created_at', 'organization_id', 'latitude', 'longitude'
             ])
@@ -118,7 +118,6 @@ class GlobalSearchController extends Controller
             $q->where('nom_point', 'LIKE', "%{$query}%")
               ->orWhere('numero_flooz', 'LIKE', "%{$query}%")
               ->orWhere('shortcode', 'LIKE', "%{$query}%")
-              ->orWhere('dealer_name', 'LIKE', "%{$query}%")
               ->orWhere('firstname', 'LIKE', "%{$query}%")
               ->orWhere('lastname', 'LIKE', "%{$query}%")
               ->orWhere('ville', 'LIKE', "%{$query}%")
@@ -156,7 +155,7 @@ class GlobalSearchController extends Controller
                     'nom_point' => $pdv->nom_point,
                     'numero_flooz' => $pdv->numero_flooz,
                     'shortcode' => $pdv->shortcode,
-                    'dealer_name' => $pdv->dealer_name,
+                    'dealer_name' => $pdv->organization->name ?? 'N/A',
                     'organization' => $pdv->organization ? [
                         'id' => $pdv->organization->id,
                         'name' => $pdv->organization->name,

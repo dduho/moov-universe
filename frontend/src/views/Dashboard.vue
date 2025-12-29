@@ -179,8 +179,8 @@
                                 <span class="flex-shrink-0 rounded-md bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
                                   {{ pdv.region || 'N/A' }}
                                 </span>
-                                <span v-if="pdv.dealer_name || pdv.organization?.name" class="flex-shrink-0 rounded-md bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
-                                  {{ pdv.dealer_name || pdv.organization?.name }}
+                                <span v-if="pdv.organization?.name" class="flex-shrink-0 rounded-md bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                                  {{ pdv.organization?.name }}
                                 </span>
                               </div>
                               <div class="flex items-center gap-2 text-xs text-gray-500">
@@ -974,7 +974,7 @@
                       {{ pdv.nom_point }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {{ pdv.dealer_name }}
+                      {{ pdv.organization?.name || 'N/A' }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {{ pdv.region }}

@@ -75,7 +75,7 @@ class GeolocationController extends Controller
                     'latitude' => (float) $pdv->latitude,
                     'longitude' => (float) $pdv->longitude,
                     'region' => $pdv->region,
-                    'dealer_name' => $pdv->dealer_name,
+                    'dealer_name' => $pdv->organization->name ?? 'N/A',
                     'status' => $pdv->status,
                     'total_ca' => $totalCa,
                     'total_transactions' => $totalTransactions,

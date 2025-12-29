@@ -28,7 +28,7 @@ class XmlExportService
             
             // Dealer info
             $dealer = $node->addChild('dealer');
-            $dealer->addChild('name', htmlspecialchars($pdv->dealer_name));
+            $dealer->addChild('name', htmlspecialchars($pdv->organization->name ?? 'N/A'));
             $dealer->addChild('numero_flooz', htmlspecialchars($pdv->numero_flooz));
             $dealer->addChild('shortcode', htmlspecialchars($pdv->shortcode));
             $dealer->addChild('organization', htmlspecialchars($pdv->organization->name ?? ''));

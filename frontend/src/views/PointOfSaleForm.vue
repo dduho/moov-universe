@@ -1731,8 +1731,7 @@ const submitForm = async () => {
       // Organization
       organization_id: parseInt(formData.value.organization_id) || formData.value.organization_id,
       
-      // Dealer info
-      dealer_name: getOrganizationName(), // Organization name as dealer_name
+      // Flooz info (removed dealer_name)
       numero_flooz: formData.value.flooz_number, // flooz_number -> numero_flooz
       shortcode: formData.value.shortcode,
       

@@ -95,7 +95,8 @@ class ForecastingController extends Controller
                       ->where('p.region', $entityId);
             } elseif ($scope === 'dealer' && $entityId) {
                 $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                      ->where('p.dealer_name', $entityId);
+                      ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+                      ->where('o.name', $entityId);
             } elseif ($scope === 'pdv' && $entityId) {
                 $query->where('pdv_numero', $entityId);
             }
@@ -297,7 +298,8 @@ class ForecastingController extends Controller
                   ->where('p.region', $entityId);
         } elseif ($scope === 'dealer' && $entityId) {
             $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                  ->where('p.dealer_name', $entityId);
+                  ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+                  ->where('o.name', $entityId);
         } elseif ($scope === 'pdv' && $entityId) {
             $query->where('pdv_numero', $entityId);
         }
@@ -334,14 +336,15 @@ class ForecastingController extends Controller
         // PDV avec croissance CA >20% sur 30 jours
         $pdvs = DB::table('pdv_transactions as t1')
             ->join('point_of_sales as p', 't1.pdv_numero', '=', 'p.numero_flooz')
-            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name')
+            ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name')
             ->selectRaw('
                 SUM(CASE WHEN t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
                 SUM(CASE WHEN t1.transaction_date < ? THEN t1.retrait_keycost ELSE 0 END) as ca_previous,
                 AVG(t1.retrait_keycost) as ca_daily_avg
             ', [$now->copy()->subDays(15), $now->copy()->subDays(15)])
             ->where('t1.transaction_date', '>=', $last30Days)
-            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name')
+            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name')
             ->havingRaw('ca_recent > 0 AND ca_previous > 0')
             ->havingRaw('((ca_recent - ca_previous) / ca_previous) > 0.20')
             ->orderByRaw('((ca_recent - ca_previous) / ca_previous) DESC')
@@ -374,7 +377,8 @@ class ForecastingController extends Controller
         // PDV avec chute CA >30% ou CA très faible
         $pdvs = DB::table('pdv_transactions as t1')
             ->join('point_of_sales as p', 't1.pdv_numero', '=', 'p.numero_flooz')
-            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name', 'p.created_at')
+            ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name', 'p.created_at')
             ->selectRaw('
                 SUM(CASE WHEN t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
                 SUM(CASE WHEN t1.transaction_date < ? THEN t1.retrait_keycost ELSE 0 END) as ca_previous,
@@ -382,7 +386,7 @@ class ForecastingController extends Controller
                 COUNT(DISTINCT t1.transaction_date) as active_days
             ', [$now->copy()->subDays(15), $now->copy()->subDays(15)])
             ->where('t1.transaction_date', '>=', $last30Days)
-            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name', 'p.created_at')
+            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name', 'p.created_at')
             ->havingRaw('ca_previous > 0 AND ((ca_recent - ca_previous) / ca_previous) < -0.30')
             ->orderByRaw('((ca_recent - ca_previous) / ca_previous) ASC')
             ->limit(10)

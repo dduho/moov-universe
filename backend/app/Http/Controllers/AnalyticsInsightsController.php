@@ -103,7 +103,8 @@ class AnalyticsInsightsController extends Controller
         
         if ($nowInactive->count() > 0) {
             $pdvDetails = PointOfSale::whereIn('numero_flooz', $nowInactive->take(5))
-                ->select('numero_flooz', 'nom_point', 'dealer_name', 'region')
+                ->select('numero_flooz', 'nom_point', 'region', 'organization_id')
+                ->with(['organization:id,name'])
                 ->get();
             
             $insights[] = [
@@ -115,7 +116,7 @@ class AnalyticsInsightsController extends Controller
                 'details' => $pdvDetails->map(fn($p) => [
                     'pdv' => $p->numero_flooz,
                     'nom' => $p->nom_point,
-                    'dealer' => $p->dealer_name,
+                    'dealer' => $p->organization->name ?? 'N/A',
                     'region' => $p->region,
                 ])->toArray(),
                 'recommendation' => 'Contactez ces PDV pour identifier les problèmes (manque de liquidité, problèmes techniques, fermeture).',
@@ -223,7 +224,7 @@ class AnalyticsInsightsController extends Controller
                     return [
                         'pdv' => $a['pdv'],
                         'nom' => $pdv ? $pdv->nom_point : 'Inconnu',
-                        'dealer' => $pdv ? $pdv->dealer_name : null,
+                        'dealer' => $pdv ? ($pdv->organization->name ?? null) : null,
                         'drop_percent' => $a['drop'],
                         'ca_recent' => $a['ca_recent'],
                         'ca_previous' => $a['ca_previous'],
@@ -333,14 +334,15 @@ class AnalyticsInsightsController extends Controller
         // Trouver les top 10 PDV par CA
         $topPdv = DB::table('pdv_transactions as t')
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
+            ->join('organizations as o', 'p.organization_id', '=', 'o.id')
             ->whereBetween('t.transaction_date', [$now->copy()->subDays(30), $now])
-            ->select('t.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name')
+            ->select('t.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name')
             ->selectRaw('
                 SUM(t.retrait_keycost) as ca_total,
                 SUM(t.count_depot + t.count_retrait) as total_transactions,
                 AVG(t.retrait_keycost) as ca_moyen_jour
             ')
-            ->groupBy('t.pdv_numero', 'p.nom_point', 'p.region', 'p.dealer_name')
+            ->groupBy('t.pdv_numero', 'p.nom_point', 'p.region', 'o.name')
             ->orderByDesc('ca_total')
             ->limit(10)
             ->get();

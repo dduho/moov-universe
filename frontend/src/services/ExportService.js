@@ -53,7 +53,7 @@ const ExportService = {
   exportPDV(pdvList, format = 'excel') {
     // Transform data for export - matching import template headers exactly
     const exportData = pdvList.map(pdv => ({
-      'DEALER_NAME': pdv.dealer_name || '',
+      'DEALER_NAME': pdv.organization?.name || '',
       'NUMERO_FLOOZ': pdv.numero_flooz || '',
       'SHORTCODE': pdv.shortcode || '',
       'NOM DU POINT': pdv.nom_point || '',

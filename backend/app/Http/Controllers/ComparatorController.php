@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Organization;
 use App\Models\PdvTransaction;
 use App\Models\PointOfSale;
 use Illuminate\Http\Request;
@@ -111,7 +112,7 @@ class ComparatorController extends Controller
                 'id' => $pdvNumero,
                 'name' => $pdv->nom_point,
                 'info' => $pdv ? [
-                    'dealer' => $pdv->dealer_name,
+                    'dealer' => $pdv->organization->name ?? 'N/A',
                     'region' => $pdv->region,
                     'ville' => $pdv->ville,
                 ] : null,
@@ -146,7 +147,8 @@ class ComparatorController extends Controller
         foreach ($dealerNames as $dealerName) {
             $stats = DB::table('pdv_transactions as t')
                 ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
-                ->where('p.dealer_name', $dealerName)
+                ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+                ->where('o.name', $dealerName)
                 ->whereBetween('t.transaction_date', [$startDate, $endDate])
                 ->selectRaw('
                     SUM(t.retrait_keycost) as ca,
@@ -161,7 +163,8 @@ class ComparatorController extends Controller
             // Évolution temporelle
             $evolution = DB::table('pdv_transactions as t')
                 ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
-                ->where('p.dealer_name', $dealerName)
+                ->join('organizations as o', 'p.organization_id', '=', 'o.id')
+                ->where('o.name', $dealerName)
                 ->whereBetween('t.transaction_date', [$startDate, $endDate])
                 ->selectRaw('DATE(t.transaction_date) as date, SUM(t.retrait_keycost) as ca')
                 ->groupBy('date')
@@ -331,7 +334,8 @@ class ComparatorController extends Controller
             });
         }
 
-        $pdvs = $query->select('id', 'numero', 'nom_point', 'nom_responsable', 'dealer_name')
+        $pdvs = $query->select('id', 'numero', 'nom_point', 'nom_responsable', 'organization_id')
+                      ->with(['organization:id,name'])
                       ->orderBy('numero')
                       ->paginate($perPage);
 
@@ -346,22 +350,19 @@ class ComparatorController extends Controller
         $search = $request->input('search', '');
         $perPage = $request->input('per_page', 20);
 
-        $query = PointOfSale::query()
-            ->whereNotNull('dealer_name')
-            ->where('dealer_name', '!=', '');
+        $query = Organization::query();
 
         if (!empty($search)) {
-            $query->where('dealer_name', 'LIKE', "%{$search}%");
+            $query->where('name', 'LIKE', "%{$search}%");
         }
 
-        $dealers = $query->select('dealer_name')
-                        ->distinct()
-                        ->orderBy('dealer_name')
+        $dealers = $query->select('id', 'name')
+                        ->orderBy('name')
                         ->get()
                         ->map(function ($item) {
                             return [
-                                'id' => $item->dealer_name,
-                                'name' => $item->dealer_name,
+                                'id' => $item->name,
+                                'name' => $item->name,
                             ];
                         });
 
