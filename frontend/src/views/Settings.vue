@@ -283,7 +283,8 @@
                   <span v-else>Finalisation...</span>
                 </div>
                 <span class="text-xs opacity-90">
-                  <span v-if="uploadStage === 'processing'">Insertion/mise à jour des données dans la base</span>
+                  <span v-if="uploadStage === 'uploading'">Envoi de {{ formatFileSize(getTotalFileSize()) }} vers le serveur</span>
+                  <span v-else-if="uploadStage === 'processing'">Traitement des données (peut prendre plusieurs minutes pour de gros fichiers)</span>
                 </span>
               </span>
               <span v-else>
@@ -664,6 +665,10 @@ const formatFileSize = (bytes) => {
   return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 };
 
+const getTotalFileSize = () => {
+  return selectedFiles.value.reduce((total, file) => total + file.size, 0);
+};
+
 const uploadTransactionFiles = async () => {
   if (selectedFiles.value.length === 0) return;
   
@@ -674,26 +679,55 @@ const uploadTransactionFiles = async () => {
     importResults.value = null;
     
     let progressInterval = null;
+    let uploadStarted = false;
+    let lastProgress = 0;
+    const totalSize = getTotalFileSize();
+    const estimatedUploadTimeMs = (totalSize / (1024 * 1024)) * 1000; // ~1 sec par MB
+    const uploadProgressStep = 50 / (estimatedUploadTimeMs / 500); // 50% en estimatedUploadTimeMs
+    
+    // Démarrer l'animation de progression immédiatement
+    progressInterval = setInterval(() => {
+      if (uploadStage.value === 'uploading' && uploadProgress.value < 50) {
+        uploadProgress.value = Math.min(50, uploadProgress.value + uploadProgressStep);
+      } else if (uploadStage.value === 'processing' && uploadProgress.value < 95) {
+        uploadProgress.value = Math.min(95, uploadProgress.value + 0.3);
+      }
+    }, 500);
     
     const response = await TransactionService.uploadFiles(
       selectedFiles.value,
       (progressEvent) => {
-        // Phase 1: Upload du fichier (0-50%)
-        const percentCompleted = Math.round((progressEvent.loaded * 50) / progressEvent.total);
-        uploadProgress.value = percentCompleted;
+        if (!uploadStarted) {
+          uploadStarted = true;
+          console.log('Upload started:', progressEvent);
+        }
         
-        // Quand upload terminé, passer au traitement
-        if (percentCompleted >= 50 && !progressInterval) {
-          uploadStage.value = 'processing';
-          // Animation de progression pendant le traitement (50-95%)
-          progressInterval = setInterval(() => {
-            if (uploadProgress.value < 95 && uploadStage.value === 'processing') {
-              uploadProgress.value += 1;
-            }
-          }, 1000); // +1% par seconde
+        // Phase 1: Upload du fichier (0-50%)
+        if (progressEvent.loaded && progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 50) / progressEvent.total);
+          
+          // Utiliser le vrai pourcentage si disponible
+          if (percentCompleted > lastProgress) {
+            uploadProgress.value = percentCompleted;
+            lastProgress = percentCompleted;
+            console.log(`Upload progress: ${progressEvent.loaded}/${progressEvent.total} = ${percentCompleted}%`);
+          }
+          
+          // Quand upload terminé, passer au traitement
+          if (percentCompleted >= 50 && uploadStage.value === 'uploading') {
+            uploadStage.value = 'processing';
+            console.log('Switching to processing stage');
+          }
         }
       }
     );
+    
+    // Si on n'a pas reçu de vrais événements de progression, basculer manuellement
+    if (!uploadStarted) {
+      console.log('No upload progress events received, switching to processing manually');
+      uploadProgress.value = 50;
+      uploadStage.value = 'processing';
+    }
     
     // Nettoyer l'intervalle si présent
     if (progressInterval) {

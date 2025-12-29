@@ -95,8 +95,10 @@ class TransactionImportController extends Controller
      */
     private function processFile(UploadedFile $file)
     {
-        // Augmenter temporairement la limite mémoire pour ce processus
+        // Augmenter temporairement la limite mémoire et temps d'exécution pour ce processus
         ini_set('memory_limit', '2G');
+        ini_set('max_execution_time', '600'); // 10 minutes
+        set_time_limit(600); // 10 minutes
         
         // Configuration de PhpSpreadsheet pour optimiser la mémoire
         \PhpOffice\PhpSpreadsheet\Settings::setCache(

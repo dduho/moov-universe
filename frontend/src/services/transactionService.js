@@ -15,7 +15,7 @@ export default {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-      timeout: 300000, // 5 minutes timeout pour fichiers volumineux
+      timeout: 600000, // 10 minutes timeout pour fichiers très volumineux
       onUploadProgress: onUploadProgress || undefined,
     });
   },
