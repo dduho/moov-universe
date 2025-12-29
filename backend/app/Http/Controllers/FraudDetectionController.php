@@ -6,6 +6,7 @@ use App\Models\PointOfSale;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class FraudDetectionController extends Controller
@@ -79,6 +80,8 @@ class FraudDetectionController extends Controller
     private function detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, $limit = 30, $offset = 0)
     {
         $alerts = [];
+        $checkedCount = 0;
+        $matchedCount = 0;
 
         $pdvQuery = PointOfSale::where('status', 'validated');
         if ($scope === 'dealer' && $entityId) {
@@ -86,48 +89,16 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        // Optimisation: limiter le nombre de PDV traités
-        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
+        // Récupérer TOUS les PDV validés pour détecter les fraudes
+        $pdvs = $pdvQuery->with('organization')->get();
 
-        // Get top 20 performers to establish benchmark
-        $topPerformers = [];
-        foreach ($pdvs as $pdv) {
-            $stats = DB::table('pdv_transactions')
-                ->where('pdv_numero', $pdv->numero_flooz)
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->selectRaw('
-                    SUM(count_depot) as total_depot,
-                    SUM(count_retrait) as total_retrait,
-                    SUM(sum_depot) as total_depot_amount,
-                    COUNT(DISTINCT transaction_date) as active_days
-                ')
-                ->first();
+        Log::info("Split Deposit Detection", [
+            'scope' => $scope,
+            'entity_id' => $entityId,
+            'pdv_count' => $pdvs->count(),
+            'date_range' => "$startDate to $endDate"
+        ]);
 
-            if ($stats && ($stats->total_depot + $stats->total_retrait) >= 50) {
-                $ratio = $stats->total_depot / max($stats->total_retrait, 1);
-                $topPerformers[] = [
-                    'pdv' => $pdv,
-                    'stats' => $stats,
-                    'ratio' => $ratio,
-                    'total_transactions' => $stats->total_depot + $stats->total_retrait
-                ];
-            }
-        }
-
-        // Sort by total transactions and take top 20
-        usort($topPerformers, function($a, $b) {
-            return $b['total_transactions'] <=> $a['total_transactions'];
-        });
-        $topPerformers = array_slice($topPerformers, 0, 20);
-
-        if (count($topPerformers) < 10) {
-            return $alerts; // Not enough data for comparison
-        }
-
-        // Calculate benchmark ratio from top performers
-        $benchmarkRatio = array_sum(array_column($topPerformers, 'ratio')) / count($topPerformers);
-
-        // Now check all PDVs against this benchmark
         foreach ($pdvs as $pdv) {
             $stats = DB::table('pdv_transactions')
                 ->where('pdv_numero', $pdv->numero_flooz)
@@ -141,12 +112,19 @@ class FraudDetectionController extends Controller
                 ')
                 ->first();
 
-            if ($stats && ($stats->total_depot + $stats->total_retrait) >= 50) {
-                $ratio = $stats->total_depot / max($stats->total_retrait, 1);
+            if (!$stats) {
+                continue;
+            }
+
+            $totalOperations = $stats->total_depot + $stats->total_retrait;
+            
+            // Condition: au moins 50 opérations, 80% de dépôts, et 100+ dépôts minimum
+            if ($totalOperations >= 50 && $stats->total_depot >= 100) {
+                $checkedCount++;
+                $depotPercentage = ($stats->total_depot / $totalOperations) * 100;
                 
-                // Flag if depot count is abnormally high compared to benchmark
-                // Ratio > 3x benchmark = suspicious
-                if ($ratio > ($benchmarkRatio * 3) && $stats->total_depot > 100) {
+                if ($depotPercentage >= 80) {
+                    $matchedCount++;
                     $avgDepotAmount = $stats->avg_depot_amount ?? 0;
                     $severity = 'high';
                     
@@ -165,21 +143,19 @@ class FraudDetectionController extends Controller
                         'date' => $endDate,
                         'flagged_amount' => 0,
                         'description' => sprintf(
-                            "Le PDV a effectué %d dépôts contre %d retraits sur la période du %s au %s (ratio: %.1f vs benchmark top 20 PDV: %.1f). Montant moyen par dépôt: %s FCFA. Suspicion de split deposits pour multiplier les commissions.",
+                            "Le PDV a effectué %d dépôts contre %d retraits sur la période du %s au %s (%.1f%% de dépôts). Montant moyen par dépôt: %s FCFA. Suspicion de split deposits pour multiplier les commissions.",
                             $stats->total_depot,
                             $stats->total_retrait,
                             Carbon::parse($startDate)->format('d/m/Y'),
                             Carbon::parse($endDate)->format('d/m/Y'),
-                            $ratio,
-                            $benchmarkRatio,
+                            $depotPercentage,
                             $avgDepotAmount > 0 ? number_format($avgDepotAmount, 0) : 'N/A'
                         ),
                         'severity_factors' => [
                             'depot_count' => $stats->total_depot,
                             'retrait_count' => $stats->total_retrait,
-                            'ratio' => $ratio,
-                            'benchmark_ratio' => $benchmarkRatio,
-                            'ratio_multiplier' => round($ratio / max($benchmarkRatio, 0.1), 2),
+                            'depot_percentage' => round($depotPercentage, 1),
+                            'total_operations' => $totalOperations,
                             'avg_depot_amount' => $avgDepotAmount,
                             'is_small_splits' => $avgDepotAmount > 0 && $avgDepotAmount < 5000,
                             'severity' => $severity,
@@ -189,8 +165,19 @@ class FraudDetectionController extends Controller
             }
         }
 
-        // Limiter le nombre de résultats retournés
-        return array_slice($alerts, 0, $limit);
+        Log::info("Split Deposit Detection Results", [
+            'checked' => $checkedCount,
+            'matched' => $matchedCount,
+            'alerts' => count($alerts)
+        ]);
+
+        // Trier par pourcentage de dépôts décroissant (plus grand au plus petit)
+        usort($alerts, function($a, $b) {
+            return $b['severity_factors']['depot_percentage'] <=> $a['severity_factors']['depot_percentage'];
+        });
+
+        // Retourner toutes les alertes trouvées
+        return $alerts;
     }
 
     /**
@@ -242,8 +229,7 @@ class FraudDetectionController extends Controller
             }
         }
 
-        // Limiter le nombre de résultats retournés
-        return array_slice($alerts, 0, $limit);
+        return $alerts;
     }
 
     /**
@@ -259,8 +245,8 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        // Optimisation: limiter le nombre de PDV traités
-        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
+        // Scan all validated PDV for activity spikes
+        $pdvs = $pdvQuery->with('organization')->get();
 
         foreach ($pdvs as $pdv) {
             // Get daily transaction volumes
@@ -301,8 +287,7 @@ class FraudDetectionController extends Controller
             }
         }
 
-        // Limiter le nombre de résultats retournés
-        return array_slice($alerts, 0, $limit);
+        return $alerts;
     }
 
     /**
@@ -319,8 +304,8 @@ class FraudDetectionController extends Controller
         } elseif ($scope === 'pdv' && $entityId) {
             $pdvQuery->where('id', $entityId);
         }
-        // Optimisation: limiter le nombre de PDV traités
-        $pdvs = $pdvQuery->with('organization')->skip($offset)->take($limit * 2)->get();
+        // Scan all validated PDV for activity spikes
+        $pdvs = $pdvQuery->with('organization')->get();
 
         foreach ($pdvs as $pdv) {
             $stats = DB::table('pdv_transactions')
@@ -379,8 +364,7 @@ class FraudDetectionController extends Controller
             }
         }
 
-        // Limiter le nombre de résultats retournés
-        return array_slice($alerts, 0, $limit);
+        return $alerts;
     }
 
     /**
