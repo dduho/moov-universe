@@ -212,6 +212,8 @@
                 :class="month.has_data ? 'border-moov-orange/20 hover:border-moov-orange/50' : 'border-gray-200 opacity-60'"
               >
                 <div class="text-center">
+                  <!-- Icône du mois -->
+                  <div class="flex justify-center mb-2" v-html="getMonthIcon(month.month)"></div>
                   <p class="text-xs font-semibold text-gray-500 uppercase mb-1">{{ month.month_name }}</p>
                   <p class="text-xl font-bold text-gray-900 mb-3">{{ formatCurrencyShort(month.ca) }}</p>
                   
@@ -261,6 +263,8 @@
                 :class="month.has_data ? 'border-moov-orange/20 hover:border-moov-orange/50' : 'border-gray-200 opacity-60'"
               >
                 <div class="text-center">
+                  <!-- Icône du mois -->
+                  <div class="flex justify-center mb-2" v-html="getMonthIcon(month.month)"></div>
                   <p class="text-xs font-semibold text-gray-500 uppercase mb-1">{{ month.month_name }}</p>
                   <p class="text-xl font-bold text-gray-900 mb-3">{{ formatCurrencyShort(month.ca) }}</p>
                   
@@ -760,6 +764,25 @@ const formatCurrencyShort = (value) => {
   }
   
   return formatNumber(value);
+};
+
+// Obtenir l'icône SVG pour chaque mois
+const getMonthIcon = (monthNumber) => {
+  const icons = {
+    1: `<svg class="w-8 h-8 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM4.332 8.027a6.012 6.012 0 011.912-2.706C6.512 5.73 6.974 6 7.5 6A1.5 1.5 0 019 7.5V8a2 2 0 004 0 2 2 0 011.523-1.943A5.977 5.977 0 0116 10c0 .34-.028.675-.083 1H15a2 2 0 00-2 2v2.197A5.973 5.973 0 0110 16v-2a2 2 0 00-2-2 2 2 0 01-2-2 2 2 0 00-1.668-1.973z" clip-rule="evenodd" /></svg>`, // Janvier - Planète/Nouveau départ
+    2: `<svg class="w-8 h-8 text-red-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" /></svg>`, // Février - Cœur
+    3: `<svg class="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18c-3.866 0-7-3.134-7-7 0-2.21 1.79-4 4-4 .552 0 1 .448 1 1s-.448 1-1 1c-1.104 0-2 .896-2 2 0 2.757 2.243 5 5 5s5-2.243 5-5c0-1.104-.896-2-2-2-.552 0-1-.448-1-1s.448-1 1-1c2.21 0 4 1.79 4 4 0 3.866-3.134 7-7 7z"/></svg>`, // Mars - Pousse verte
+    4: `<svg class="w-8 h-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M5.5 16a3.5 3.5 0 01-.369-6.98 4 4 0 117.753-1.977A4.5 4.5 0 1113.5 16h-8z" /></svg>`, // Avril - Nuage pluie
+    5: `<svg class="w-8 h-8 text-yellow-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" /></svg>`, // Mai - Soleil
+    6: `<svg class="w-8 h-8 text-orange-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1h4v1a2 2 0 11-4 0zM12 14c.015-.34.208-.646.477-.859a4 4 0 10-4.954 0c.27.213.462.519.476.859h4.002z" /></svg>`, // Juin - Ampoule/Été
+    7: `<svg class="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.5 2a3.5 3.5 0 101.665 6.58L8.585 10l-1.42 1.42a3.5 3.5 0 101.414 1.414l8.128-8.127a1 1 0 00-1.414-1.414L10 8.586l-1.42-1.42A3.5 3.5 0 005.5 2zM4 5.5a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 9a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z" clip-rule="evenodd" /><path d="M12.828 11.414a1 1 0 00-1.414 1.414l3.879 3.88a1 1 0 001.414-1.415l-3.879-3.879z" /></svg>`, // Juillet - Vacances/Parasol
+    8: `<svg class="w-8 h-8 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" /></svg>`, // Août - Feu/Chaleur
+    9: `<svg class="w-8 h-8 text-orange-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M17.778 8.222c-4.296-4.296-11.26-4.296-15.556 0A1 1 0 01.808 6.808c5.076-5.077 13.308-5.077 18.384 0a1 1 0 01-1.414 1.414zM14.95 11.05a7 7 0 00-9.9 0 1 1 0 01-1.414-1.414 9 9 0 0112.728 0 1 1 0 01-1.414 1.414zM12.12 13.88a3 3 0 00-4.242 0 1 1 0 01-1.415-1.415 5 5 0 017.072 0 1 1 0 01-1.415 1.415zM9 16a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>`, // Septembre - Rentrée/Wifi
+    10: `<svg class="w-8 h-8 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>`, // Octobre - Étoile/Citrouille
+    11: `<svg class="w-8 h-8 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2C7.243 2 5 4.243 5 7c0 2.757 2.243 5 5 5s5-2.243 5-5c0-2.757-2.243-5-5-5zm0 8a3 3 0 110-6 3 3 0 010 6zm-1 7c0-1.104.896-2 2-2s2 .896 2 2v1H7v-1c0-1.104.896-2 2-2z"/><path d="M10 14c-2.21 0-4-1.79-4-4 0-1.104.896-2 2-2s2 .896 2 2c0 1.104-.896 2-2 2z"/></svg>`, // Novembre - Feuille d'automne
+    12: `<svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l-3 5h2v2H7l3 5H8v2h8v-2h-2l3-5h-4V7h2z"/><rect x="10" y="19" width="4" height="3" rx="1" fill="#8B5C2F"/></svg>`, // Décembre - Sapin de Noël
+  };
+  return icons[monthNumber] || '';
 };
 
 // Initial load
