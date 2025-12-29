@@ -127,11 +127,12 @@ class OfflineDB {
 
   // Méthodes spécifiques pour les PDV
   async savePDVList(pdvList) {
+    // Effacer les anciennes données d'abord
+    await this.clear(STORES.PDV);
+    
+    // Créer une nouvelle transaction pour ajouter les données
     const tx = this.db.transaction(STORES.PDV, 'readwrite');
     const store = tx.objectStore(STORES.PDV);
-    
-    // Effacer les anciennes données
-    await this.clear(STORES.PDV);
     
     // Ajouter les nouvelles
     for (const pdv of pdvList) {

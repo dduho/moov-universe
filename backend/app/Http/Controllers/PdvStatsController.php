@@ -24,24 +24,38 @@ class PdvStatsController extends Controller
         
         // Définir la fenêtre temporelle selon la période sélectionnée
         $now = Carbon::now();
-        [$startDate, $endDate] = match ($period) {
+        
+        // Pour les stats globales : utiliser seulement la dernière période
+        [$statStartDate, $statEndDate] = match ($period) {
             'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()], // J-1
-            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()], // month par défaut
+            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()], // Semaine actuelle
+            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()], // Mois actuel
+        };
+        
+        // Pour l'évolution temporelle : utiliser une plage plus large
+        [$timelineStartDate, $timelineEndDate] = match ($period) {
+            'day' => [$now->copy()->subDays(30)->startOfDay(), $now->endOfDay()], // 30 derniers jours
+            'week' => [$now->copy()->subWeeks(8)->startOfWeek(), $now->copy()->endOfWeek()], // 8 dernières semaines
+            default => [$now->copy()->subMonths(6)->startOfMonth(), $now->copy()->endOfMonth()], // 6 derniers mois
         };
 
-        // Récupérer les transactions du PDV filtrées par période
-        $transactionsQuery = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->orderBy('transaction_date', 'desc');
+        // Récupérer les transactions pour les stats globales (période courte)
+        $statsTransactions = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
+            ->whereBetween('transaction_date', [$statStartDate, $statEndDate])
+            ->orderBy('transaction_date', 'desc')
+            ->get();
         
-        $allTransactions = $transactionsQuery->get();
+        // Récupérer les transactions pour l'évolution temporelle (période étendue)
+        $timelineTransactions = PdvTransaction::where('pdv_numero', $pdv->numero_flooz)
+            ->whereBetween('transaction_date', [$timelineStartDate, $timelineEndDate])
+            ->orderBy('transaction_date', 'desc')
+            ->get();
 
         // Toujours retourner des données pour un PDV existant, même sans transactions
-        // Grouper par période selon le filtre
-        $groupedTransactions = $this->groupByPeriod($allTransactions, $period);
+        // Grouper par période selon le filtre (pour l'évolution temporelle)
+        $groupedTransactions = $this->groupByPeriod($timelineTransactions, $period);
         
-        // Calculer les statistiques globales
+        // Calculer les statistiques globales (sur la période courte: J-1, semaine actuelle, ou mois actuel)
         $stats = [
             'hasData' => true,
             'pdv' => [
@@ -50,10 +64,10 @@ class PdvStatsController extends Controller
                 'numero_flooz' => $pdv->numero_flooz,
             ],
             'period' => $period,
-            'summary' => $this->calculateSummary($allTransactions),
-            'trends' => $this->calculateTrends($allTransactions),
-            'commissions' => $this->calculateCommissions($allTransactions),
-            'transfers' => $this->calculateTransfers($allTransactions),
+            'summary' => $this->calculateSummary($statsTransactions),
+            'trends' => $this->calculateTrends($statsTransactions),
+            'commissions' => $this->calculateCommissions($statsTransactions),
+            'transfers' => $this->calculateTransfers($statsTransactions),
             'performance' => $this->calculatePerformance($groupedTransactions),
             'charts' => $this->prepareChartData($groupedTransactions, $period),
             'timeline' => $this->getTimelinePaginated($groupedTransactions, $page, $perPage),
