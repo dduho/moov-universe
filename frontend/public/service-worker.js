@@ -55,8 +55,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          // Mettre en cache la réponse si succès
-          if (response.status === 200) {
+          // Mettre en cache UNIQUEMENT les requêtes GET réussies
+          if (response.status === 200 && request.method === 'GET') {
             const responseClone = response.clone();
             caches.open(DYNAMIC_CACHE).then((cache) => {
               cache.put(request, responseClone);
@@ -65,23 +65,37 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Si offline, retourner depuis le cache
-          return caches.match(request).then((cached) => {
-            if (cached) {
-              return cached;
-            }
-            // Retourner une réponse par défaut
+          // Si offline, retourner depuis le cache UNIQUEMENT pour GET
+          if (request.method === 'GET') {
+            return caches.match(request).then((cached) => {
+              if (cached) {
+                return cached;
+              }
+              // Retourner une réponse par défaut
+              return new Response(
+                JSON.stringify({ 
+                  error: 'offline', 
+                  message: 'Vous êtes hors ligne. Données en cache non disponibles.' 
+                }),
+                {
+                  headers: { 'Content-Type': 'application/json' },
+                  status: 503
+                }
+              );
+            });
+          } else {
+            // Pour POST/PUT/DELETE offline, retourner erreur immédiatement
             return new Response(
               JSON.stringify({ 
                 error: 'offline', 
-                message: 'Vous êtes hors ligne. Données en cache non disponibles.' 
+                message: 'Impossible d\'envoyer des données en mode hors ligne.' 
               }),
               {
                 headers: { 'Content-Type': 'application/json' },
                 status: 503
               }
             );
-          });
+          }
         })
     );
     return;

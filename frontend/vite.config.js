@@ -8,6 +8,11 @@ const disablePWA = process.env.VITE_DISABLE_PWA === 'true'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    hmr: {
+      clientPort: 5173
+    }
+  },
   plugins: [
     vue(),
     !disablePWA && VitePWA({
