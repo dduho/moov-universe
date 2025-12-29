@@ -277,12 +277,20 @@
                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Importation en cours...
+                Importation en cours... {{ uploadProgress }}%
               </span>
               <span v-else>
                 Importer {{ selectedFiles.length }} fichier(s)
               </span>
             </button>
+
+            <!-- Progress Bar -->
+            <div v-if="uploading" class="w-full bg-gray-200 rounded-full h-2.5">
+              <div 
+                class="bg-moov-orange h-2.5 rounded-full transition-all duration-300" 
+                :style="{ width: uploadProgress + '%' }"
+              ></div>
+            </div>
 
             <!-- Import Results -->
             <div v-if="importResults" class="space-y-3">
@@ -494,6 +502,7 @@ const fileInput = ref(null);
 const selectedFiles = ref([]);
 const isDragging = ref(false);
 const uploading = ref(false);
+const uploadProgress = ref(0);
 const importResults = ref(null);
 
 const loadSettings = async () => {
@@ -640,23 +649,41 @@ const uploadTransactionFiles = async () => {
   
   try {
     uploading.value = true;
+    uploadProgress.value = 0;
     importResults.value = null;
     
-    const response = await TransactionService.uploadFiles(selectedFiles.value);
+    const response = await TransactionService.uploadFiles(
+      selectedFiles.value,
+      (progressEvent) => {
+        // Calcul de la progression (upload + traitement estimé)
+        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        uploadProgress.value = percentCompleted;
+      }
+    );
+    
     importResults.value = response.data;
     
     // Clear selected files if all were successful
     if (response.data.errors.length === 0) {
       selectedFiles.value = [];
-      toast.success(`${response.data.total_imported} nouvelles entrées importées avec succès!`);
+      const totalImported = response.data.total_imported || 0;
+      const totalUpdated = response.data.total_updated || 0;
+      toast.success(`Import réussi: ${totalImported} nouvelles entrées, ${totalUpdated} mises à jour!`);
     } else {
       toast.warning('Import partiellement réussi. Consultez les détails ci-dessous.');
     }
   } catch (error) {
     console.error('Error uploading files:', error);
-    toast.error('Erreur lors de l\'importation des fichiers');
+    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+      toast.error('Erreur réseau: Le fichier est peut-être trop volumineux ou le serveur ne répond pas. Vérifiez que le backend est en cours d\'exécution.');
+    } else if (error.code === 'ECONNABORTED') {
+      toast.error('Timeout: Le traitement prend trop de temps. Essayez avec des fichiers plus petits.');
+    } else {
+      toast.error('Erreur lors de l\'importation des fichiers: ' + (error.response?.data?.message || error.message));
+    }
   } finally {
     uploading.value = false;
+    uploadProgress.value = 0;
   }
 };
 

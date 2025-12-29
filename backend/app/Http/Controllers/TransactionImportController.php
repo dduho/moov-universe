@@ -28,6 +28,7 @@ class TransactionImportController extends Controller
                 'success' => [],
                 'errors' => [],
                 'total_imported' => 0,
+                'total_updated' => 0,
                 'total_skipped' => 0,
             ];
 
@@ -41,10 +42,12 @@ class TransactionImportController extends Controller
                     $results['success'][] = [
                         'filename' => $file->getClientOriginalName(),
                         'imported' => $result['imported'],
+                        'updated' => $result['updated'],
                         'skipped' => $result['skipped'],
                         'date' => $result['date'],
                     ];
                     $results['total_imported'] += $result['imported'];
+                    $results['total_updated'] += $result['updated'];
                     $results['total_skipped'] += $result['skipped'];
                     
                     // Invalider le cache analytics pour cette date
@@ -73,6 +76,7 @@ class TransactionImportController extends Controller
                 'success' => [],
                 'errors' => [],
                 'total_imported' => 0,
+                'total_updated' => 0,
                 'total_skipped' => 0,
             ], 500);
         }
@@ -149,17 +153,12 @@ class TransactionImportController extends Controller
         // Obtenir la dernière ligne du fichier
         $highestRow = $worksheet->getHighestRow();
         
-        // Récupérer tous les PDV existants pour cette date en une seule requête
-        $existingPdvs = PdvTransaction::where('transaction_date', $transactionDate->format('Y-m-d'))
-            ->pluck('pdv_numero')
-            ->flip()
-            ->toArray();
-        
         // Lire les données à partir de la ligne 12 jusqu'à la dernière ligne
         $imported = 0;
+        $updated = 0;
         $skipped = 0;
-        $batchData = [];
-        $batchSize = 500; // Insérer par lots de 500
+        $allData = [];
+        $batchSize = 1000; // Traiter par lots de 1000
         $debugFirstRow = true; // Debug mode pour la première ligne
 
         for ($row = 12; $row <= $highestRow; $row++) {
@@ -174,12 +173,6 @@ class TransactionImportController extends Controller
 
             $pdvNumeroTrimmed = trim($pdvNumero);
             
-            // Vérifier si l'entrée existe déjà dans la base ou dans le batch en cours
-            if (isset($existingPdvs[$pdvNumeroTrimmed])) {
-                $skipped++;
-                continue;
-            }
-
             // Préparer les données
             $data = [
                 'pdv_numero' => $pdvNumeroTrimmed,
@@ -222,27 +215,29 @@ class TransactionImportController extends Controller
             $data['created_at'] = now();
             $data['updated_at'] = now();
             
-            $batchData[] = $data;
-            $existingPdvs[$pdvNumeroTrimmed] = true; // Marquer comme existant pour éviter les doublons dans le fichier
+            $allData[] = $data;
 
-            // Insérer par lot quand on atteint la taille du batch
-            if (count($batchData) >= $batchSize) {
-                PdvTransaction::insert($batchData);
-                $imported += count($batchData);
-                $batchData = [];
+            // Traiter par lot quand on atteint la taille du batch
+            if (count($allData) >= $batchSize) {
+                $result = $this->upsertBatch($allData, $transactionDate->format('Y-m-d'));
+                $imported += $result['inserted'];
+                $updated += $result['updated'];
+                $allData = [];
             }
         }
         
-        // Insérer les données restantes
-        if (!empty($batchData)) {
-            PdvTransaction::insert($batchData);
-            $imported += count($batchData);
+        // Traiter les données restantes
+        if (!empty($allData)) {
+            $result = $this->upsertBatch($allData, $transactionDate->format('Y-m-d'));
+            $imported += $result['inserted'];
+            $updated += $result['updated'];
         }
         
-        Log::info("Import terminé: {$imported} importés, {$skipped} ignorés (lignes vides ou doublons)");
+        Log::info("Import terminé: {$imported} créés, {$updated} mis à jour, {$skipped} ignorés (lignes vides)");
 
         return [
             'imported' => $imported,
+            'updated' => $updated,
             'skipped' => $skipped,
             'date' => $transactionDate->format('Y-m-d'),
         ];
@@ -268,6 +263,76 @@ class TransactionImportController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * Upsert batch optimisé avec Laravel upsert()
+     */
+    private function upsertBatch(array $data, string $date): array
+    {
+        // Compter les existants avant
+        $existingPdvs = PdvTransaction::where('transaction_date', $date)
+            ->pluck('pdv_numero')
+            ->flip()
+            ->toArray();
+        
+        $beforeCount = count($existingPdvs);
+        
+        // Colonnes qui définissent l'unicité
+        $uniqueBy = ['pdv_numero', 'transaction_date'];
+        
+        // Colonnes à mettre à jour en cas de conflit (basé sur la structure réelle de la table)
+        $update = [
+            'count_depot',
+            'sum_depot',
+            'pdv_depot_commission',
+            'dealer_depot_commission',
+            'pdv_depot_retenue',
+            'dealer_depot_retenue',
+            'depot_keycost',
+            'depot_customer_tva',
+            'count_retrait',
+            'sum_retrait',
+            'pdv_retrait_commission',
+            'dealer_retrait_commission',
+            'pdv_retrait_retenue',
+            'dealer_retrait_retenue',
+            'retrait_keycost',
+            'retrait_customer_tva',
+            'count_give_send',
+            'sum_give_send',
+            'count_give_send_in_network',
+            'sum_give_send_in_network',
+            'count_give_send_out_network',
+            'sum_give_send_out_network',
+            'count_give_receive',
+            'sum_give_receive',
+            'count_give_receive_in_network',
+            'sum_give_receive_in_network',
+            'count_give_receive_out_network',
+            'sum_give_receive_out_network',
+            'updated_at'
+        ];
+        
+        // Effectuer l'upsert en une seule requête batch
+        PdvTransaction::upsert($data, $uniqueBy, $update);
+        
+        // Compter les nouveaux après
+        $afterPdvs = PdvTransaction::where('transaction_date', $date)
+            ->pluck('pdv_numero')
+            ->flip()
+            ->toArray();
+        
+        $afterCount = count($afterPdvs);
+        
+        // Calculer inserted vs updated
+        $inserted = max(0, $afterCount - $beforeCount);
+        $updated = count($data) - $inserted;
+        
+        return [
+            'inserted' => $inserted,
+            'updated' => $updated
+        ];
     }
 
     /**

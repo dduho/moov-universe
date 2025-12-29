@@ -4,7 +4,7 @@ export default {
   /**
    * Upload multiple transaction files
    */
-  async uploadFiles(files) {
+  async uploadFiles(files, onUploadProgress = null) {
     const formData = new FormData();
     
     for (let i = 0; i < files.length; i++) {
@@ -15,6 +15,8 @@ export default {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 300000, // 5 minutes timeout pour fichiers volumineux
+      onUploadProgress: onUploadProgress || undefined,
     });
   },
 
