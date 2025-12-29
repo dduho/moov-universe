@@ -272,24 +272,43 @@
                 ? 'bg-gray-300 cursor-not-allowed' 
                 : 'bg-moov-orange hover:bg-orange-600 shadow-lg hover:shadow-xl'"
             >
-              <span v-if="uploading" class="flex items-center justify-center gap-2">
-                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Importation en cours... {{ uploadProgress }}%
+              <span v-if="uploading" class="flex flex-col items-center justify-center gap-1">
+                <div class="flex items-center gap-2">
+                  <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span v-if="uploadStage === 'uploading'">Envoi du fichier... {{ uploadProgress }}%</span>
+                  <span v-else-if="uploadStage === 'processing'">Traitement en cours... {{ uploadProgress }}%</span>
+                  <span v-else>Finalisation...</span>
+                </div>
+                <span class="text-xs opacity-90">
+                  <span v-if="uploadStage === 'processing'">Insertion/mise à jour des données dans la base</span>
+                </span>
               </span>
               <span v-else>
                 Importer {{ selectedFiles.length }} fichier(s)
               </span>
             </button>
 
-            <!-- Progress Bar -->
-            <div v-if="uploading" class="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                class="bg-moov-orange h-2.5 rounded-full transition-all duration-300" 
-                :style="{ width: uploadProgress + '%' }"
-              ></div>
+            <!-- Progress Bar with Stage Colors -->
+            <div v-if="uploading" class="space-y-2">
+              <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                <div 
+                  class="h-2.5 rounded-full transition-all duration-300"
+                  :class="{
+                    'bg-blue-500': uploadStage === 'uploading',
+                    'bg-moov-orange': uploadStage === 'processing',
+                    'bg-green-500': uploadStage === 'complete'
+                  }"
+                  :style="{ width: uploadProgress + '%' }"
+                ></div>
+              </div>
+              <div class="flex justify-between text-xs text-gray-600">
+                <span :class="uploadStage === 'uploading' ? 'font-semibold text-blue-600' : ''">📤 Upload</span>
+                <span :class="uploadStage === 'processing' ? 'font-semibold text-orange-600' : ''">⚙️ Traitement</span>
+                <span :class="uploadStage === 'complete' ? 'font-semibold text-green-600' : ''">✅ Terminé</span>
+              </div>
             </div>
 
             <!-- Import Results -->
@@ -503,6 +522,7 @@ const selectedFiles = ref([]);
 const isDragging = ref(false);
 const uploading = ref(false);
 const uploadProgress = ref(0);
+const uploadStage = ref(''); // 'uploading', 'processing', 'complete'
 const importResults = ref(null);
 
 const loadSettings = async () => {
@@ -650,16 +670,39 @@ const uploadTransactionFiles = async () => {
   try {
     uploading.value = true;
     uploadProgress.value = 0;
+    uploadStage.value = 'uploading';
     importResults.value = null;
+    
+    let progressInterval = null;
     
     const response = await TransactionService.uploadFiles(
       selectedFiles.value,
       (progressEvent) => {
-        // Calcul de la progression (upload + traitement estimé)
-        const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        // Phase 1: Upload du fichier (0-50%)
+        const percentCompleted = Math.round((progressEvent.loaded * 50) / progressEvent.total);
         uploadProgress.value = percentCompleted;
+        
+        // Quand upload terminé, passer au traitement
+        if (percentCompleted >= 50 && !progressInterval) {
+          uploadStage.value = 'processing';
+          // Animation de progression pendant le traitement (50-95%)
+          progressInterval = setInterval(() => {
+            if (uploadProgress.value < 95 && uploadStage.value === 'processing') {
+              uploadProgress.value += 1;
+            }
+          }, 1000); // +1% par seconde
+        }
       }
     );
+    
+    // Nettoyer l'intervalle si présent
+    if (progressInterval) {
+      clearInterval(progressInterval);
+    }
+    
+    // Phase 3: Terminé
+    uploadStage.value = 'complete';
+    uploadProgress.value = 100;
     
     importResults.value = response.data;
     
@@ -684,6 +727,7 @@ const uploadTransactionFiles = async () => {
   } finally {
     uploading.value = false;
     uploadProgress.value = 0;
+    uploadStage.value = '';
   }
 };
 
