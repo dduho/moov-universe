@@ -1,14 +1,73 @@
 import api from './api';
+import { offlineDB } from '../utils/offlineDB';
 
 export default {
   async getAll(params = {}) {
-    const response = await api.get('/point-of-sales', { params });
-    return response.data;
+    try {
+      // Si en ligne, fetch depuis l'API
+      if (navigator.onLine) {
+        const response = await api.get('/point-of-sales', { params });
+        const pdvList = response.data.data || response.data;
+        
+        // Sauvegarder dans IndexedDB pour usage offline
+        if (Array.isArray(pdvList)) {
+          await offlineDB.savePDVList(pdvList);
+          console.log('[PDV Service] Liste PDV sauvegardée pour mode offline');
+        }
+        
+        return response.data;
+      }
+      
+      // Si hors ligne, utiliser les données locales
+      console.log('[PDV Service] Mode hors ligne - Chargement depuis IndexedDB');
+      const cachedPDV = await offlineDB.getPDVList();
+      return { data: cachedPDV };
+    } catch (error) {
+      console.error('[PDV Service] Erreur, tentative cache...', error);
+      
+      // En cas d'erreur, essayer le cache local
+      const cached = await offlineDB.getPDVList();
+      if (cached && cached.length > 0) {
+        console.log('[PDV Service] Données récupérées du cache');
+        return { data: cached };
+      }
+      
+      throw error;
+    }
   },
 
   async getForMap(params = {}) {
-    const response = await api.get('/point-of-sales/for-map', { params });
-    return response.data;
+    try {
+      if (navigator.onLine) {
+        const response = await api.get('/point-of-sales/for-map', { params });
+        
+        // Mettre en cache les données de la carte
+        const mapData = response.data;
+        if (mapData) {
+          await offlineDB.cacheData('map-pdv-list', mapData, 60);
+        }
+        
+        return response.data;
+      }
+      
+      // Mode offline : récupérer depuis le cache
+      const cached = await offlineDB.getCachedData('map-pdv-list');
+      if (cached) {
+        console.log('[PDV Service] Données carte depuis cache');
+        return cached;
+      }
+      
+      // Fallback sur la liste complète
+      const allPDV = await offlineDB.getPDVList();
+      return { data: allPDV.filter(pdv => pdv.latitude && pdv.longitude) };
+    } catch (error) {
+      // Fallback cache
+      const cached = await offlineDB.getCachedData('map-pdv-list');
+      if (cached) return cached;
+      
+      const allPDV = await offlineDB.getPDVList();
+      return { data: allPDV.filter(pdv => pdv.latitude && pdv.longitude) };
+    }
   },
 
   async getById(id) {

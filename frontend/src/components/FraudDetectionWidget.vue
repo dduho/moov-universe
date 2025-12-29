@@ -9,7 +9,7 @@
           </svg>
         </div>
         <div>
-          <h3 class="text-lg font-bold text-gray-900">Détection de Fraude</h3>
+          <h3 class="text-lg font-bold text-gray-900">Comportements suspicieux</h3>
           <p class="text-sm text-gray-600">Alertes basées sur patterns suspects</p>
         </div>
       </div>
