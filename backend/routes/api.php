@@ -236,6 +236,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Fraud Detection routes (Admin only)
     Route::prefix('fraud-detection')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/', [FraudDetectionController::class, 'detect']);
+        Route::get('/export', [FraudDetectionController::class, 'exportExcel']);
     });
 
     // Geolocation routes (Admin only)

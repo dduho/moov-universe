@@ -8,6 +8,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class FraudDetectionController extends Controller
 {
@@ -421,5 +426,286 @@ class FraudDetectionController extends Controller
         if ($score >= 70) return 'high';
         if ($score >= 40) return 'medium';
         return 'low';
+    }
+
+    /**
+     * Export fraud detection alerts to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $scope = $request->input('scope', 'global');
+        $entityId = $request->input('entity_id');
+        $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
+        $endDate = $request->input('end_date', now()->format('Y-m-d'));
+
+        // Get all alerts (no limit for export)
+        $alerts = [];
+        $alerts = array_merge($alerts, $this->detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, 10000, 0));
+        $alerts = array_merge($alerts, $this->detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate, 10000, 0));
+        $alerts = array_merge($alerts, $this->detectActivitySpikes($scope, $entityId, $startDate, $endDate, 10000, 0));
+        $alerts = array_merge($alerts, $this->detectCommissionOverCa($scope, $entityId, $startDate, $endDate, 10000, 0));
+
+        // Calculate risk scores
+        foreach ($alerts as &$alert) {
+            $alert['risk_score'] = $this->calculateRiskScore($alert);
+            $alert['risk_level'] = $this->getRiskLevel($alert['risk_score']);
+        }
+
+        // Sort by risk score descending
+        usort($alerts, function ($a, $b) {
+            return $b['risk_score'] <=> $a['risk_score'];
+        });
+
+        // Create Excel file
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Comportements Suspicieux');
+
+        // Define headers
+        $headers = [
+            'A1' => 'Date',
+            'B1' => 'PDV Numéro',
+            'C1' => 'Nom PDV',
+            'D1' => 'Dealer',
+            'E1' => 'Région',
+            'F1' => 'Type d\'Alerte',
+            'G1' => 'Niveau de Risque',
+            'H1' => 'Score de Risque',
+            'I1' => 'Montant Suspect (FCFA)',
+            'J1' => 'Description',
+            'K1' => 'Détails Techniques'
+        ];
+
+        // Style headers
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 12
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1F2937']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ];
+
+        // Set headers
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+        $sheet->getStyle('A1:K1')->applyFromArray($headerStyle);
+
+        // Auto-size columns
+        foreach (range('A', 'K') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Set row height for header
+        $sheet->getRowDimension(1)->setRowHeight(30);
+
+        // Fill data
+        $row = 2;
+        foreach ($alerts as $alert) {
+            // Type labels mapping
+            $typeLabels = [
+                'split_deposit_fraud' => 'Fractionnement de Dépôts',
+                'off_hours_transactions' => 'Transactions Hors Heures',
+                'activity_spike' => 'Pic d\'Activité Suspect',
+                'commission_over_ca' => 'Commission > CA'
+            ];
+
+            $riskLevelLabels = [
+                'high' => 'ÉLEVÉ',
+                'medium' => 'MOYEN',
+                'low' => 'FAIBLE'
+            ];
+
+            // Build technical details
+            $technicalDetails = [];
+            if (isset($alert['severity_factors'])) {
+                foreach ($alert['severity_factors'] as $key => $value) {
+                    if (is_numeric($value)) {
+                        $value = number_format($value, 2, ',', ' ');
+                    }
+                    $technicalDetails[] = ucfirst(str_replace('_', ' ', $key)) . ': ' . $value;
+                }
+            }
+
+            $sheet->setCellValue('A' . $row, Carbon::parse($alert['date'])->format('d/m/Y'));
+            $sheet->setCellValue('B' . $row, $alert['pdv_numero']);
+            $sheet->setCellValue('C' . $row, $alert['pdv_name']);
+            $sheet->setCellValue('D' . $row, $alert['dealer_name']);
+            $sheet->setCellValue('E' . $row, $alert['region']);
+            $sheet->setCellValue('F' . $row, $typeLabels[$alert['type']] ?? $alert['type']);
+            $sheet->setCellValue('G' . $row, $riskLevelLabels[$alert['risk_level']] ?? $alert['risk_level']);
+            $sheet->setCellValue('H' . $row, $alert['risk_score']);
+            $sheet->setCellValue('I' . $row, number_format($alert['flagged_amount'], 0, ',', ' '));
+            $sheet->setCellValue('J' . $row, $alert['description']);
+            $sheet->setCellValue('K' . $row, implode(' | ', $technicalDetails));
+
+            // Apply row styling based on risk level
+            $rowStyle = [
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_TOP,
+                    'wrapText' => true
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ]
+                ]
+            ];
+
+            $sheet->getStyle('A' . $row . ':K' . $row)->applyFromArray($rowStyle);
+
+            // Color code risk levels
+            $riskColors = [
+                'high' => 'FEE2E2',    // Red-100
+                'medium' => 'FEF3C7',  // Yellow-100
+                'low' => 'DBEAFE'      // Blue-100
+            ];
+
+            if (isset($riskColors[$alert['risk_level']])) {
+                $sheet->getStyle('G' . $row)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $riskColors[$alert['risk_level']]]
+                    ],
+                    'font' => ['bold' => true]
+                ]);
+            }
+
+            // Highlight risk score
+            $sheet->getStyle('H' . $row)->applyFromArray([
+                'font' => ['bold' => true, 'size' => 12],
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+            ]);
+
+            // Format amount with alignment
+            $sheet->getStyle('I' . $row)->applyFromArray([
+                'alignment' => ['horizontal' => Alignment::HORIZONTAL_RIGHT]
+            ]);
+
+            $row++;
+        }
+
+        // Set specific column widths for better readability
+        $sheet->getColumnDimension('A')->setWidth(12);  // Date
+        $sheet->getColumnDimension('B')->setWidth(15);  // PDV Numéro
+        $sheet->getColumnDimension('C')->setWidth(25);  // Nom PDV
+        $sheet->getColumnDimension('D')->setWidth(20);  // Dealer
+        $sheet->getColumnDimension('E')->setWidth(15);  // Région
+        $sheet->getColumnDimension('F')->setWidth(25);  // Type
+        $sheet->getColumnDimension('G')->setWidth(15);  // Niveau
+        $sheet->getColumnDimension('H')->setWidth(12);  // Score
+        $sheet->getColumnDimension('I')->setWidth(18);  // Montant
+        $sheet->getColumnDimension('J')->setWidth(50);  // Description
+        $sheet->getColumnDimension('K')->setWidth(40);  // Détails
+
+        // Add summary sheet
+        $summarySheet = $spreadsheet->createSheet();
+        $summarySheet->setTitle('Résumé');
+
+        // Summary headers
+        $summarySheet->setCellValue('A1', 'RÉSUMÉ DES COMPORTEMENTS SUSPICIEUX');
+        $summarySheet->mergeCells('A1:B1');
+        $summarySheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+
+        $summarySheet->setCellValue('A3', 'Période analysée:');
+        $summarySheet->setCellValue('B3', Carbon::parse($startDate)->format('d/m/Y') . ' - ' . Carbon::parse($endDate)->format('d/m/Y'));
+
+        $summarySheet->setCellValue('A4', 'Nombre total d\'alertes:');
+        $summarySheet->setCellValue('B4', count($alerts));
+
+        $highRisk = count(array_filter($alerts, fn($a) => $a['risk_level'] === 'high'));
+        $mediumRisk = count(array_filter($alerts, fn($a) => $a['risk_level'] === 'medium'));
+        $lowRisk = count(array_filter($alerts, fn($a) => $a['risk_level'] === 'low'));
+
+        $summarySheet->setCellValue('A6', 'Alertes Risque ÉLEVÉ:');
+        $summarySheet->setCellValue('B6', $highRisk);
+        $summarySheet->getStyle('B6')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'DC2626']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEE2E2']]
+        ]);
+
+        $summarySheet->setCellValue('A7', 'Alertes Risque MOYEN:');
+        $summarySheet->setCellValue('B7', $mediumRisk);
+        $summarySheet->getStyle('B7')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'D97706']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FEF3C7']]
+        ]);
+
+        $summarySheet->setCellValue('A8', 'Alertes Risque FAIBLE:');
+        $summarySheet->setCellValue('B8', $lowRisk);
+        $summarySheet->getStyle('B8')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => '2563EB']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'DBEAFE']]
+        ]);
+
+        $totalAmount = array_sum(array_column($alerts, 'flagged_amount'));
+        $summarySheet->setCellValue('A10', 'Montant total suspect:');
+        $summarySheet->setCellValue('B10', number_format($totalAmount, 0, ',', ' ') . ' FCFA');
+        $summarySheet->getStyle('B10')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 12]
+        ]);
+
+        // Type breakdown
+        $summarySheet->setCellValue('A12', 'Répartition par type:');
+        $summarySheet->getStyle('A12')->applyFromArray(['font' => ['bold' => true]]);
+
+        $typeCount = [];
+        foreach ($alerts as $alert) {
+            $type = $alert['type'];
+            $typeCount[$type] = ($typeCount[$type] ?? 0) + 1;
+        }
+
+        $summaryRow = 13;
+        $typeLabels = [
+            'split_deposit_fraud' => 'Fractionnement de Dépôts',
+            'off_hours_transactions' => 'Transactions Hors Heures',
+            'activity_spike' => 'Pic d\'Activité Suspect',
+            'commission_over_ca' => 'Commission > CA'
+        ];
+
+        foreach ($typeCount as $type => $count) {
+            $summarySheet->setCellValue('A' . $summaryRow, $typeLabels[$type] ?? $type);
+            $summarySheet->setCellValue('B' . $summaryRow, $count);
+            $summaryRow++;
+        }
+
+        $summarySheet->getColumnDimension('A')->setWidth(30);
+        $summarySheet->getColumnDimension('B')->setWidth(25);
+
+        // Set active sheet back to main data
+        $spreadsheet->setActiveSheetIndex(0);
+
+        // Generate filename
+        $filename = 'comportements_suspicieux_' . Carbon::parse($startDate)->format('Ymd') . '_' . Carbon::parse($endDate)->format('Ymd') . '.xlsx';
+
+        // Create writer and save to temporary file
+        $writer = new Xlsx($spreadsheet);
+        $tempFile = tempnam(sys_get_temp_dir(), 'fraud_export_');
+        $writer->save($tempFile);
+
+        // Return as download response with proper CORS headers
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control' => 'max-age=0',
+        ])->deleteFileAfterSend(true);
     }
 }
