@@ -485,7 +485,9 @@ class PointOfSaleImportController extends Controller
         $commune = $commune ?: 'N/A';
         $ville = $ville ?: 'N/A';
         $quartier = $quartier ?: 'N/A';
-        // dealer_name est ignoré car on utilise organization_id (sélectionné avant l'import)
+        // Récupérer le nom du dealer depuis l'organisation
+        $organization = Organization::find($organizationId);
+        $dealer_name = $organization ? $organization->name : 'N/A';
         $numero_cagnt = $this->getColumnValue($row, $headerMap, 'numero_cagnt') ?: '00000000000';
         $numero_proprietaire = $phone ?: '00000000000';
         $support_visibilite = $support_visibilite ?: 'N/A';
@@ -502,7 +504,7 @@ class PointOfSaleImportController extends Controller
             'ville' => $ville,
             'quartier' => $quartier,
             'canton' => $canton,
-            // dealer_name n'est plus rempli, on utilise organization_id
+            'dealer_name' => $dealer_name,
             'latitude' => $latitude,
             'longitude' => $longitude,
             // Informations gérant
