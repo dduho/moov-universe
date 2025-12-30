@@ -30,7 +30,7 @@ class FraudDetectionController extends Controller
 
         $cacheKey = "fraud_detection_{$scope}_{$entityId}_{$startDate}_{$endDate}_{$limit}_{$offset}";
 
-        return Cache::remember($cacheKey, 1800, function () use ($scope, $entityId, $startDate, $endDate, $limit, $offset) {
+        return Cache::remember($cacheKey, 10800, function () use ($scope, $entityId, $startDate, $endDate, $limit, $offset) {
             $alerts = [];
 
             // 1. Split deposit fraud - Main fraud pattern (high depot count vs retrait)
@@ -438,22 +438,27 @@ class FraudDetectionController extends Controller
         $startDate = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->format('Y-m-d'));
 
-        // Get all alerts (no limit for export)
-        $alerts = [];
-        $alerts = array_merge($alerts, $this->detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, 10000, 0));
-        $alerts = array_merge($alerts, $this->detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate, 10000, 0));
-        $alerts = array_merge($alerts, $this->detectActivitySpikes($scope, $entityId, $startDate, $endDate, 10000, 0));
-        $alerts = array_merge($alerts, $this->detectCommissionOverCa($scope, $entityId, $startDate, $endDate, 10000, 0));
+        $cacheKey = "fraud_detection_export_{$scope}_{$entityId}_{$startDate}_{$endDate}";
 
-        // Calculate risk scores
-        foreach ($alerts as &$alert) {
-            $alert['risk_score'] = $this->calculateRiskScore($alert);
-            $alert['risk_level'] = $this->getRiskLevel($alert['risk_score']);
-        }
+        $alerts = \Cache::remember($cacheKey, 10800, function () use ($scope, $entityId, $startDate, $endDate) {
+            $alerts = [];
+            $alerts = array_merge($alerts, $this->detectSplitDepositFraud($scope, $entityId, $startDate, $endDate, 10000, 0));
+            $alerts = array_merge($alerts, $this->detectOffHoursLargeTransactions($scope, $entityId, $startDate, $endDate, 10000, 0));
+            $alerts = array_merge($alerts, $this->detectActivitySpikes($scope, $entityId, $startDate, $endDate, 10000, 0));
+            $alerts = array_merge($alerts, $this->detectCommissionOverCa($scope, $entityId, $startDate, $endDate, 10000, 0));
 
-        // Sort by risk score descending
-        usort($alerts, function ($a, $b) {
-            return $b['risk_score'] <=> $a['risk_score'];
+            // Calculate risk scores
+            foreach ($alerts as &$alert) {
+                $alert['risk_score'] = $this->calculateRiskScore($alert);
+                $alert['risk_level'] = $this->getRiskLevel($alert['risk_score']);
+            }
+
+            // Sort by risk score descending
+            usort($alerts, function ($a, $b) {
+                return $b['risk_score'] <=> $a['risk_score'];
+            });
+
+            return $alerts;
         });
 
         // Create Excel file
