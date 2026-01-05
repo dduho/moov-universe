@@ -138,6 +138,18 @@ class StatisticsController extends Controller
         $now = Carbon::now();
         $yearStart = $now->copy()->startOfYear();
         $yearEnd = $now->copy()->endOfYear();
+        
+        // Vérifier s'il y a des données dans l'année en cours
+        $currentYearHasData = DB::table('pdv_transactions')
+            ->whereBetween('transaction_date', [$yearStart, $yearEnd])
+            ->exists();
+        
+        // Si pas de données dans l'année en cours, utiliser l'année précédente
+        if (!$currentYearHasData) {
+            $yearStart = $now->copy()->subYear()->startOfYear();
+            $yearEnd = $now->copy()->subYear()->endOfYear();
+        }
+        
         $yesterdayDate = $now->copy()->subDay()->toDateString();
 
         $txQuery = DB::table('pdv_transactions as t')

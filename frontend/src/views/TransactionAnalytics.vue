@@ -665,6 +665,7 @@ const { toast } = useToast();
 // State
 const loading = ref(false);
 const analytics = ref(null);
+const analyticsCache = ref({}); // Cache frontend pour toutes les périodes
 const insights = ref([]);
 const loadingInsights = ref(false);
 const insightsGeneratedAt = ref('');
@@ -755,40 +756,97 @@ const getWeekEndDate = (year, week) => {
   return `${weekStart.getDate().toString().padStart(2, '0')}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}`;
 };
 
+// Générer une clé de cache unique pour chaque combinaison de paramètres
+const getCacheKey = (params) => {
+  return JSON.stringify(params);
+};
+
+// Clone robuste pour éviter les erreurs de DataCloneError (ex: objets non sérialisables)
+const safeClone = (value) => {
+  try {
+    return structuredClone(value);
+  } catch (error) {
+    try {
+      return JSON.parse(JSON.stringify(value));
+    } catch (jsonError) {
+      console.error('Clone error, returning original object', { error, jsonError });
+      return value;
+    }
+  }
+};
+
+// Obtenir les données depuis le cache ou charger depuis l'API
+const getAnalyticsData = async (params) => {
+  const cacheKey = getCacheKey(params);
+  
+  // Si déjà en cache, retourner immédiatement
+  if (analyticsCache.value[cacheKey]) {
+    return safeClone(analyticsCache.value[cacheKey]);
+  }
+  
+  // Sinon, charger depuis l'API
+  const response = await TransactionAnalyticsService.getAnalytics(params);
+  // Stocker puis retourner une copie pour déclencher la réactivité des graphiques
+  analyticsCache.value[cacheKey] = response.data;
+  return safeClone(response.data);
+};
+
+// Pré-charger toutes les périodes au montage
+const preloadAllPeriods = async () => {
+  if (!isCurrentYear.value) return;
+  
+  const periods = ['day', 'week', 'month', 'quarter'];
+  await Promise.all(
+    periods.map(async (period) => {
+      try {
+        await getAnalyticsData({ period });
+      } catch (error) {
+        console.error(`Error preloading ${period}:`, error);
+      }
+    })
+  );
+};
+
 // Load analytics
 const loadAnalytics = async () => {
+  let params = {};
+  
+  if (isCurrentYear.value) {
+    // Année en cours : utiliser le système de période classique
+    params = { period: selectedPeriod.value };
+  } else {
+    // Année passée : utiliser le nouveau système
+    if (historicalPeriodType.value === 'year') {
+      params = { 
+        period: 'historical_year',
+        year: selectedYear.value 
+      };
+    } else if (historicalPeriodType.value === 'month') {
+      params = { 
+        period: 'historical_month',
+        year: selectedYear.value,
+        month: selectedMonth.value
+      };
+    } else if (historicalPeriodType.value === 'week') {
+      params = { 
+        period: 'historical_week',
+        year: selectedYear.value,
+        week: selectedWeek.value
+      };
+    }
+  }
+
+  // Si déjà en cache, servir immédiatement et éviter le loader global
+  const cacheKey = getCacheKey(params);
+  if (analyticsCache.value[cacheKey]) {
+    analytics.value = safeClone(analyticsCache.value[cacheKey]);
+    loading.value = false;
+    return;
+  }
+  
   try {
     loading.value = true;
-    
-    let params = {};
-    
-    if (isCurrentYear.value) {
-      // Année en cours : utiliser le système de période classique
-      params = { period: selectedPeriod.value };
-    } else {
-      // Année passée : utiliser le nouveau système
-      if (historicalPeriodType.value === 'year') {
-        params = { 
-          period: 'historical_year',
-          year: selectedYear.value 
-        };
-      } else if (historicalPeriodType.value === 'month') {
-        params = { 
-          period: 'historical_month',
-          year: selectedYear.value,
-          month: selectedMonth.value
-        };
-      } else if (historicalPeriodType.value === 'week') {
-        params = { 
-          period: 'historical_week',
-          year: selectedYear.value,
-          week: selectedWeek.value
-        };
-      }
-    }
-    
-    const response = await TransactionAnalyticsService.getAnalytics(params);
-    analytics.value = response.data;
+    analytics.value = await getAnalyticsData(params);
   } catch (error) {
     console.error('Error loading analytics:', error);
     toast.error('Erreur lors du chargement des analytics');
@@ -911,6 +969,7 @@ const caChartOptions = {
     y: {
       beginAtZero: true,
       ticks: {
+        maxTicksLimit: 10,
         callback: (value) => formatCurrency(value)
       }
     }
@@ -953,6 +1012,7 @@ const pdvChartOptions = {
     y: {
       beginAtZero: false,
       ticks: {
+        maxTicksLimit: 10,
         callback: (value) => formatNumber(value)
       }
     }
@@ -1023,9 +1083,13 @@ const getMonthIcon = (monthNumber) => {
 };
 
 // Initial load
-onMounted(() => {
+onMounted(async () => {
+  // Charger les données de la période sélectionnée
   loadAnalytics();
   loadInsights();
   loadMonthlyRevenue();
+  
+  // Pré-charger toutes les autres périodes en arrière-plan
+  preloadAllPeriods();
 });
 </script>

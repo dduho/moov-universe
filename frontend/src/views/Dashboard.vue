@@ -39,7 +39,7 @@
       <main>
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <!-- Loading Skeleton -->
-          <div v-if="loading">
+          <div v-if="loadingStates.stats && stats.total === 0">
             <!-- Stats Cards Skeleton -->
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
               <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
@@ -65,34 +65,10 @@
                 </div>
               </div>
             </div>
-
-            <!-- Quick Actions & Recent PDV Skeleton -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
-                <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
-                <div class="space-y-4">
-                  <div v-for="i in 3" :key="i" class="h-12 bg-gray-300 rounded-xl"></div>
-                </div>
-              </div>
-              <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse">
-                <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
-                <div class="space-y-3">
-                  <div v-for="i in 5" :key="i" class="h-16 bg-gray-300 rounded-xl"></div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Regions Skeleton -->
-            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl animate-pulse mb-8">
-              <div class="h-6 bg-gray-300 rounded w-40 mb-6"></div>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <div v-for="i in 6" :key="i" class="h-32 bg-gray-300 rounded-xl"></div>
-              </div>
-            </div>
           </div>
 
           <!-- Actual Content -->
-          <div v-else>
+          <div v-if="stats.total > 0 || !loadingStates.stats">
           <!-- Incomplete required fields alert -->
           <div v-if="incompletePdvs.length" class="mb-8">
             <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-[2px] shadow-2xl">
@@ -886,7 +862,31 @@
                 </router-link>
               </div>
 
-              <div class="space-y-3">
+              <!-- Skeleton pour Top Dealers -->
+              <div v-if="loadingStates.topDealers && topDealers.length === 0" class="space-y-3">
+                <div v-for="i in 5" :key="i" class="animate-pulse rounded-xl bg-gray-100 p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-12 h-12 rounded-xl bg-gray-300"></div>
+                      <div class="space-y-2">
+                        <div class="h-4 bg-gray-300 rounded w-32"></div>
+                        <div class="h-3 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </div>
+                    <div class="space-y-2">
+                      <div class="h-3 bg-gray-200 rounded w-16"></div>
+                      <div class="h-4 bg-gray-300 rounded w-24"></div>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2">
+                    <div class="h-16 bg-gray-200 rounded-lg"></div>
+                    <div class="h-16 bg-gray-200 rounded-lg"></div>
+                    <div class="h-16 bg-gray-200 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-else class="space-y-3">
                 <div
                   v-for="(dealer, index) in topDealers.slice(0, 5)"
                   :key="dealer.id"
@@ -1101,7 +1101,17 @@ const recentPdvs = ref([]);
 const byOrganization = ref([]);
 const byRegion = ref([]);
 const topDealers = ref([]);
-const loading = ref(true);
+const loadingStates = ref({
+  stats: false,
+  recentPdvs: false,
+  byOrganization: false,
+  topDealers: false,
+  byRegion: false,
+  incompletePdvs: false,
+  gpsStats: false,
+  geoAlerts: false,
+  proximityAlerts: false
+});
 const expandedRegions = ref({});
 const gpsStats = ref({
   total_pdv: 0,
@@ -1208,14 +1218,13 @@ const getCompletionPercentage = (pdv) => {
   return Math.round((completedCount / totalRequiredFields) * 100);
 };
 
-const fetchDashboardData = async () => {
+// Charger les données individuellement
+const fetchStats = async () => {
   try {
-    loading.value = true;
+    loadingStates.value.stats = true;
     const data = await StatisticsService.getDashboard();
     stats.value = data.stats;
-    recentPdvs.value = data.recent_pdvs || [];
     byOrganization.value = data.by_organization || [];
-    topDealers.value = data.top_dealers || data.topDealers || [];
     byRegion.value = data.by_region || [
       { name: 'Maritime', count: 45, validated: 35, pending: 8, rejected: 2, cities: ['Lomé', 'Aného', 'Tsévié'] },
       { name: 'Plateaux', count: 32, validated: 28, pending: 3, rejected: 1, cities: ['Atakpamé', 'Kpalimé'] },
@@ -1224,37 +1233,87 @@ const fetchDashboardData = async () => {
       { name: 'Savanes', count: 18, validated: 15, pending: 2, rejected: 1, cities: ['Dapaong', 'Mango'] },
     ];
     incompletePdvs.value = data.incomplete_pdvs || [];
-    
-    // Fetch GPS stats
-    try {
-      const gpsData = await PointOfSaleService.getGpsStats();
-      gpsStats.value = gpsData;
-    } catch (gpsError) {
-      console.error('Failed to fetch GPS stats:', gpsError);
-    }
-    
-    // Fetch geo alerts (admin only)
-    if (authStore.isAdmin) {
-      try {
-        const alertsData = await StatisticsService.getGeoAlerts();
-        geoAlerts.value = alertsData;
-      } catch (geoError) {
-        console.error('Failed to fetch geo alerts:', geoError);
-      }
-    }
-    
-    // Fetch proximity alerts
-    try {
-      const proximityData = await PointOfSaleService.getProximityAlerts();
-      proximityAlerts.value = proximityData;
-    } catch (proximityError) {
-      console.error('Failed to fetch proximity alerts:', proximityError);
-    }
   } catch (error) {
-    console.error('Failed to fetch dashboard data:', error);
+    console.error('Failed to fetch stats:', error);
   } finally {
-    loading.value = false;
+    loadingStates.value.stats = false;
+    loadingStates.value.byOrganization = false;
+    loadingStates.value.byRegion = false;
+    loadingStates.value.incompletePdvs = false;
   }
+};
+
+const fetchRecentPdvs = async () => {
+  try {
+    loadingStates.value.recentPdvs = true;
+    const data = await StatisticsService.getDashboard();
+    recentPdvs.value = data.recent_pdvs || [];
+  } catch (error) {
+    console.error('Failed to fetch recent PDVs:', error);
+  } finally {
+    loadingStates.value.recentPdvs = false;
+  }
+};
+
+const fetchTopDealers = async () => {
+  try {
+    loadingStates.value.topDealers = true;
+    const data = await StatisticsService.getDashboard();
+    topDealers.value = data.top_dealers || data.topDealers || [];
+  } catch (error) {
+    console.error('Failed to fetch top dealers:', error);
+  } finally {
+    loadingStates.value.topDealers = false;
+  }
+};
+
+const fetchGpsStats = async () => {
+  try {
+    loadingStates.value.gpsStats = true;
+    const gpsData = await PointOfSaleService.getGpsStats();
+    gpsStats.value = gpsData;
+  } catch (error) {
+    console.error('Failed to fetch GPS stats:', error);
+  } finally {
+    loadingStates.value.gpsStats = false;
+  }
+};
+
+const fetchGeoAlerts = async () => {
+  if (!authStore.isAdmin) return;
+  try {
+    loadingStates.value.geoAlerts = true;
+    const alertsData = await StatisticsService.getGeoAlerts();
+    geoAlerts.value = alertsData;
+  } catch (error) {
+    console.error('Failed to fetch geo alerts:', error);
+  } finally {
+    loadingStates.value.geoAlerts = false;
+  }
+};
+
+const fetchProximityAlerts = async () => {
+  try {
+    loadingStates.value.proximityAlerts = true;
+    const proximityData = await PointOfSaleService.getProximityAlerts();
+    proximityAlerts.value = proximityData;
+  } catch (error) {
+    console.error('Failed to fetch proximity alerts:', error);
+  } finally {
+    loadingStates.value.proximityAlerts = false;
+  }
+};
+
+const fetchDashboardData = async () => {
+  // Charger tous les widgets en parallèle
+  await Promise.all([
+    fetchStats(),
+    fetchRecentPdvs(),
+    fetchTopDealers(),
+    fetchGpsStats(),
+    fetchGeoAlerts(),
+    fetchProximityAlerts()
+  ]);
 };
 
 // Pull-to-refresh functionality

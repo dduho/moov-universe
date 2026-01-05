@@ -472,7 +472,16 @@
               <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Gestion avancée du cache</h3>
               <p class="text-xs sm:text-sm text-gray-600">Activez, désactivez, ajustez la durée ou videz le cache pour chaque widget avancé.</p>
             </div>
-            <button @click="clearAllCaches" class="px-4 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg">Vider tous les caches</button>
+              <button @click="clearAllCaches" :disabled="clearingAllCaches" class="px-4 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed">
+                <span v-if="clearingAllCaches" class="flex items-center gap-2">
+                  <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4A8 8 0 104 12z"></path>
+                  </svg>
+                  Vidage en cours...
+                </span>
+                <span v-else>Vider tous les caches</span>
+              </button>
           </div>
           <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
@@ -494,7 +503,17 @@
                     <input type="number" min="1" max="1440" v-model.number="widget.ttl" @change="updateCacheSetting(widget)" class="w-24 px-2 py-1 border rounded-lg focus:ring-moov-orange focus:border-moov-orange" />
                   </td>
                   <td class="px-4 py-2">
-                    <button @click="clearWidgetCache(widget)" class="px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-semibold">Vider le cache</button>
+                    <button
+                      @click="clearWidgetCache(widget)"
+                      :disabled="widget._loading"
+                      class="px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      <svg v-if="widget._loading" class="animate-spin h-4 w-4 text-red-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4A8 8 0 104 12z"></path>
+                      </svg>
+                      <span>{{ widget._loading ? 'Vidage...' : 'Vider le cache' }}</span>
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -570,12 +589,13 @@ const importResults = ref(null);
 
 // Advanced Cache Management
 const cacheWidgets = ref([
-  { key: 'network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60 },
-  { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60 },
-  { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60 },
-  { key: 'offline_dashboard', label: 'Tableau de bord hors ligne', enabled: true, ttl: 60 },
-  { key: 'dealer_analytics', label: 'Analytics Dealer', enabled: true, ttl: 60 },
+  { key: 'network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60, _loading: false },
+  { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60, _loading: false },
+  { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60, _loading: false },
+  { key: 'offline_dashboard', label: 'Tableau de bord hors ligne', enabled: true, ttl: 60, _loading: false },
+  { key: 'dealer_analytics', label: 'Analytics Dealer', enabled: true, ttl: 60, _loading: false },
 ]);
+const clearingAllCaches = ref(false);
 const cacheSettingsError = ref(null);
 
 const loadSettings = async () => {
@@ -770,7 +790,6 @@ const uploadTransactionFiles = async () => {
           if (percentCompleted > lastProgress) {
             uploadProgress.value = percentCompleted;
             lastProgress = percentCompleted;
-            console.log(`Upload progress: ${progressEvent.loaded}/${progressEvent.total} = ${percentCompleted}%`);
           }
           
           // Quand upload terminé, passer au traitement
@@ -851,17 +870,42 @@ async function fetchCacheSettings() {
 }
 
 async function updateCacheSetting(widget) {
-  await SettingService.updateCacheSetting(widget.key, { enabled: widget.enabled, ttl: widget.ttl });
+  try {
+    widget._loading = true;
+    await SettingService.updateCacheSetting(widget.key, { enabled: widget.enabled, ttl: widget.ttl });
+    toast.success('Cache mis à jour');
+  } catch (error) {
+    console.error('Error updating cache setting:', error);
+    toast.error('Erreur lors de la mise à jour du cache');
+  } finally {
+    widget._loading = false;
+  }
 }
 
 async function clearWidgetCache(widget) {
-  await SettingService.clearCache(widget.key);
-  // Optionally show a toast
+  try {
+    widget._loading = true;
+    await SettingService.clearCache(widget.key);
+    toast.success('Cache vidé');
+  } catch (error) {
+    console.error('Error clearing widget cache:', error);
+    toast.error('Erreur lors du vidage du cache');
+  } finally {
+    widget._loading = false;
+  }
 }
 
 async function clearAllCaches() {
-  await SettingService.clearAllCaches();
-  // Optionally show a toast
+  try {
+    clearingAllCaches.value = true;
+    await SettingService.clearAllCaches();
+    toast.success('Tous les caches ont été vidés');
+  } catch (error) {
+    console.error('Error clearing all caches:', error);
+    toast.error('Erreur lors du vidage de tous les caches');
+  } finally {
+    clearingAllCaches.value = false;
+  }
 }
 
 

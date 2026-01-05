@@ -12,6 +12,46 @@ class DealerAnalyticsService {
   }
 
   /**
+   * Récupérer uniquement les KPI
+   * @param {Object} params - Paramètres de période
+   * @returns {Promise} KPI avec comparaisons
+   */
+  async getKpi(params = {}) {
+    const response = await api.get('/dealer-analytics/kpi', { params });
+    return response.data;
+  }
+
+  /**
+   * Récupérer uniquement l'évolution
+   * @param {Object} params - Paramètres de période
+   * @returns {Promise} Données d'évolution
+   */
+  async getEvolution(params = {}) {
+    const response = await api.get('/dealer-analytics/evolution', { params });
+    return response.data;
+  }
+
+  /**
+   * Récupérer uniquement les top PDV
+   * @param {Object} params - Paramètres de période
+   * @returns {Promise} Top PDV par commissions
+   */
+  async getTopPdv(params = {}) {
+    const response = await api.get('/dealer-analytics/top-pdv', { params });
+    return response.data;
+  }
+
+  /**
+   * Récupérer uniquement les stats GIVE
+   * @param {Object} params - Paramètres de période
+   * @returns {Promise} Statistiques GIVE network
+   */
+  async getGiveStats(params = {}) {
+    const response = await api.get('/dealer-analytics/give-stats', { params });
+    return response.data;
+  }
+
+  /**
    * Récupérer les revenus mensuels pour l'année sélectionnée
    * @param {number} year - Année (ex: 2025)
    * @returns {Promise} Données mensuelles (commissions, retenues)

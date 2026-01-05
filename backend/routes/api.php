@@ -217,6 +217,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('dealer-analytics')->middleware('App\\Http\\Middleware\\CheckRole:dealer_owner')->group(function () {
         Route::get('/analytics', [DealerAnalyticsController::class, 'getAnalytics']);
         Route::get('/monthly-revenue', [DealerAnalyticsController::class, 'getMonthlyRevenue']);
+        Route::get('/kpi', [DealerAnalyticsController::class, 'getKpi']);
+        Route::get('/evolution', [DealerAnalyticsController::class, 'getEvolutionData']);
+        Route::get('/top-pdv', [DealerAnalyticsController::class, 'getTopPdv']);
+        Route::get('/give-stats', [DealerAnalyticsController::class, 'getGiveStats']);
     });
 
     // Comparator routes (Admin only)

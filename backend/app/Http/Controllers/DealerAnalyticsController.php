@@ -584,4 +584,177 @@ class DealerAnalyticsController extends Controller
         
         return [$weekStart->startOfDay(), $weekEnd];
     }
+
+    /**
+     * Récupérer uniquement les KPI
+     */
+    public function getKpi(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->hasRole('dealer_owner')) {
+            return response()->json(['message' => 'Accès refusé. Réservé aux dealer-owners.'], 403);
+        }
+
+        $organizationId = $user->organization_id;
+        if (!$organizationId) {
+            return response()->json(['message' => 'Aucune organisation associée.'], 400);
+        }
+
+        $period = $request->input('period', 'month');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $week = $request->input('week');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period, Carbon::now(), $year, $month, $week);
+        [$prevStartDate, $prevEndDate] = $this->getPreviousPeriodDates($period, $startDate, $endDate, $year, $month, $week);
+        
+        // Gestion du cache
+        $cacheEnabled = SystemSetting::getValue('cache_dealer_analytics_enabled', true);
+        $cacheTtl = (int) SystemSetting::getValue('cache_dealer_analytics_ttl', 60);
+        $cacheKey = "dealer_kpi_{$organizationId}_{$period}_" . $startDate->format('Y-m-d') . "_" . $endDate->format('Y-m-d');
+        
+        if ($cacheEnabled) {
+            $kpiData = Cache::remember($cacheKey, $cacheTtl * 60, function () use ($organizationId, $startDate, $endDate, $prevStartDate, $prevEndDate) {
+                $currentKPI = $this->calculateKPI($organizationId, $startDate, $endDate);
+                $previousKPI = $this->calculateKPI($organizationId, $prevStartDate, $prevEndDate);
+                return $this->addComparisons($currentKPI, $previousKPI);
+            });
+        } else {
+            $currentKPI = $this->calculateKPI($organizationId, $startDate, $endDate);
+            $previousKPI = $this->calculateKPI($organizationId, $prevStartDate, $prevEndDate);
+            $kpiData = $this->addComparisons($currentKPI, $previousKPI);
+        }
+        
+        return response()->json([
+            'kpi' => $kpiData,
+            'date_range' => [
+                'start' => $startDate->format('Y-m-d'),
+                'end' => $endDate->format('Y-m-d'),
+            ],
+        ]);
+    }
+
+    /**
+     * Récupérer uniquement l'évolution
+     */
+    public function getEvolutionData(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->hasRole('dealer_owner')) {
+            return response()->json(['message' => 'Accès refusé. Réservé aux dealer-owners.'], 403);
+        }
+
+        $organizationId = $user->organization_id;
+        if (!$organizationId) {
+            return response()->json(['message' => 'Aucune organisation associée.'], 400);
+        }
+
+        $period = $request->input('period', 'month');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $week = $request->input('week');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period, Carbon::now(), $year, $month, $week);
+        
+        // Gestion du cache
+        $cacheEnabled = SystemSetting::getValue('cache_dealer_analytics_enabled', true);
+        $cacheTtl = (int) SystemSetting::getValue('cache_dealer_analytics_ttl', 60);
+        $cacheKey = "dealer_evolution_{$organizationId}_{$period}_" . $startDate->format('Y-m-d') . "_" . $endDate->format('Y-m-d');
+        
+        if ($cacheEnabled) {
+            $evolution = Cache::remember($cacheKey, $cacheTtl * 60, function () use ($organizationId, $period, $startDate, $endDate) {
+                return $this->getEvolution($organizationId, $period, $startDate, $endDate);
+            });
+        } else {
+            $evolution = $this->getEvolution($organizationId, $period, $startDate, $endDate);
+        }
+        
+        return response()->json([
+            'evolution' => $evolution,
+        ]);
+    }
+
+    /**
+     * Récupérer uniquement les top PDV
+     */
+    public function getTopPdv(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->hasRole('dealer_owner')) {
+            return response()->json(['message' => 'Accès refusé. Réservé aux dealer-owners.'], 403);
+        }
+
+        $organizationId = $user->organization_id;
+        if (!$organizationId) {
+            return response()->json(['message' => 'Aucune organisation associée.'], 400);
+        }
+
+        $period = $request->input('period', 'month');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $week = $request->input('week');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period, Carbon::now(), $year, $month, $week);
+        
+        // Gestion du cache
+        $cacheEnabled = SystemSetting::getValue('cache_dealer_analytics_enabled', true);
+        $cacheTtl = (int) SystemSetting::getValue('cache_dealer_analytics_ttl', 60);
+        $cacheKey = "dealer_top_pdv_{$organizationId}_{$period}_" . $startDate->format('Y-m-d') . "_" . $endDate->format('Y-m-d');
+        
+        if ($cacheEnabled) {
+            $topPdv = Cache::remember($cacheKey, $cacheTtl * 60, function () use ($organizationId, $startDate, $endDate) {
+                return $this->getCommissionsByPdv($organizationId, $startDate, $endDate);
+            });
+        } else {
+            $topPdv = $this->getCommissionsByPdv($organizationId, $startDate, $endDate);
+        }
+        
+        return response()->json([
+            'commissions_by_pdv' => $topPdv,
+        ]);
+    }
+
+    /**
+     * Récupérer uniquement les stats GIVE
+     */
+    public function getGiveStats(Request $request)
+    {
+        $user = $request->user();
+        
+        if (!$user->hasRole('dealer_owner')) {
+            return response()->json(['message' => 'Accès refusé. Réservé aux dealer-owners.'], 403);
+        }
+
+        $organizationId = $user->organization_id;
+        if (!$organizationId) {
+            return response()->json(['message' => 'Aucune organisation associée.'], 400);
+        }
+
+        $period = $request->input('period', 'month');
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $week = $request->input('week');
+        
+        [$startDate, $endDate] = $this->getPeriodDates($period, Carbon::now(), $year, $month, $week);
+        
+        // Gestion du cache
+        $cacheEnabled = SystemSetting::getValue('cache_dealer_analytics_enabled', true);
+        $cacheTtl = (int) SystemSetting::getValue('cache_dealer_analytics_ttl', 60);
+        $cacheKey = "dealer_give_stats_{$organizationId}_{$period}_" . $startDate->format('Y-m-d') . "_" . $endDate->format('Y-m-d');
+        
+        if ($cacheEnabled) {
+            $giveStats = Cache::remember($cacheKey, $cacheTtl * 60, function () use ($organizationId, $startDate, $endDate) {
+                return $this->getGiveNetworkStats($organizationId, $startDate, $endDate);
+            });
+        } else {
+            $giveStats = $this->getGiveNetworkStats($organizationId, $startDate, $endDate);
+        }
+        
+        return response()->json([
+            'give_network_stats' => $giveStats,
+        ]);
+    }
 }

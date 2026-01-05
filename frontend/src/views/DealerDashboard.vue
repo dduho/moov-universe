@@ -48,7 +48,7 @@
             <button
               v-for="period in periods"
               :key="period.value"
-              @click="selectedPeriod = period.value"
+              @click="changePeriod(period.value)"
               :class="[
                 'px-4 py-2 rounded-xl font-semibold text-sm transition-all',
                 selectedPeriod === period.value
@@ -75,7 +75,7 @@
             <!-- Sélecteur de mois (si type = month) -->
             <select
               v-if="historicalPeriodType === 'month'"
-              v-model="selectedMonth"
+              v-model.number="selectedMonth"
               class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
             >
               <option v-for="month in monthsList" :key="month.value" :value="month.value">
@@ -86,7 +86,7 @@
             <!-- Sélecteur de semaine (si type = week) -->
             <select
               v-if="historicalPeriodType === 'week'"
-              v-model="selectedWeek"
+              v-model.number="selectedWeek"
               class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
             >
               <option v-for="week in weeksList" :key="week.value" :value="week.value">
@@ -97,16 +97,10 @@
         </div>
       </div>
 
-      <!-- Loading State -->
-      <div v-if="loading" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-2xl p-8 sm:p-12 text-center">
-        <div class="animate-spin rounded-full h-12 w-12 sm:h-16 sm:w-16 border-b-4 border-moov-orange mx-auto mb-4"></div>
-        <p class="text-sm sm:text-base text-gray-600 font-semibold">Chargement de vos données...</p>
-      </div>
-
-      <!-- Content -->
-      <div v-else-if="analytics?.kpi" class="space-y-6">
+      <!-- Content - Progressive Loading with Skeletons -->
+      <div class="space-y-6">
         <!-- Date Range Info -->
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4">
+        <div v-if="analytics.kpi" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4">
           <div class="flex items-center gap-2 text-gray-600">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -118,6 +112,20 @@
 
         <!-- KPI Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <!-- Skeleton KPI Cards -->
+          <template v-if="loadingStates.kpi && !analytics.kpi">
+            <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+              <div class="animate-pulse">
+                <div class="w-12 h-12 bg-gray-200 rounded-xl mb-4"></div>
+                <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div class="h-8 bg-gray-200 rounded w-full mb-2"></div>
+                <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            </div>
+          </template>
+          
+          <!-- Real KPI Cards -->
+          <template v-if="analytics.kpi">
           <!-- Commissions Totales -->
           <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
             <div class="flex items-center justify-between mb-4">
@@ -226,10 +234,26 @@
               </div>
             </div>
           </div>
+          </template>
         </div>
 
         <!-- Commissions & Retenues Detail -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-if="loadingStates.kpi && !analytics.kpi" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div v-for="i in 2" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <div class="animate-pulse">
+              <div class="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+              <div class="space-y-4">
+                <div v-for="j in 3" :key="j" class="p-4 bg-gray-100 rounded-xl">
+                  <div class="flex justify-between">
+                    <div class="h-4 bg-gray-200 rounded w-1/3"></div>
+                    <div class="h-6 bg-gray-200 rounded w-1/4"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="analytics.kpi" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Commissions -->
           <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
             <h3 class="text-lg font-bold text-gray-900 mb-4">Détail des Commissions</h3>
@@ -270,7 +294,22 @@
         </div>
 
         <!-- GIVE Network Stats -->
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.giveStats && !analytics.give_network_stats" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div v-for="i in 2" :key="i" class="space-y-4">
+                <div class="h-5 bg-gray-200 rounded w-1/4 mb-4"></div>
+                <div v-for="j in 3" :key="j" class="p-4 bg-gray-100 rounded-xl">
+                  <div class="h-4 bg-gray-200 rounded w-1/3 mb-2"></div>
+                  <div class="h-6 bg-gray-200 rounded w-2/3 mb-1"></div>
+                  <div class="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="analytics.give_network_stats" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
             <svg class="w-6 h-6 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -364,7 +403,25 @@
         </div>
 
         <!-- Top PDV par Commissions -->
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.topPdv && !analytics.commissions_by_pdv" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div class="space-y-3">
+              <div v-for="i in 8" :key="i" class="flex items-center gap-4 p-4 rounded-xl border border-gray-100">
+                <div class="w-8 h-8 bg-gray-200 rounded-full"></div>
+                <div class="flex-1">
+                  <div class="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div class="h-3 bg-gray-200 rounded w-1/3"></div>
+                </div>
+                <div class="text-right">
+                  <div class="h-5 bg-gray-200 rounded w-20 mb-1"></div>
+                  <div class="h-3 bg-gray-200 rounded w-16"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-else-if="analytics.commissions_by_pdv" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
             <svg class="w-6 h-6 text-moov-orange" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd" />
@@ -394,7 +451,13 @@
         </div>
 
         <!-- Monthly Revenue Chart -->
-        <div v-if="monthlyRevenue.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.monthlyRevenue && monthlyRevenue.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div class="h-96 bg-gray-100 rounded-xl"></div>
+          </div>
+        </div>
+        <div v-else-if="monthlyRevenue.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution Mensuelle {{ selectedYear }}</h3>
           <div style="height: 400px;">
             <Line :data="monthlyChartData" :options="chartOptions" />
@@ -402,7 +465,13 @@
         </div>
 
         <!-- Evolution Timeline -->
-        <div v-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.evolution && !analytics.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div class="h-[350px] bg-gray-100 rounded-xl"></div>
+          </div>
+        </div>
+        <div v-else-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution Quotidienne</h3>
           <div style="height: 350px;">
             <Line :data="evolutionChartData" :options="chartOptions" />
@@ -410,21 +479,27 @@
         </div>
 
         <!-- PDV Actifs Evolution -->
-        <div v-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.evolution && !analytics.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+          <div class="animate-pulse">
+            <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
+            <div class="h-[350px] bg-gray-100 rounded-xl"></div>
+          </div>
+        </div>
+        <div v-else-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution des PDV Actifs</h3>
           <div style="height: 350px;">
             <Line :data="pdvActifsChartData" :options="pdvActifsChartOptions" />
           </div>
         </div>
-      </div>
 
-      <!-- Error State -->
-      <div v-else-if="error" class="bg-white/90 backdrop-blur-md border border-red-200 shadow-2xl rounded-2xl p-8 text-center">
-        <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <p class="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</p>
-        <p class="text-sm text-gray-600">{{ error }}</p>
+        <!-- Error State -->
+        <div v-if="error" class="bg-white/90 backdrop-blur-md border border-red-200 shadow-2xl rounded-2xl p-8 text-center">
+          <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-lg font-semibold text-gray-900 mb-2">Erreur de chargement</p>
+          <p class="text-sm text-gray-600">{{ error }}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -442,9 +517,16 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const { toast } = useToast();
 
-const analytics = ref(null);
+const analytics = ref({});
+const analyticsCache = ref({}); // Cache frontend pour toutes les périodes
 const monthlyRevenue = ref([]);
-const loading = ref(false);
+const loadingStates = ref({
+  kpi: false,
+  evolution: false,
+  topPdv: false,
+  giveStats: false,
+  monthlyRevenue: false
+});
 const error = ref(null);
 
 const selectedPeriod = ref('week');
@@ -485,6 +567,13 @@ const availableYears = computed(() => {
 });
 
 const isCurrentYear = computed(() => selectedYear.value === currentYear);
+
+// État de chargement global - true si au moins une section charge lors du premier chargement
+const loading = computed(() => {
+  const hasNoData = !analytics.value.kpi && !analytics.value.evolution && !analytics.value.commissions_by_pdv && !analytics.value.give_network_stats;
+  const isLoading = loadingStates.value.kpi || loadingStates.value.evolution || loadingStates.value.topPdv || loadingStates.value.giveStats;
+  return hasNoData && isLoading;
+});
 
 const weeksList = computed(() => {
   const weeks = [];
@@ -534,64 +623,211 @@ const getWeekEndDate = (year, week) => {
   return `${weekStart.getDate().toString().padStart(2, '0')}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}`;
 };
 
-const loadAnalytics = async () => {
+// Construction des params de période
+const getPeriodParams = () => {
+  let params = {};
+  
+  if (isCurrentYear.value) {
+    params = { period: selectedPeriod.value };
+  } else {
+    if (historicalPeriodType.value === 'year') {
+      params = { 
+        period: 'historical_year',
+        year: selectedYear.value 
+      };
+    } else if (historicalPeriodType.value === 'month') {
+      params = { 
+        period: 'historical_month',
+        year: selectedYear.value,
+        month: selectedMonth.value
+      };
+    } else if (historicalPeriodType.value === 'week') {
+      params = { 
+        period: 'historical_week',
+        year: selectedYear.value,
+        week: selectedWeek.value
+      };
+    }
+  }
+  
+  return params;
+};
+
+// Génér une clé de cache unique
+const getCacheKey = (type, params) => {
+  return `${type}_${JSON.stringify(params)}`;
+};
+
+// Charger les KPI avec cache
+const loadKpi = async () => {
   try {
-    loading.value = true;
-    error.value = null;
+    loadingStates.value.kpi = true;
+    const params = getPeriodParams();
+    const cacheKey = getCacheKey('kpi', params);
     
-    let params = {};
-    
-    if (isCurrentYear.value) {
-      // Année en cours : utiliser le système de période classique
-      params = { period: selectedPeriod.value };
-    } else {
-      // Année passée : utiliser le nouveau système
-      if (historicalPeriodType.value === 'year') {
-        params = { 
-          period: 'historical_year',
-          year: selectedYear.value 
-        };
-      } else if (historicalPeriodType.value === 'month') {
-        params = { 
-          period: 'historical_month',
-          year: selectedYear.value,
-          month: selectedMonth.value
-        };
-      } else if (historicalPeriodType.value === 'week') {
-        params = { 
-          period: 'historical_week',
-          year: selectedYear.value,
-          week: selectedWeek.value
-        };
-      }
+    // Vérifier le cache
+    if (analyticsCache.value[cacheKey]) {
+      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
+      loadingStates.value.kpi = false;
+      return;
     }
     
-    analytics.value = await dealerAnalyticsService.getAnalytics(params);
+    const data = await dealerAnalyticsService.getKpi(params);
+    analyticsCache.value[cacheKey] = data;
+    analytics.value = { ...analytics.value, ...data };
   } catch (err) {
-    console.error('Erreur lors du chargement des analytics:', err);
-    error.value = err.response?.data?.message || 'Impossible de charger les données.';
-    toast.error('Erreur de chargement des analytics');
+    console.error('Erreur lors du chargement des KPI:', err);
+    toast.error('Erreur de chargement des KPI');
   } finally {
-    loading.value = false;
+    loadingStates.value.kpi = false;
   }
 };
 
+// Charger l'évolution avec cache
+const loadEvolution = async () => {
+  try {
+    loadingStates.value.evolution = true;
+    const params = getPeriodParams();
+    const cacheKey = getCacheKey('evolution', params);
+    
+    // Vérifier le cache
+    if (analyticsCache.value[cacheKey]) {
+      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
+      loadingStates.value.evolution = false;
+      return;
+    }
+    
+    const data = await dealerAnalyticsService.getEvolution(params);
+    analyticsCache.value[cacheKey] = data;
+    analytics.value = { ...analytics.value, ...data };
+  } catch (err) {
+    console.error('Erreur lors du chargement de l\'évolution:', err);
+    toast.error('Erreur de chargement de l\'évolution');
+  } finally {
+    loadingStates.value.evolution = false;
+  }
+};
+
+// Charger les top PDV avec cache
+const loadTopPdv = async () => {
+  try {
+    loadingStates.value.topPdv = true;
+    const params = getPeriodParams();
+    const cacheKey = getCacheKey('topPdv', params);
+    
+    if (analyticsCache.value[cacheKey]) {
+      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
+      loadingStates.value.topPdv = false;
+      return;
+    }
+    
+    const data = await dealerAnalyticsService.getTopPdv(params);
+    analyticsCache.value[cacheKey] = data;
+    analytics.value = { ...analytics.value, ...data };
+  } catch (err) {
+    console.error('Erreur lors du chargement des top PDV:', err);
+    toast.error('Erreur de chargement des top PDV');
+  } finally {
+    loadingStates.value.topPdv = false;
+  }
+};
+
+// Charger les stats GIVE avec cache
+const loadGiveStats = async () => {
+  try {
+    loadingStates.value.giveStats = true;
+    const params = getPeriodParams();
+    const cacheKey = getCacheKey('giveStats', params);
+    
+    if (analyticsCache.value[cacheKey]) {
+      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
+      loadingStates.value.giveStats = false;
+      return;
+    }
+    
+    const data = await dealerAnalyticsService.getGiveStats(params);
+    analyticsCache.value[cacheKey] = data;
+    analytics.value = { ...analytics.value, ...data };
+  } catch (err) {
+    console.error('Erreur lors du chargement des stats GIVE:', err);
+    toast.error('Erreur de chargement des stats GIVE');
+  } finally {
+    loadingStates.value.giveStats = false;
+  }
+};
+
+// Charger les revenus mensuels
 const loadMonthlyRevenue = async () => {
   try {
+    loadingStates.value.monthlyRevenue = true;
     monthlyRevenue.value = await dealerAnalyticsService.getMonthlyRevenue(selectedYear.value);
   } catch (err) {
     console.error('Erreur lors du chargement des revenus mensuels:', err);
+  } finally {
+    loadingStates.value.monthlyRevenue = false;
   }
 };
 
-onMounted(() => {
-  loadAnalytics();
+// Charger toutes les données en parallèle
+const loadAllData = () => {
+  error.value = null;
+  loadKpi();
+  loadEvolution();
+  loadTopPdv();
+  loadGiveStats();
   loadMonthlyRevenue();
+};
+
+// Pré-charger toutes les périodes en arrière-plan
+const preloadAllPeriods = async () => {
+  if (!isCurrentYear.value) return;
+  
+  const periods = ['day', 'week', 'month', 'quarter'];
+  // Charger en parallèle
+  await Promise.all(
+    periods.map(async (period) => {
+      if (period === selectedPeriod.value) return; // Déjà chargé
+      try {
+        const params = { period };
+        const cacheKey = getCacheKey('kpi', params);
+        if (!analyticsCache.value[cacheKey]) {
+          await dealerAnalyticsService.getKpi(params).then(data => {
+            analyticsCache.value[getCacheKey('kpi', params)] = data;
+          });
+          await dealerAnalyticsService.getEvolution(params).then(data => {
+            analyticsCache.value[getCacheKey('evolution', params)] = data;
+          });
+          await dealerAnalyticsService.getTopPdv(params).then(data => {
+            analyticsCache.value[getCacheKey('topPdv', params)] = data;
+          });
+          await dealerAnalyticsService.getGiveStats(params).then(data => {
+            analyticsCache.value[getCacheKey('giveStats', params)] = data;
+          });
+        }
+      } catch (error) {
+        console.error(`Error preloading ${period}:`, error);
+      }
+    })
+  );
+};
+
+// Changer la période
+const changePeriod = (period) => {
+  selectedPeriod.value = period;
+};
+
+onMounted(async () => {
+  loadAllData();
+  // Pré-charger les autres périodes en arrière-plan
+  preloadAllPeriods();
 });
 
 watch(selectedPeriod, () => {
   if (isCurrentYear.value) {
-    loadAnalytics();
+    loadKpi();
+    loadEvolution();
+    loadTopPdv();
+    loadGiveStats();
   }
 });
 
@@ -601,25 +837,33 @@ watch(selectedYear, () => {
   selectedMonth.value = 1;
   selectedWeek.value = 1;
   
-  loadAnalytics();
-  loadMonthlyRevenue();
+  loadAllData();
 });
 
 watch(historicalPeriodType, () => {
   if (!isCurrentYear.value) {
-    loadAnalytics();
+    loadKpi();
+    loadEvolution();
+    loadTopPdv();
+    loadGiveStats();
   }
 });
 
 watch(selectedMonth, () => {
   if (!isCurrentYear.value && historicalPeriodType.value === 'month') {
-    loadAnalytics();
+    loadKpi();
+    loadEvolution();
+    loadTopPdv();
+    loadGiveStats();
   }
 });
 
 watch(selectedWeek, () => {
   if (!isCurrentYear.value && historicalPeriodType.value === 'week') {
-    loadAnalytics();
+    loadKpi();
+    loadEvolution();
+    loadTopPdv();
+    loadGiveStats();
   }
 });
 
@@ -638,6 +882,9 @@ const chartOptions = {
   scales: {
     y: {
       beginAtZero: true,
+      ticks: {
+        maxTicksLimit: 10,
+      },
     },
   },
 };
@@ -721,7 +968,13 @@ const pdvActifsChartOptions = {
     y: {
       beginAtZero: true,
       ticks: {
-        stepSize: 1,
+        precision: 0,
+        maxTicksLimit: 10,
+        callback: function(value) {
+          if (Math.floor(value) === value) {
+            return value;
+          }
+        }
       },
     },
   },
