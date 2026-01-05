@@ -465,6 +465,47 @@
           </div>
         </div>
 
+        <!-- Advanced Cache Management Section -->
+        <div v-if="authStore.isAdmin && !cacheSettingsError" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mt-10">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Gestion avancée du cache</h3>
+              <p class="text-xs sm:text-sm text-gray-600">Activez, désactivez, ajustez la durée ou videz le cache pour chaque widget avancé.</p>
+            </div>
+            <button @click="clearAllCaches" class="px-4 py-2 rounded-lg font-bold bg-red-600 text-white hover:bg-red-700 shadow-lg">Vider tous les caches</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Widget</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Cache activé</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Durée (minutes)</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr v-for="widget in cacheWidgets" :key="widget.key">
+                  <td class="px-4 py-2 font-semibold text-gray-900">{{ widget.label }}</td>
+                  <td class="px-4 py-2">
+                    <input type="checkbox" v-model="widget.enabled" @change="updateCacheSetting(widget)" class="form-checkbox h-5 w-5 text-moov-orange" />
+                  </td>
+                  <td class="px-4 py-2">
+                    <input type="number" min="1" max="1440" v-model.number="widget.ttl" @change="updateCacheSetting(widget)" class="w-24 px-2 py-1 border rounded-lg focus:ring-moov-orange focus:border-moov-orange" />
+                  </td>
+                  <td class="px-4 py-2">
+                    <button @click="clearWidgetCache(widget)" class="px-3 py-1 rounded bg-red-100 text-red-700 hover:bg-red-200 font-semibold">Vider le cache</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div v-if="cacheSettingsError" class="bg-red-100 border border-red-300 text-red-700 rounded-lg p-4 mt-10">
+          <strong>Erreur lors du chargement de la gestion du cache :</strong>
+          <span>{{ cacheSettingsError }}</span>
+        </div>
+
         <!-- Future settings placeholder -->
         <!-- <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
@@ -493,13 +534,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import SystemSettingService from '../services/systemSettingService';
 import TransactionService from '../services/transactionService';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
+import SettingService from '../services/SettingService';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -526,6 +568,15 @@ const uploadProgress = ref(0);
 const uploadStage = ref(''); // 'uploading', 'processing', 'complete'
 const importResults = ref(null);
 
+// Advanced Cache Management
+const cacheWidgets = ref([
+  { key: 'network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60 },
+  { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60 },
+  { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60 },
+  { key: 'offline_dashboard', label: 'Tableau de bord hors ligne', enabled: true, ttl: 60 },
+]);
+const cacheSettingsError = ref(null);
+
 const loadSettings = async () => {
   try {
     loading.value = true;
@@ -542,6 +593,14 @@ const loadSettings = async () => {
     
     // Vérifier la configuration SMTP
     await checkSmtpConfiguration();
+    
+    // Charger les paramètres de cache
+    cacheSettingsError.value = null;
+    try {
+      await fetchCacheSettings();
+    } catch (err) {
+      cacheSettingsError.value = err?.response?.data?.error || err.message || 'Erreur inconnue';
+    }
   } catch (error) {
     console.error('Error loading settings:', error);
   } finally {
@@ -780,15 +839,49 @@ const checkSmtpConfiguration = async () => {
   }
 };
 
+async function fetchCacheSettings() {
+  const settings = await SettingService.getCacheSettings();
+  cacheWidgets.value.forEach(w => {
+    if (settings[w.key]) {
+      w.enabled = settings[w.key].enabled;
+      w.ttl = settings[w.key].ttl;
+    }
+  });
+}
+
+async function updateCacheSetting(widget) {
+  await SettingService.updateCacheSetting(widget.key, { enabled: widget.enabled, ttl: widget.ttl });
+}
+
+async function clearWidgetCache(widget) {
+  await SettingService.clearCache(widget.key);
+  // Optionally show a toast
+}
+
+async function clearAllCaches() {
+  await SettingService.clearAllCaches();
+  // Optionally show a toast
+}
+
+
 onMounted(() => {
-  // Vérifier que l'utilisateur est admin
   if (!authStore.isAdmin) {
     router.push({ name: 'Dashboard' });
     return;
   }
-  
   loadSettings();
 });
+
+// Watcher pour recharger les paramètres si l'utilisateur ou le rôle change
+watch(
+  () => [authStore.user, authStore.isAdmin],
+  ([user, isAdmin], [oldUser, oldIsAdmin]) => {
+    if (isAdmin && (!oldIsAdmin || user?.id !== oldUser?.id)) {
+      loadSettings();
+    }
+  },
+  { deep: true }
+);
 </script>
 
 <style scoped>

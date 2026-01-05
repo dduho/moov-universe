@@ -51,22 +51,22 @@
     </div>
 
     <!-- Forecast Content -->
-    <div v-else-if="forecast">
+    <div v-else-if="forecast && forecast.period && forecast.current && forecast.projected">
       <!-- Progress Bar -->
       <div class="mb-6">
         <div class="flex items-center justify-between mb-2">
           <span class="text-sm font-semibold text-gray-700">Progression du mois</span>
-          <span class="text-sm font-bold text-orange-600">{{ forecast.period.progress_percentage }}%</span>
+          <span class="text-sm font-bold text-orange-600">{{ forecast.period?.progress_percentage || 0 }}%</span>
         </div>
         <div class="w-full bg-orange-200/50 rounded-full h-3 overflow-hidden">
           <div 
             class="h-full bg-gradient-to-r from-orange-500 to-orange-600 rounded-full transition-all duration-500 ease-out"
-            :style="{ width: `${forecast.period.progress_percentage}%` }"
+            :style="{ width: `${forecast.period?.progress_percentage || 0}%` }"
           ></div>
         </div>
         <div class="flex items-center justify-between mt-1">
-          <span class="text-xs text-gray-500">{{ forecast.period.days_passed }} jours écoulés</span>
-          <span class="text-xs text-gray-500">{{ forecast.period.days_remaining }} jours restants</span>
+          <span class="text-xs text-gray-500">{{ forecast.period?.days_passed || 0 }} jours écoulés</span>
+          <span class="text-xs text-gray-500">{{ forecast.period?.days_remaining || 0 }} jours restants</span>
         </div>
       </div>
 
@@ -75,17 +75,17 @@
         <!-- Current CA -->
         <div class="bg-white/80 rounded-xl p-4 border border-orange-200">
           <p class="text-xs font-semibold text-gray-500 uppercase mb-1">CA Actuel</p>
-          <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(forecast.current.ca) }}</p>
-          <p class="text-xs text-gray-600 mt-1">{{ formatCurrency(forecast.current.daily_average) }}/jour</p>
+          <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(forecast.current?.ca || 0) }}</p>
+          <p class="text-xs text-gray-600 mt-1">{{ formatCurrency(forecast.current?.daily_average || 0) }}/jour</p>
         </div>
 
         <!-- Projected CA -->
         <div class="bg-white/80 rounded-xl p-4 border-2 border-orange-400">
           <p class="text-xs font-semibold text-orange-600 uppercase mb-1">CA Projeté</p>
-          <p class="text-2xl font-bold text-orange-600">{{ formatCurrency(forecast.projected.ca) }}</p>
+          <p class="text-2xl font-bold text-orange-600">{{ formatCurrency(forecast.projected?.ca || 0) }}</p>
           <div class="flex items-center gap-1 mt-1">
             <svg 
-              v-if="forecast.projected.trend === 'increasing'" 
+              v-if="forecast.projected?.trend === 'increasing'" 
               class="w-3 h-3 text-green-600" 
               fill="currentColor" 
               viewBox="0 0 20 20"
@@ -93,15 +93,15 @@
               <path fill-rule="evenodd" d="M5.293 9.707a1 1 0 010-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 01-1.414 1.414L11 7.414V15a1 1 0 11-2 0V7.414L6.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
             </svg>
             <svg 
-              v-else-if="forecast.projected.trend === 'decreasing'" 
+              v-else-if="forecast.projected?.trend === 'decreasing'" 
               class="w-3 h-3 text-red-600" 
               fill="currentColor" 
               viewBox="0 0 20 20"
             >
               <path fill-rule="evenodd" d="M14.707 10.293a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V5a1 1 0 012 0v7.586l2.293-2.293a1 1 0 011.414 0z" clip-rule="evenodd" />
             </svg>
-            <span class="text-xs" :class="getTrendColor(forecast.projected.trend)">
-              {{ getTrendLabel(forecast.projected.trend) }}
+            <span class="text-xs" :class="getTrendColor(forecast.projected?.trend || 'stable')">
+              {{ getTrendLabel(forecast.projected?.trend || 'stable') }}
             </span>
           </div>
         </div>
@@ -112,17 +112,17 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-xs font-semibold text-gray-500 uppercase mb-1">vs Mois Dernier</p>
-            <p class="text-lg font-bold text-gray-900">{{ formatCurrency(forecast.comparison.last_month_ca) }}</p>
+            <p class="text-lg font-bold text-gray-900">{{ formatCurrency(forecast.comparison?.last_month_ca || 0) }}</p>
           </div>
           <div class="text-right">
             <div 
               class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold"
-              :class="getGrowthBadgeClass(forecast.comparison.growth_rate)"
+              :class="getGrowthBadgeClass(forecast.comparison?.growth_rate || 0)"
             >
-              <span v-if="forecast.comparison.growth_rate > 0">+</span>
-              <span>{{ forecast.comparison.growth_rate.toFixed(1) }}%</span>
+              <span v-if="(forecast.comparison?.growth_rate || 0) > 0">+</span>
+              <span>{{ (forecast.comparison?.growth_rate || 0).toFixed(1) }}%</span>
             </div>
-            <p class="text-xs text-gray-500 mt-1">{{ getGrowthStatusLabel(forecast.comparison.growth_status) }}</p>
+            <p class="text-xs text-gray-500 mt-1">{{ getGrowthStatusLabel(forecast.comparison?.growth_status || 'stable') }}</p>
           </div>
         </div>
       </div>
@@ -131,15 +131,15 @@
       <div class="bg-white/80 rounded-xl p-4 border border-orange-200 mb-6">
         <div class="flex items-center justify-between mb-2">
           <span class="text-xs font-semibold text-gray-700">Niveau de confiance</span>
-          <span class="text-sm font-bold" :class="getConfidenceColor(forecast.projected.confidence_level)">
-            {{ forecast.projected.confidence_level.toFixed(0) }}%
+          <span class="text-sm font-bold" :class="getConfidenceColor(forecast.projected?.confidence_level || 0)">
+            {{ (forecast.projected?.confidence_level || 0).toFixed(0) }}%
           </span>
         </div>
         <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
           <div 
             class="h-full rounded-full transition-all duration-500"
-            :class="getConfidenceBarClass(forecast.projected.confidence_level)"
-            :style="{ width: `${forecast.projected.confidence_level}%` }"
+            :class="getConfidenceBarClass(forecast.projected?.confidence_level || 0)"
+            :style="{ width: `${forecast.projected?.confidence_level || 0}%` }"
           ></div>
         </div>
       </div>
@@ -147,7 +147,7 @@
       <!-- Message -->
       <div class="bg-white/90 rounded-xl p-4 border-l-4 border-orange-500">
         <p class="text-sm text-gray-700 leading-relaxed">
-          {{ forecast.message }}
+          {{ forecast.message || 'Aucun message disponible.' }}
         </p>
       </div>
     </div>

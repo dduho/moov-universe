@@ -10,21 +10,33 @@
           <p class="text-sm text-gray-600 mt-1">Vue d'ensemble et analyse des transactions importées</p>
         </div>
         
-        <!-- Period Selector -->
-        <div class="flex items-center gap-2">
-          <button
-            v-for="period in periods"
-            :key="period.value"
-            @click="selectedPeriod = period.value"
-            :class="[
-              'px-4 py-2 rounded-xl font-semibold text-sm transition-all',
-              selectedPeriod === period.value
-                ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg'
-                : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'
-            ]"
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <!-- Year Selector -->
+          <select
+            v-model="selectedYear"
+            class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
           >
-            {{ period.label }}
-          </button>
+            <option v-for="year in availableYears" :key="year" :value="year">
+              {{ year }}
+            </option>
+          </select>
+          
+          <!-- Period Selector -->
+          <div class="flex items-center gap-2">
+            <button
+              v-for="period in periods"
+              :key="period.value"
+              @click="selectedPeriod = period.value"
+              :class="[
+                'px-4 py-2 rounded-xl font-semibold text-sm transition-all',
+                selectedPeriod === period.value
+                  ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg'
+                  : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'
+              ]"
+            >
+              {{ period.label }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -580,6 +592,14 @@ const periods = [
 
 const selectedPeriod = ref('month');
 
+// Générer les années disponibles (de 2020 à l'année en cours)
+const currentYear = new Date().getFullYear();
+const availableYears = ref([]);
+for (let year = currentYear; year >= 2020; year--) {
+  availableYears.value.push(year);
+}
+const selectedYear = ref(currentYear);
+
 // Load analytics
 const loadAnalytics = async () => {
   try {
@@ -599,7 +619,7 @@ const loadAnalytics = async () => {
 // Load monthly revenue
 const loadMonthlyRevenue = async () => {
   try {
-    const response = await TransactionService.getMonthlyRevenue(new Date().getFullYear());
+    const response = await TransactionService.getMonthlyRevenue(selectedYear.value);
     monthlyRevenue.value = response.data;
   } catch (error) {
     console.error('Error loading monthly revenue:', error);
@@ -636,6 +656,11 @@ const refreshInsights = () => {
 watch(selectedPeriod, () => {
   loadAnalytics();
   loadInsights();
+});
+
+// Watch year changes
+watch(selectedYear, () => {
+  loadMonthlyRevenue();
 });
 
 // Chart data - CA

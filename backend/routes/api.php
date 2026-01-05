@@ -27,6 +27,7 @@ use App\Http\Controllers\ForecastingController;
 use App\Http\Controllers\RecommendationsController;
 use App\Http\Controllers\FraudDetectionController;
 use App\Http\Controllers\GeolocationController;
+use App\Http\Controllers\CacheSettingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -39,6 +40,15 @@ use Illuminate\Support\Facades\Route;
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
 Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
+
+
+// Advanced cache management (Admin only) - doit être avant la route générique settings/{key}
+Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
+    Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
+    Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
+    Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
+    Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']);
+});
 
 // Public system settings (read-only)
 Route::prefix('settings')->group(function () {
@@ -244,5 +254,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('geolocation')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/pdv', [GeolocationController::class, 'getPdvGeoData']);
         Route::get('/potential-zones', [GeolocationController::class, 'getPotentialZones']);
+    });
+
+    // Advanced cache management (Admin only)
+    Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
+        Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
+        Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
+        Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
+        Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']);
     });
 });
