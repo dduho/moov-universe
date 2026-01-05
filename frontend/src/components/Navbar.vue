@@ -387,28 +387,41 @@ const ImportIcon = {
 };
 
 // Main navigation (always visible)
-const mainNavigation = [
-  {
-    name: 'Tableau de bord',
-    path: '/dashboard',
-    icon: DashboardIcon,
-  },
-  {
-    name: 'Liste PDV',
-    path: '/pdv/list',
-    icon: ListIcon,
-  },
-  {
-    name: 'Carte',
-    path: '/map',
-    icon: MapIcon,
-  },
-  {
-    name: 'Mes tâches',
-    path: '/tasks',
-    icon: CheckIcon,
-  },
-];
+const mainNavigation = computed(() => {
+  const baseNav = [
+    {
+      name: 'Tableau de bord',
+      path: '/dashboard',
+      icon: DashboardIcon,
+    },
+    {
+      name: 'Liste PDV',
+      path: '/pdv/list',
+      icon: ListIcon,
+    },
+    {
+      name: 'Carte',
+      path: '/map',
+      icon: MapIcon,
+    },
+    {
+      name: 'Mes tâches',
+      path: '/tasks',
+      icon: CheckIcon,
+    },
+  ];
+
+  // Ajouter le lien Tableau de Bord Dealer pour les dealer-owner
+  if (authStore.isDealerOwner) {
+    baseNav.push({
+      name: 'Dealer Analytics',
+      path: '/dealer-dashboard',
+      icon: ChartBarIcon,
+    });
+  }
+
+  return baseNav;
+});
 
 // Admin navigation (in dropdown)
 const adminNavigation = [

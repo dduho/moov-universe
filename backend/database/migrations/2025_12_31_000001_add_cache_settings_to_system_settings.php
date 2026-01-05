@@ -21,6 +21,8 @@ return new class extends Migration {
             ['key' => 'cache_advanced_geospatial_ttl', 'value' => '180'],
             ['key' => 'cache_offline_dashboard_enabled', 'value' => '1'],
             ['key' => 'cache_offline_dashboard_ttl', 'value' => '180'],
+            ['key' => 'cache_dealer_analytics_enabled', 'value' => '1'],
+            ['key' => 'cache_dealer_analytics_ttl', 'value' => '60'],
         ];
         foreach ($settings as $setting) {
             // N'insère que si la clé n'existe pas déjà
@@ -44,6 +46,8 @@ return new class extends Migration {
             'cache_advanced_geospatial_ttl',
             'cache_offline_dashboard_enabled',
             'cache_offline_dashboard_ttl',
+            'cache_dealer_analytics_enabled',
+            'cache_dealer_analytics_ttl',
         ];
         DB::table('system_settings')->whereIn('key', $keys)->delete();
     }

@@ -574,6 +574,7 @@ const cacheWidgets = ref([
   { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60 },
   { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60 },
   { key: 'offline_dashboard', label: 'Tableau de bord hors ligne', enabled: true, ttl: 60 },
+  { key: 'dealer_analytics', label: 'Analytics Dealer', enabled: true, ttl: 60 },
 ]);
 const cacheSettingsError = ref(null);
 

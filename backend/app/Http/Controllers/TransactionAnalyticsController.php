@@ -18,24 +18,31 @@ class TransactionAnalyticsController extends Controller
     public function getAnalytics(Request $request)
     {
         $period = $request->input('period', 'month'); // day, week, month, quarter
+        $year = $request->input('year');
+        $month = $request->input('month');
+        $week = $request->input('week');
         $now = Carbon::now();
         
         // Définir la fenêtre temporelle selon la période sélectionnée
-        [$startDate, $endDate] = $this->getPeriodDates($period, $now);
+        [$startDate, $endDate] = $this->getPeriodDates($period, $now, $year, $month, $week);
+        [$prevStartDate, $prevEndDate] = $this->getPreviousPeriodDates($period, $startDate, $endDate, $year, $month, $week);
 
         // Clé de cache unique par période et dates
         $cacheKey = "analytics_{$period}_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}";
         
         // Cache de 1 heure (3600s) - les données changent peu fréquemment
         // Le cache sera invalidé automatiquement lors de l'import de nouvelles transactions
-        $data = Cache::remember($cacheKey, 3600, function () use ($period, $startDate, $endDate) {
+        $data = Cache::remember($cacheKey, 3600, function () use ($period, $startDate, $endDate, $prevStartDate, $prevEndDate) {
+            $currentKPI = $this->calculateKPI($startDate, $endDate);
+            $previousKPI = $this->calculateKPI($prevStartDate, $prevEndDate);
+            
             return [
                 'period' => $period,
                 'date_range' => [
                     'start' => $startDate->format('Y-m-d'),
                     'end' => $endDate->format('Y-m-d'),
                 ],
-                'kpi' => $this->calculateKPI($startDate, $endDate),
+                'kpi' => $this->addComparisons($currentKPI, $previousKPI),
                 'top_pdv' => $this->getTopPDV($startDate, $endDate, 10),
                 'top_dealers' => $this->getTopDealers($startDate, $endDate, 10),
                 'evolution' => $this->getEvolution($period, $startDate, $endDate),
@@ -237,8 +244,8 @@ class TransactionAnalyticsController extends Controller
      */
     private function getEvolution($period, $startDate, $endDate)
     {
-        if ($period === 'quarter') {
-            // Pour trimestre: grouper par mois (3 mois)
+        if (in_array($period, ['quarter', 'historical_year'])) {
+            // Pour trimestre ou année complète: grouper par mois
             $evolution = DB::table('pdv_transactions')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
@@ -266,7 +273,7 @@ class TransactionAnalyticsController extends Controller
                 ->orderBy('period')
                 ->get();
         } else {
-            // Pour jour et mois: grouper par jour
+            // Pour jour, mois, historical_month, historical_week: grouper par jour
             $evolution = DB::table('pdv_transactions')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
@@ -335,17 +342,132 @@ class TransactionAnalyticsController extends Controller
         ];
     }
 
-    /**
-     * Obtenir les dates de début et fin selon la période
+    /**     * Ajouter les comparaisons avec la période précédente
      */
-    private function getPeriodDates($period, $now)
+    private function addComparisons($currentKPI, $previousKPI)
+    {
+        // Fonction helper pour calculer le pourcentage de variation
+        $calculateChange = function($current, $previous) {
+            if ($previous == 0) {
+                return $current > 0 ? 100 : 0;
+            }
+            return round((($current - $previous) / $previous) * 100, 1);
+        };
+
+        // Ajouter les comparaisons au niveau principal
+        $currentKPI['comparison'] = [
+            'chiffre_affaire' => $calculateChange(
+                $currentKPI['chiffre_affaire'],
+                $previousKPI['chiffre_affaire'] ?? 0
+            ),
+            'total_transactions' => $calculateChange(
+                $currentKPI['total_transactions'],
+                $previousKPI['total_transactions'] ?? 0
+            ),
+            'volume_total' => $calculateChange(
+                $currentKPI['volume_total'],
+                $previousKPI['volume_total'] ?? 0
+            ),
+            'pdv_actifs' => $calculateChange(
+                $currentKPI['pdv_actifs'],
+                $previousKPI['pdv_actifs'] ?? 0
+            ),
+        ];
+
+        // Ajouter les comparaisons pour les détails de transactions
+        if (isset($currentKPI['transactions_detail'])) {
+            $currentKPI['transactions_detail']['depots']['comparison'] = $calculateChange(
+                $currentKPI['transactions_detail']['depots']['count'],
+                $previousKPI['transactions_detail']['depots']['count'] ?? 0
+            );
+            $currentKPI['transactions_detail']['retraits']['comparison'] = $calculateChange(
+                $currentKPI['transactions_detail']['retraits']['count'],
+                $previousKPI['transactions_detail']['retraits']['count'] ?? 0
+            );
+        }
+
+        return $currentKPI;
+    }
+
+    /**
+     * Obtenir les dates de la période précédente pour comparaison
+     */
+    private function getPreviousPeriodDates($period, Carbon $startDate, Carbon $endDate, $year = null, $month = null, $week = null)
+    {
+        $duration = $startDate->diffInDays($endDate) + 1;
+
+        return match($period) {
+            'day' => [
+                $startDate->copy()->subDay()->startOfDay(),
+                $startDate->copy()->subDay()->endOfDay()
+            ],
+            'week' => [
+                $startDate->copy()->subWeeks(8)->startOfDay(),
+                $endDate->copy()->subWeeks(8)->endOfDay()
+            ],
+            'month' => [
+                $startDate->copy()->subMonth()->startOfDay(),
+                $endDate->copy()->subMonth()->endOfDay()
+            ],
+            'quarter' => [
+                $startDate->copy()->subQuarter()->startOfDay(),
+                $endDate->copy()->subQuarter()->endOfDay()
+            ],
+            'historical_year' => [
+                Carbon::create($year - 1, 1, 1)->startOfDay(),
+                Carbon::create($year - 1, 12, 31)->endOfDay()
+            ],
+            'historical_month' => [
+                $month == 1 
+                    ? Carbon::create($year - 1, 12, 1)->startOfDay()
+                    : Carbon::create($year, $month - 1, 1)->startOfDay(),
+                $month == 1
+                    ? Carbon::create($year - 1, 12, 1)->endOfMonth()->endOfDay()
+                    : Carbon::create($year, $month - 1, 1)->endOfMonth()->endOfDay()
+            ],
+            'historical_week' => [
+                $startDate->copy()->subWeek()->startOfDay(),
+                $endDate->copy()->subWeek()->endOfDay()
+            ],
+            default => [
+                $startDate->copy()->subDays($duration)->startOfDay(),
+                $endDate->copy()->subDays($duration)->endOfDay()
+            ],
+        };
+    }
+
+    /**     * Obtenir les dates de début et fin selon la période
+     */
+    private function getPeriodDates($period, $now, $year = null, $month = null, $week = null)
     {
         return match ($period) {
             'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
             'week' => [$now->copy()->subWeeks(8)->startOfDay(), $now->copy()->endOfDay()],
             'quarter' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
+            'historical_year' => [
+                Carbon::create($year, 1, 1)->startOfDay(),
+                Carbon::create($year, 12, 31)->endOfDay()
+            ],
+            'historical_month' => [
+                Carbon::create($year, $month, 1)->startOfDay(),
+                Carbon::create($year, $month, 1)->endOfMonth()->endOfDay()
+            ],
+            'historical_week' => $this->getHistoricalWeekDates($year, $week),
             default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
         };
+    }
+
+    /**
+     * Obtenir les dates de début et fin d'une semaine historique
+     */
+    private function getHistoricalWeekDates($year, $weekNumber)
+    {
+        $jan4 = Carbon::create($year, 1, 4);
+        $dayOfWeek = $jan4->dayOfWeek === 0 ? 7 : $jan4->dayOfWeek;
+        $weekStart = $jan4->copy()->subDays($dayOfWeek - 1)->addWeeks($weekNumber - 1);
+        $weekEnd = $weekStart->copy()->addDays(6)->endOfDay();
+        
+        return [$weekStart->startOfDay(), $weekEnd];
     }
 
     /**

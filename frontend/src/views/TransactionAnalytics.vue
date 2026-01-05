@@ -21,8 +21,8 @@
             </option>
           </select>
           
-          <!-- Period Selector -->
-          <div class="flex items-center gap-2">
+          <!-- Period Selector (visible uniquement pour année en cours) -->
+          <div v-if="isCurrentYear" class="flex items-center gap-2">
             <button
               v-for="period in periods"
               :key="period.value"
@@ -36,6 +36,41 @@
             >
               {{ period.label }}
             </button>
+          </div>
+          
+          <!-- Filtres pour années passées -->
+          <div v-else class="flex items-center gap-2">
+            <!-- Sélecteur de type de période -->
+            <select
+              v-model="historicalPeriodType"
+              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+            >
+              <option value="year">Année complète</option>
+              <option value="month">Par mois</option>
+              <option value="week">Par semaine</option>
+            </select>
+            
+            <!-- Sélecteur de mois (si type = month) -->
+            <select
+              v-if="historicalPeriodType === 'month'"
+              v-model="selectedMonth"
+              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+            >
+              <option v-for="month in monthsList" :key="month.value" :value="month.value">
+                {{ month.label }}
+              </option>
+            </select>
+            
+            <!-- Sélecteur de semaine (si type = week) -->
+            <select
+              v-if="historicalPeriodType === 'week'"
+              v-model="selectedWeek"
+              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+            >
+              <option v-for="week in weeksList" :key="week.value" :value="week.value">
+                {{ week.label }}
+              </option>
+            </select>
           </div>
         </div>
       </div>
@@ -74,7 +109,20 @@
             </div>
             <h3 class="text-sm font-semibold text-gray-600 mb-1">Chiffre d'Affaires</h3>
             <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.chiffre_affaire) }}</p>
-            <p class="text-xs text-gray-500 mt-1">RETRAIT_KEYCOST</p>
+            <div class="flex items-center gap-2 mt-2">
+              <p class="text-xs text-gray-500">RETRAIT_KEYCOST</p>
+              <div v-if="analytics.kpi.comparison" class="ml-auto flex items-center gap-1">
+                <svg v-if="analytics.kpi.comparison.chiffre_affaire >= 0" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span :class="analytics.kpi.comparison.chiffre_affaire >= 0 ? 'text-green-600' : 'text-red-600'" class="text-xs font-semibold">
+                  {{ Math.abs(analytics.kpi.comparison.chiffre_affaire) }}%
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Volume Total -->
@@ -88,7 +136,20 @@
             </div>
             <h3 class="text-sm font-semibold text-gray-600 mb-1">Volume Total</h3>
             <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.volume_total) }}</p>
-            <p class="text-xs text-gray-500 mt-1">Dépôts + Retraits</p>
+            <div class="flex items-center gap-2 mt-2">
+              <p class="text-xs text-gray-500">Dépôts + Retraits</p>
+              <div v-if="analytics.kpi.comparison" class="ml-auto flex items-center gap-1">
+                <svg v-if="analytics.kpi.comparison.volume_total >= 0" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span :class="analytics.kpi.comparison.volume_total >= 0 ? 'text-green-600' : 'text-red-600'" class="text-xs font-semibold">
+                  {{ Math.abs(analytics.kpi.comparison.volume_total) }}%
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- Total Transactions -->
@@ -102,7 +163,20 @@
             </div>
             <h3 class="text-sm font-semibold text-gray-600 mb-1">Total Transactions</h3>
             <p class="text-2xl font-bold text-gray-900">{{ formatNumber(analytics.kpi.total_transactions) }}</p>
-            <p class="text-xs text-gray-500 mt-1">Toutes opérations</p>
+            <div class="flex items-center gap-2 mt-2">
+              <p class="text-xs text-gray-500">Toutes opérations</p>
+              <div v-if="analytics.kpi.comparison" class="ml-auto flex items-center gap-1">
+                <svg v-if="analytics.kpi.comparison.total_transactions >= 0" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span :class="analytics.kpi.comparison.total_transactions >= 0 ? 'text-green-600' : 'text-red-600'" class="text-xs font-semibold">
+                  {{ Math.abs(analytics.kpi.comparison.total_transactions) }}%
+                </span>
+              </div>
+            </div>
           </div>
 
           <!-- PDV Actifs -->
@@ -117,7 +191,20 @@
             </div>
             <h3 class="text-sm font-semibold text-gray-600 mb-1">PDV Actifs</h3>
             <p class="text-2xl font-bold text-gray-900">{{ formatNumber(analytics.kpi.pdv_actifs) }}</p>
-            <p class="text-xs text-gray-500 mt-1">Avec transactions</p>
+            <div class="flex items-center gap-2 mt-2">
+              <p class="text-xs text-gray-500">Avec transactions</p>
+              <div v-if="analytics.kpi.comparison" class="ml-auto flex items-center gap-1">
+                <svg v-if="analytics.kpi.comparison.pdv_actifs >= 0" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                <svg v-else class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                </svg>
+                <span :class="analytics.kpi.comparison.pdv_actifs >= 0 ? 'text-green-600' : 'text-red-600'" class="text-xs font-semibold">
+                  {{ Math.abs(analytics.kpi.comparison.pdv_actifs) }}%
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -591,6 +678,24 @@ const periods = [
 ];
 
 const selectedPeriod = ref('month');
+const historicalPeriodType = ref('year'); // 'year', 'month', 'week'
+const selectedMonth = ref(new Date().getMonth() + 1);
+const selectedWeek = ref(1);
+
+const monthsList = [
+  { label: 'Janvier', value: 1 },
+  { label: 'Février', value: 2 },
+  { label: 'Mars', value: 3 },
+  { label: 'Avril', value: 4 },
+  { label: 'Mai', value: 5 },
+  { label: 'Juin', value: 6 },
+  { label: 'Juillet', value: 7 },
+  { label: 'Août', value: 8 },
+  { label: 'Septembre', value: 9 },
+  { label: 'Octobre', value: 10 },
+  { label: 'Novembre', value: 11 },
+  { label: 'Décembre', value: 12 }
+];
 
 // Générer les années disponibles (de 2020 à l'année en cours)
 const currentYear = new Date().getFullYear();
@@ -600,13 +705,89 @@ for (let year = currentYear; year >= 2020; year--) {
 }
 const selectedYear = ref(currentYear);
 
+const isCurrentYear = computed(() => selectedYear.value === currentYear);
+
+const weeksList = computed(() => {
+  const weeks = [];
+  const year = selectedYear.value;
+  const lastWeek = getWeeksInYear(year);
+  
+  for (let week = 1; week <= lastWeek; week++) {
+    const weekStart = getWeekStartDate(year, week);
+    const weekEnd = getWeekEndDate(year, week);
+    weeks.push({
+      value: week,
+      label: `Sem. ${week} (${weekStart} - ${weekEnd})`
+    });
+  }
+  
+  return weeks;
+});
+
+// Utilitaires pour les semaines
+const getWeeksInYear = (year) => {
+  const lastDay = new Date(year, 11, 31);
+  const lastWeek = getWeekNumber(lastDay);
+  return lastWeek === 1 ? 52 : lastWeek;
+};
+
+const getWeekNumber = (date) => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+};
+
+const getWeekStartDate = (year, week) => {
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7;
+  const weekStart = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
+  weekStart.setDate(weekStart.getDate() + (week - 1) * 7);
+  return `${weekStart.getDate().toString().padStart(2, '0')}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}`;
+};
+
+const getWeekEndDate = (year, week) => {
+  const jan4 = new Date(year, 0, 4);
+  const dayOfWeek = jan4.getDay() || 7;
+  const weekStart = new Date(jan4.getTime() - (dayOfWeek - 1) * 86400000);
+  weekStart.setDate(weekStart.getDate() + (week - 1) * 7 + 6);
+  return `${weekStart.getDate().toString().padStart(2, '0')}/${(weekStart.getMonth() + 1).toString().padStart(2, '0')}`;
+};
+
 // Load analytics
 const loadAnalytics = async () => {
   try {
     loading.value = true;
-    const response = await TransactionAnalyticsService.getAnalytics({
-      period: selectedPeriod.value
-    });
+    
+    let params = {};
+    
+    if (isCurrentYear.value) {
+      // Année en cours : utiliser le système de période classique
+      params = { period: selectedPeriod.value };
+    } else {
+      // Année passée : utiliser le nouveau système
+      if (historicalPeriodType.value === 'year') {
+        params = { 
+          period: 'historical_year',
+          year: selectedYear.value 
+        };
+      } else if (historicalPeriodType.value === 'month') {
+        params = { 
+          period: 'historical_month',
+          year: selectedYear.value,
+          month: selectedMonth.value
+        };
+      } else if (historicalPeriodType.value === 'week') {
+        params = { 
+          period: 'historical_week',
+          year: selectedYear.value,
+          week: selectedWeek.value
+        };
+      }
+    }
+    
+    const response = await TransactionAnalyticsService.getAnalytics(params);
     analytics.value = response.data;
   } catch (error) {
     console.error('Error loading analytics:', error);
@@ -654,13 +835,44 @@ const refreshInsights = () => {
 
 // Watch period changes
 watch(selectedPeriod, () => {
-  loadAnalytics();
-  loadInsights();
+  if (isCurrentYear.value) {
+    loadAnalytics();
+    loadInsights();
+  }
 });
 
 // Watch year changes
 watch(selectedYear, () => {
+  // Réinitialiser les filtres lors du changement d'année
+  historicalPeriodType.value = 'year';
+  selectedMonth.value = 1;
+  selectedWeek.value = 1;
+  
+  loadAnalytics();
+  loadInsights();
   loadMonthlyRevenue();
+});
+
+// Watch historical period changes
+watch(historicalPeriodType, () => {
+  if (!isCurrentYear.value) {
+    loadAnalytics();
+    loadInsights();
+  }
+});
+
+watch(selectedMonth, () => {
+  if (!isCurrentYear.value && historicalPeriodType.value === 'month') {
+    loadAnalytics();
+    loadInsights();
+  }
+});
+
+watch(selectedWeek, () => {
+  if (!isCurrentYear.value && historicalPeriodType.value === 'week') {
+    loadAnalytics();
+    loadInsights();
+  }
 });
 
 // Chart data - CA

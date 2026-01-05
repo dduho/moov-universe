@@ -28,6 +28,7 @@ use App\Http\Controllers\RecommendationsController;
 use App\Http\Controllers\FraudDetectionController;
 use App\Http\Controllers\GeolocationController;
 use App\Http\Controllers\CacheSettingController;
+use App\Http\Controllers\DealerAnalyticsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -210,6 +211,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/transactions', [TransactionAnalyticsController::class, 'getAnalytics']);
         Route::get('/monthly-revenue', [TransactionAnalyticsController::class, 'getMonthlyRevenue']);
         Route::get('/insights', [AnalyticsInsightsController::class, 'getInsights']);
+    });
+
+    // Dealer Analytics routes (Dealer-owner only)
+    Route::prefix('dealer-analytics')->middleware('App\\Http\\Middleware\\CheckRole:dealer_owner')->group(function () {
+        Route::get('/analytics', [DealerAnalyticsController::class, 'getAnalytics']);
+        Route::get('/monthly-revenue', [DealerAnalyticsController::class, 'getMonthlyRevenue']);
     });
 
     // Comparator routes (Admin only)

@@ -137,6 +137,12 @@ const routes = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: '/dealer-dashboard',
+    name: 'DealerDashboard',
+    component: () => import('../views/DealerDashboard.vue'),
+    meta: { requiresAuth: true, requiresDealerOwner: true },
+  },
+  {
     path: '/comparator',
     name: 'Comparator',
     component: () => import('../views/Comparator.vue'),
@@ -176,7 +182,11 @@ router.beforeEach((to, from, next) => {
   // Si la route nécessite un admin et l'utilisateur n'est pas admin
   else if (to.meta.requiresAdmin && !authStore.isAdmin) {
     next({ name: 'Dashboard' });
-  } 
+  }
+  // Si la route nécessite dealer-owner et l'utilisateur ne l'est pas
+  else if (to.meta.requiresDealerOwner && !authStore.isDealerOwner) {
+    next({ name: 'Dashboard' });
+  }
   // Si l'utilisateur est déjà authentifié et va vers Login
   else if (to.name === 'Login' && authStore.isAuthenticated) {
     next({ name: 'Dashboard' });
