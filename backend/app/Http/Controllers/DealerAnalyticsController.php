@@ -302,10 +302,11 @@ class DealerAnalyticsController extends Controller
     {
         // Déterminer le format de groupement selon la période
         $groupBy = match($period) {
-            'historical_year' => 'month',  // Grouper par mois pour une année complète
-            'historical_month', 'historical_week' => 'day',  // Grouper par jour pour mois/semaine
+            'historical_year' => 'month',          // Grouper par mois pour une année complète
+            'month', 'quarter' => 'month',         // Grouper par mois pour les périodes mensuelles/trimestrielles courantes
+            'historical_month', 'historical_week' => 'day',  // Grouper par jour pour mois/semaine historiques
             'day' => 'hour',
-            'week', 'month', 'quarter' => 'day',
+            'week' => 'day',
             default => 'day',
         };
 
@@ -554,11 +555,30 @@ class DealerAnalyticsController extends Controller
      */
     private function getPeriodDates($period, Carbon $now, $year = null, $month = null, $week = null)
     {
+        // Pour l'année courante, on borne à J-1 pour éviter d'inclure la journée en cours
+        $yesterdayEnd = $now->copy()->subDay()->endOfDay();
+        
         return match($period) {
-            'day' => [$now->copy()->startOfDay(), $now->copy()->endOfDay()],
-            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()],
-            'month' => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
-            'quarter' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
+            // Jours du mois courant
+            'day' => [
+                $now->copy()->startOfMonth(),
+                $yesterdayEnd
+            ],
+            // Semaines de l'année courante
+            'week' => [
+                $now->copy()->startOfYear(),
+                $yesterdayEnd
+            ],
+            // Mois courant jusqu'à J-1 (mois complet si mois précédent)
+            'month' => [
+                $now->copy()->startOfMonth(),
+                $yesterdayEnd
+            ],
+            // Trimestre courant jusqu'à J-1
+            'quarter' => [
+                $yesterdayEnd->copy()->startOfQuarter(),
+                $yesterdayEnd
+            ],
             'historical_year' => [
                 Carbon::create($year, 1, 1)->startOfDay(),
                 Carbon::create($year, 12, 31)->endOfDay()

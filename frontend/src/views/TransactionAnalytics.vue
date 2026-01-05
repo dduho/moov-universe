@@ -279,7 +279,7 @@
         <div v-if="analytics.evolution && analytics.evolution.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-4">Évolution du Chiffre d'Affaires</h3>
           <div class="h-64">
-            <Line :data="caChartData" :options="caChartOptions" />
+            <Line :key="caChartKey" :data="caChartData" :options="caChartOptions" />
           </div>
         </div>
 
@@ -287,7 +287,7 @@
         <div v-if="analytics.evolution && analytics.evolution.length > 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-4">Évolution des PDV Actifs</h3>
           <div class="h-64">
-            <Line :data="pdvChartData" :options="pdvChartOptions" />
+            <Line :key="pdvChartKey" :data="pdvChartData" :options="pdvChartOptions" />
           </div>
         </div>
 
@@ -809,6 +809,9 @@ const preloadAllPeriods = async () => {
 
 // Load analytics
 const loadAnalytics = async () => {
+  // Activer le loader immédiatement pour éviter l'affichage de données périmées pendant la latence
+  loading.value = true;
+
   let params = {};
   
   if (isCurrentYear.value) {
@@ -845,7 +848,6 @@ const loadAnalytics = async () => {
   }
   
   try {
-    loading.value = true;
     analytics.value = await getAnalyticsData(params);
   } catch (error) {
     console.error('Error loading analytics:', error);
@@ -952,6 +954,8 @@ const caChartData = computed(() => {
   };
 });
 
+const caChartKey = computed(() => `ca-${selectedYear.value}-${selectedPeriod.value}-${historicalPeriodType.value}-${selectedMonth.value}-${selectedWeek.value}`);
+
 const caChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
@@ -994,6 +998,8 @@ const pdvChartData = computed(() => {
     ]
   };
 });
+
+const pdvChartKey = computed(() => `pdv-${selectedYear.value}-${selectedPeriod.value}-${historicalPeriodType.value}-${selectedMonth.value}-${selectedWeek.value}`);
 
 const pdvChartOptions = {
   responsive: true,

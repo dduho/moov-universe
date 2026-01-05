@@ -244,8 +244,8 @@ class TransactionAnalyticsController extends Controller
      */
     private function getEvolution($period, $startDate, $endDate)
     {
-        if (in_array($period, ['quarter', 'historical_year'])) {
-            // Pour trimestre ou année complète: grouper par mois
+        if (in_array($period, ['month', 'quarter', 'historical_year'])) {
+            // Pour mois, trimestre ou année complète: grouper par mois
             $evolution = DB::table('pdv_transactions')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
@@ -440,10 +440,14 @@ class TransactionAnalyticsController extends Controller
      */
     private function getPeriodDates($period, $now, $year = null, $month = null, $week = null)
     {
+        $yesterdayEnd = $now->copy()->subDay()->endOfDay();
+
         return match ($period) {
-            'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()],
-            'week' => [$now->copy()->subWeeks(8)->startOfDay(), $now->copy()->endOfDay()],
-            'quarter' => [$now->copy()->startOfQuarter(), $now->copy()->endOfQuarter()],
+            // Jours du mois courant jusqu'à J-1
+            'day' => [$now->copy()->startOfMonth(), $yesterdayEnd],
+            // Semaines de l'année courante jusqu'à J-1
+            'week' => [$now->copy()->startOfYear(), $yesterdayEnd],
+            'quarter' => [$now->copy()->startOfQuarter(), $yesterdayEnd],
             'historical_year' => [
                 Carbon::create($year, 1, 1)->startOfDay(),
                 Carbon::create($year, 12, 31)->endOfDay()

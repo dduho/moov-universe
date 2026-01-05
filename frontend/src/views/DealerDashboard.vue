@@ -113,7 +113,7 @@
         <!-- KPI Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
           <!-- Skeleton KPI Cards -->
-          <template v-if="loadingStates.kpi && !analytics.kpi">
+          <template v-if="loadingStates.kpi">
             <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
               <div class="animate-pulse">
                 <div class="w-12 h-12 bg-gray-200 rounded-xl mb-4"></div>
@@ -125,7 +125,7 @@
           </template>
           
           <!-- Real KPI Cards -->
-          <template v-if="analytics.kpi">
+          <template v-else-if="analytics.kpi">
           <!-- Commissions Totales -->
           <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
             <div class="flex items-center justify-between mb-4">
@@ -238,7 +238,7 @@
         </div>
 
         <!-- Commissions & Retenues Detail -->
-        <div v-if="loadingStates.kpi && !analytics.kpi" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div v-if="loadingStates.kpi" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div v-for="i in 2" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
             <div class="animate-pulse">
               <div class="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
@@ -294,7 +294,7 @@
         </div>
 
         <!-- GIVE Network Stats -->
-        <div v-if="loadingStates.giveStats && !analytics.give_network_stats" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.giveStats" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <div class="animate-pulse">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -403,7 +403,7 @@
         </div>
 
         <!-- Top PDV par Commissions -->
-        <div v-if="loadingStates.topPdv && !analytics.commissions_by_pdv" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.topPdv" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <div class="animate-pulse">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
             <div class="space-y-3">
@@ -451,7 +451,7 @@
         </div>
 
         <!-- Monthly Revenue Chart -->
-        <div v-if="loadingStates.monthlyRevenue && monthlyRevenue.length === 0" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.monthlyRevenue" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <div class="animate-pulse">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div class="h-96 bg-gray-100 rounded-xl"></div>
@@ -460,12 +460,12 @@
         <div v-else-if="monthlyRevenue.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution Mensuelle {{ selectedYear }}</h3>
           <div style="height: 400px;">
-            <Line :data="monthlyChartData" :options="chartOptions" />
+            <Line :key="monthlyChartKey" :data="monthlyChartData" :options="chartOptions" />
           </div>
         </div>
 
         <!-- Evolution Timeline -->
-        <div v-if="loadingStates.evolution && !analytics.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <div class="animate-pulse">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div class="h-[350px] bg-gray-100 rounded-xl"></div>
@@ -474,12 +474,12 @@
         <div v-else-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution Quotidienne</h3>
           <div style="height: 350px;">
-            <Line :data="evolutionChartData" :options="chartOptions" />
+            <Line :key="evolutionChartKey" :data="evolutionChartData" :options="chartOptions" />
           </div>
         </div>
 
         <!-- PDV Actifs Evolution -->
-        <div v-if="loadingStates.evolution && !analytics.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+        <div v-if="loadingStates.evolution" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <div class="animate-pulse">
             <div class="h-6 bg-gray-200 rounded w-1/3 mb-6"></div>
             <div class="h-[350px] bg-gray-100 rounded-xl"></div>
@@ -488,7 +488,7 @@
         <div v-else-if="analytics.evolution && analytics.evolution.length" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
           <h3 class="text-lg font-bold text-gray-900 mb-6">Évolution des PDV Actifs</h3>
           <div style="height: 350px;">
-            <Line :data="pdvActifsChartData" :options="pdvActifsChartOptions" />
+            <Line :key="pdvActifsChartKey" :data="pdvActifsChartData" :options="pdvActifsChartOptions" />
           </div>
         </div>
 
@@ -740,14 +740,15 @@ const loadGiveStats = async () => {
     const cacheKey = getCacheKey('giveStats', params);
     
     if (analyticsCache.value[cacheKey]) {
-      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
+      // Cloner pour forcer la réactivité lors des changements de filtres
+      analytics.value = { ...analytics.value, ...JSON.parse(JSON.stringify(analyticsCache.value[cacheKey])) };
       loadingStates.value.giveStats = false;
       return;
     }
     
     const data = await dealerAnalyticsService.getGiveStats(params);
     analyticsCache.value[cacheKey] = data;
-    analytics.value = { ...analytics.value, ...data };
+    analytics.value = { ...analytics.value, ...JSON.parse(JSON.stringify(data)) };
   } catch (err) {
     console.error('Erreur lors du chargement des stats GIVE:', err);
     toast.error('Erreur de chargement des stats GIVE');
@@ -979,6 +980,11 @@ const pdvActifsChartOptions = {
     },
   },
 };
+
+// Clés de rendu pour forcer le redraw des graphiques lors des changements de filtres
+const monthlyChartKey = computed(() => `monthly-${selectedYear.value}`);
+const evolutionChartKey = computed(() => `evo-${selectedYear.value}-${selectedPeriod.value}-${historicalPeriodType.value}-${selectedMonth.value}-${selectedWeek.value}`);
+const pdvActifsChartKey = computed(() => `pdv-${selectedYear.value}-${selectedPeriod.value}-${historicalPeriodType.value}-${selectedMonth.value}-${selectedWeek.value}`);
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('fr-FR', {
