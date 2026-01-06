@@ -647,6 +647,7 @@ import FraudDetectionWidget from '../components/FraudDetectionWidget.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
 import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';
+import { useAnalyticsCacheStore } from '../stores/analyticsCache';
 
 // Register ChartJS components
 ChartJS.register(
@@ -661,11 +662,12 @@ ChartJS.register(
 );
 
 const { toast } = useToast();
+const analyticsCacheStore = useAnalyticsCacheStore();
+const cacheNamespace = 'transaction';
 
 // State
 const loading = ref(false);
 const analytics = ref(null);
-const analyticsCache = ref({}); // Cache frontend pour toutes les périodes
 const insights = ref([]);
 const loadingInsights = ref(false);
 const insightsGeneratedAt = ref('');
@@ -778,16 +780,14 @@ const safeClone = (value) => {
 // Obtenir les données depuis le cache ou charger depuis l'API
 const getAnalyticsData = async (params) => {
   const cacheKey = getCacheKey(params);
-  
-  // Si déjà en cache, retourner immédiatement
-  if (analyticsCache.value[cacheKey]) {
-    return safeClone(analyticsCache.value[cacheKey]);
+  const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
+
+  if (cached) {
+    return cached;
   }
-  
-  // Sinon, charger depuis l'API
+
   const response = await TransactionAnalyticsService.getAnalytics(params);
-  // Stocker puis retourner une copie pour déclencher la réactivité des graphiques
-  analyticsCache.value[cacheKey] = response.data;
+  analyticsCacheStore.set(cacheNamespace, cacheKey, response.data);
   return safeClone(response.data);
 };
 
@@ -809,9 +809,6 @@ const preloadAllPeriods = async () => {
 
 // Load analytics
 const loadAnalytics = async () => {
-  // Activer le loader immédiatement pour éviter l'affichage de données périmées pendant la latence
-  loading.value = true;
-
   let params = {};
   
   if (isCurrentYear.value) {
@@ -841,12 +838,15 @@ const loadAnalytics = async () => {
 
   // Si déjà en cache, servir immédiatement et éviter le loader global
   const cacheKey = getCacheKey(params);
-  if (analyticsCache.value[cacheKey]) {
-    analytics.value = safeClone(analyticsCache.value[cacheKey]);
+  const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
+  if (cached) {
+    analytics.value = cached;
     loading.value = false;
     return;
   }
-  
+
+  // Activer le loader seulement si aucune donnée en cache
+  loading.value = true;
   try {
     analytics.value = await getAnalyticsData(params);
   } catch (error) {
@@ -859,9 +859,17 @@ const loadAnalytics = async () => {
 
 // Load monthly revenue
 const loadMonthlyRevenue = async () => {
+  const cachedMonthly = analyticsCacheStore.getMonthly(cacheNamespace, selectedYear.value);
+
+  if (cachedMonthly) {
+    monthlyRevenue.value = cachedMonthly;
+    return;
+  }
+
   try {
     const response = await TransactionService.getMonthlyRevenue(selectedYear.value);
     monthlyRevenue.value = response.data;
+    analyticsCacheStore.setMonthly(cacheNamespace, selectedYear.value, response.data);
   } catch (error) {
     console.error('Error loading monthly revenue:', error);
     // N'affiche pas de toast d'erreur pour ne pas polluer l'interface

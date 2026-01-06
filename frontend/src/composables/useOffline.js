@@ -21,6 +21,11 @@ export function useOffline() {
 
   // Enregistrer le Service Worker
   const registerServiceWorker = async () => {
+    // Ne pas enregistrer de service worker en développement pour éviter de bloquer HMR/WebSocket
+    if (!import.meta.env.PROD) {
+      return null;
+    }
+
     if ('serviceWorker' in navigator) {
       try {
         registration = await navigator.serviceWorker.register('/service-worker.js', {
@@ -194,8 +199,14 @@ export function useOffline() {
 
   // Lifecycle hooks
   onMounted(async () => {
-    // Enregistrer le Service Worker
-    await registerServiceWorker();
+    // Enregistrer le Service Worker (prod uniquement) ou nettoyer en dev
+    if (!import.meta.env.PROD && 'serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(registrations.map((reg) => reg.unregister()));
+      console.log('[Offline] Service Workers désenregistrés en développement');
+    } else {
+      await registerServiceWorker();
+    }
     
     // Initialiser IndexedDB
     try {

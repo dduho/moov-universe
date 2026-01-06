@@ -237,6 +237,21 @@ class OfflineDB {
   async deleteSyncItem(id) {
     return this.delete(STORES.SYNC_QUEUE, id);
   }
+
+  async clearAll() {
+    if (!this.db) {
+      // Safe guard: initialize if not ready yet
+      await this.init();
+    }
+    const storeNames = Object.values(STORES);
+    for (const store of storeNames) {
+      try {
+        await this.clear(store);
+      } catch (error) {
+        console.error(`[offlineDB] clearAll error on ${store}:`, error);
+      }
+    }
+  }
 }
 
 // Instance singleton

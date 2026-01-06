@@ -1,35 +1,80 @@
 import api from './api';
 import { offlineDB } from '../utils/offlineDB';
 
+const buildCacheKey = (params = {}) => {
+  const sorted = Object.keys(params)
+    .sort()
+    .reduce((acc, key) => {
+      acc[key] = params[key];
+      return acc;
+    }, {});
+  return `pdv-list:${JSON.stringify(sorted)}`;
+};
+
 export default {
   async getAll(params = {}) {
     try {
+      const cacheKey = buildCacheKey(params);
+
+      // Try cache first when offline or to shortcut repeat fetches
+      if (!navigator.onLine) {
+        const cached = await offlineDB.getCachedData(cacheKey);
+        if (cached) {
+          console.log('[PDV Service] Offline cache hit');
+          return cached;
+        }
+      }
+
       // Si en ligne, fetch depuis l'API
       if (navigator.onLine) {
         const response = await api.get('/point-of-sales', { params });
-        const pdvList = response.data.data || response.data;
+        const payload = response.data;
+        const pdvList = payload.data || payload;
         
         // Sauvegarder dans IndexedDB pour usage offline
         if (Array.isArray(pdvList)) {
           await offlineDB.savePDVList(pdvList);
           console.log('[PDV Service] Liste PDV sauvegardée pour mode offline');
         }
+
+        // Cache la réponse paginée pour réutilisation rapide (5 min)
+        try {
+          await offlineDB.cacheData(cacheKey, payload, 5);
+        } catch (cacheError) {
+          console.warn('[PDV Service] Cache write failed', cacheError);
+        }
         
-        return response.data;
+        return payload;
       }
       
       // Si hors ligne, utiliser les données locales
       console.log('[PDV Service] Mode hors ligne - Chargement depuis IndexedDB');
+      const cached = await offlineDB.getCachedData(cacheKey);
+      if (cached) {
+        return cached;
+      }
+
       const cachedPDV = await offlineDB.getPDVList();
       return { data: cachedPDV };
     } catch (error) {
       console.error('[PDV Service] Erreur, tentative cache...', error);
       
       // En cas d'erreur, essayer le cache local
-      const cached = await offlineDB.getPDVList();
-      if (cached && cached.length > 0) {
-        console.log('[PDV Service] Données récupérées du cache');
-        return { data: cached };
+      try {
+        const cacheKey = buildCacheKey(params);
+        const cachedResponse = await offlineDB.getCachedData(cacheKey);
+        if (cachedResponse) {
+          console.log('[PDV Service] Données récupérées du cache');
+          return cachedResponse;
+        }
+      } catch (cacheErr) {
+        console.warn('[PDV Service] Cache fallback failed', cacheErr);
+      }
+
+      const cachedList = await offlineDB.getPDVList();
+      if (cachedList && cachedList.length > 0) {
+        console.log('[PDV Service] Données récupérées du cache (liste brute)');
+        return { data: cachedList };
       }
       
       throw error;

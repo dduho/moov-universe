@@ -53,6 +53,10 @@ const SettingService = {
   async clearAllCaches() {
     return api.post('/settings/cache/clear-all');
   },
+  async clearFrontendCaches() {
+    // Placeholder for potential frontend-only cache clearing endpoint
+    return apiClient.post('/settings/cache/clear-frontend');
+  }
 };
 
 export default SettingService;

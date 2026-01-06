@@ -12,6 +12,7 @@
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <ExportButton
             @export="handleExport"
+            :disabled="loading || exportLoading"
             label="Exporter"
             class="flex-1 sm:flex-none"
           />
@@ -475,6 +476,7 @@ const organizationStore = useOrganizationStore();
 
 const loading = ref(true);
 const loadingMore = ref(false);
+const exportLoading = ref(false);
 const pointsOfSale = ref([]);
 const viewMode = ref('grid');
 const currentPage = ref(1);
@@ -608,22 +610,31 @@ const clearFilters = () => {
 };
 
 const handleExport = async (format) => {
+  if (exportLoading.value) return;
+  exportLoading.value = true;
+
   try {
-    loading.value = true;
-    
-    // Récupérer TOUS les PDV en faisant des appels successifs
+    // Note: l'API limite per_page à 100. On boucle pour tout récupérer.
+    // Récupérer tous les PDV correspondant aux filtres en paginant côté API
     let allPDV = [];
-    let currentPage = 1;
+    let currentExportPage = 1;
     let hasMore = true;
-    
+
     while (hasMore) {
       const params = {
-        page: currentPage,
-        per_page: 100, // Maximum autorisé par l'API
+        page: currentExportPage,
+        per_page: 100, // aligné avec la limite API
         sort_by: filters.value.sortBy,
         sort_order: 'desc'
       };
-      
+
+      // Forcer la scope organisation pour les dealer owners
+      if (authStore.isDealerOwner && authStore.organizationId) {
+        params.organization_id = authStore.organizationId;
+      } else if (filters.value.dealer) {
+        params.organization_id = filters.value.dealer;
+      }
+
       // Ajouter les filtres actifs
       if (filters.value.search) params.search = filters.value.search;
       if (filters.value.status) params.status = filters.value.status;
@@ -633,26 +644,31 @@ const handleExport = async (format) => {
       if (filters.value.ville) params.ville = filters.value.ville;
       if (filters.value.quartier) params.quartier = filters.value.quartier;
       if (filters.value.dealer) params.organization_id = filters.value.dealer;
-      
+
       // Filtres de qualité des données
       if (filters.value.incompleteData) params.incomplete_data = true;
       if (filters.value.noGPS) params.no_gps = true;
       if (filters.value.geoInconsistency) params.geo_inconsistency = true;
       if (filters.value.proximityAlert) params.proximity_alert = true;
-      
+
       const response = await PointOfSaleService.getAll(params);
-      allPDV = allPDV.concat(response.data);
-      
-      // Vérifier s'il y a encore des pages
-      hasMore = currentPage < response.last_page;
-      currentPage++;
+      const pageData = Array.isArray(response.data) ? response.data : [];
+      allPDV = allPDV.concat(pageData);
+
+      const lastPage = response.last_page;
+      if (!lastPage || pageData.length === 0 || currentExportPage >= lastPage) {
+        hasMore = false;
+      } else {
+        hasMore = true;
+      }
+      currentExportPage++;
     }
-    
+
     ExportService.exportPDV(allPDV, format);
   } catch (error) {
     console.error('Erreur lors de l\'export:', error);
   } finally {
-    loading.value = false;
+    exportLoading.value = false;
   }
 };
 
@@ -671,13 +687,20 @@ const fetchPointsOfSale = async (append = false) => {
       sort_by: filters.value.sortBy,
       sort_order: 'desc'
     };
+
+    // Forcer la scope organisation pour les dealer owners
+    if (authStore.isDealerOwner && authStore.organizationId) {
+      params.organization_id = authStore.organizationId;
+    } else if (filters.value.dealer) {
+      params.organization_id = filters.value.dealer;
+    }
     
     // Ajouter les filtres actifs
     if (filters.value.status) params.status = filters.value.status;
     if (filters.value.region) params.region = filters.value.region.toUpperCase();
     if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
     if (filters.value.search) params.search = filters.value.search;
-    if (filters.value.dealer) params.organization_id = filters.value.dealer;
+    // (déjà ajouté plus haut)
     
     // Filtres de qualité des données
     if (filters.value.incompleteData) params.incomplete_data = true;

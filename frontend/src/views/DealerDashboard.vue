@@ -512,13 +512,13 @@ import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement
 import Navbar from '../components/Navbar.vue';
 import dealerAnalyticsService from '../services/dealerAnalyticsService';
 import { useToast } from '../composables/useToast';
+import { useAnalyticsCacheStore } from '../stores/analyticsCache';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const { toast } = useToast();
 
 const analytics = ref({});
-const analyticsCache = ref({}); // Cache frontend pour toutes les périodes
 const monthlyRevenue = ref([]);
 const loadingStates = ref({
   kpi: false,
@@ -528,6 +528,9 @@ const loadingStates = ref({
   monthlyRevenue: false
 });
 const error = ref(null);
+
+const analyticsCacheStore = useAnalyticsCacheStore();
+const cacheNamespace = 'dealer';
 
 const selectedPeriod = ref('week');
 const selectedYear = ref(new Date().getFullYear());
@@ -658,22 +661,51 @@ const getCacheKey = (type, params) => {
   return `${type}_${JSON.stringify(params)}`;
 };
 
+const getCachedData = (type, params) => {
+  return analyticsCacheStore.get(cacheNamespace, getCacheKey(type, params));
+};
+
+const setCachedData = (type, params, data) => {
+  analyticsCacheStore.set(cacheNamespace, getCacheKey(type, params), data);
+};
+
+// Hydrate immédiatement depuis le cache pour éviter un flash de skeleton lors des retours de navigation
+const hydrateFromCache = () => {
+  const params = getPeriodParams();
+  const cachedKpi = getCachedData('kpi', params);
+  const cachedEvolution = getCachedData('evolution', params);
+  const cachedTopPdv = getCachedData('topPdv', params);
+  const cachedGiveStats = getCachedData('giveStats', params);
+
+  const merged = { ...analytics.value };
+  if (cachedKpi) Object.assign(merged, cachedKpi);
+  if (cachedEvolution) Object.assign(merged, cachedEvolution);
+  if (cachedTopPdv) Object.assign(merged, cachedTopPdv);
+  if (cachedGiveStats) Object.assign(merged, cachedGiveStats);
+
+  analytics.value = merged;
+
+  const cachedMonthly = analyticsCacheStore.getMonthly(cacheNamespace, selectedYear.value);
+  if (cachedMonthly) {
+    monthlyRevenue.value = cachedMonthly;
+  }
+};
+
 // Charger les KPI avec cache
 const loadKpi = async () => {
+  const params = getPeriodParams();
+  const cached = getCachedData('kpi', params);
+
+  if (cached) {
+    analytics.value = { ...analytics.value, ...cached };
+    loadingStates.value.kpi = false;
+    return;
+  }
+
   try {
     loadingStates.value.kpi = true;
-    const params = getPeriodParams();
-    const cacheKey = getCacheKey('kpi', params);
-    
-    // Vérifier le cache
-    if (analyticsCache.value[cacheKey]) {
-      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
-      loadingStates.value.kpi = false;
-      return;
-    }
-    
     const data = await dealerAnalyticsService.getKpi(params);
-    analyticsCache.value[cacheKey] = data;
+    setCachedData('kpi', params, data);
     analytics.value = { ...analytics.value, ...data };
   } catch (err) {
     console.error('Erreur lors du chargement des KPI:', err);
@@ -685,20 +717,19 @@ const loadKpi = async () => {
 
 // Charger l'évolution avec cache
 const loadEvolution = async () => {
+  const params = getPeriodParams();
+  const cached = getCachedData('evolution', params);
+
+  if (cached) {
+    analytics.value = { ...analytics.value, ...cached };
+    loadingStates.value.evolution = false;
+    return;
+  }
+
   try {
     loadingStates.value.evolution = true;
-    const params = getPeriodParams();
-    const cacheKey = getCacheKey('evolution', params);
-    
-    // Vérifier le cache
-    if (analyticsCache.value[cacheKey]) {
-      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
-      loadingStates.value.evolution = false;
-      return;
-    }
-    
     const data = await dealerAnalyticsService.getEvolution(params);
-    analyticsCache.value[cacheKey] = data;
+    setCachedData('evolution', params, data);
     analytics.value = { ...analytics.value, ...data };
   } catch (err) {
     console.error('Erreur lors du chargement de l\'évolution:', err);
@@ -710,19 +741,19 @@ const loadEvolution = async () => {
 
 // Charger les top PDV avec cache
 const loadTopPdv = async () => {
+  const params = getPeriodParams();
+  const cached = getCachedData('topPdv', params);
+
+  if (cached) {
+    analytics.value = { ...analytics.value, ...cached };
+    loadingStates.value.topPdv = false;
+    return;
+  }
+
   try {
     loadingStates.value.topPdv = true;
-    const params = getPeriodParams();
-    const cacheKey = getCacheKey('topPdv', params);
-    
-    if (analyticsCache.value[cacheKey]) {
-      analytics.value = { ...analytics.value, ...analyticsCache.value[cacheKey] };
-      loadingStates.value.topPdv = false;
-      return;
-    }
-    
     const data = await dealerAnalyticsService.getTopPdv(params);
-    analyticsCache.value[cacheKey] = data;
+    setCachedData('topPdv', params, data);
     analytics.value = { ...analytics.value, ...data };
   } catch (err) {
     console.error('Erreur lors du chargement des top PDV:', err);
@@ -734,21 +765,20 @@ const loadTopPdv = async () => {
 
 // Charger les stats GIVE avec cache
 const loadGiveStats = async () => {
+  const params = getPeriodParams();
+  const cached = getCachedData('giveStats', params);
+
+  if (cached) {
+    analytics.value = { ...analytics.value, ...cached };
+    loadingStates.value.giveStats = false;
+    return;
+  }
+
   try {
     loadingStates.value.giveStats = true;
-    const params = getPeriodParams();
-    const cacheKey = getCacheKey('giveStats', params);
-    
-    if (analyticsCache.value[cacheKey]) {
-      // Cloner pour forcer la réactivité lors des changements de filtres
-      analytics.value = { ...analytics.value, ...JSON.parse(JSON.stringify(analyticsCache.value[cacheKey])) };
-      loadingStates.value.giveStats = false;
-      return;
-    }
-    
     const data = await dealerAnalyticsService.getGiveStats(params);
-    analyticsCache.value[cacheKey] = data;
-    analytics.value = { ...analytics.value, ...JSON.parse(JSON.stringify(data)) };
+    setCachedData('giveStats', params, data);
+    analytics.value = { ...analytics.value, ...data };
   } catch (err) {
     console.error('Erreur lors du chargement des stats GIVE:', err);
     toast.error('Erreur de chargement des stats GIVE');
@@ -759,9 +789,19 @@ const loadGiveStats = async () => {
 
 // Charger les revenus mensuels
 const loadMonthlyRevenue = async () => {
+  const cachedMonthly = analyticsCacheStore.getMonthly(cacheNamespace, selectedYear.value);
+
+  if (cachedMonthly) {
+    monthlyRevenue.value = cachedMonthly;
+    loadingStates.value.monthlyRevenue = false;
+    return;
+  }
+
   try {
     loadingStates.value.monthlyRevenue = true;
-    monthlyRevenue.value = await dealerAnalyticsService.getMonthlyRevenue(selectedYear.value);
+    const data = await dealerAnalyticsService.getMonthlyRevenue(selectedYear.value);
+    monthlyRevenue.value = data;
+    analyticsCacheStore.setMonthly(cacheNamespace, selectedYear.value, data);
   } catch (err) {
     console.error('Erreur lors du chargement des revenus mensuels:', err);
   } finally {
@@ -790,19 +830,18 @@ const preloadAllPeriods = async () => {
       if (period === selectedPeriod.value) return; // Déjà chargé
       try {
         const params = { period };
-        const cacheKey = getCacheKey('kpi', params);
-        if (!analyticsCache.value[cacheKey]) {
+        if (!getCachedData('kpi', params)) {
           await dealerAnalyticsService.getKpi(params).then(data => {
-            analyticsCache.value[getCacheKey('kpi', params)] = data;
+            setCachedData('kpi', params, data);
           });
           await dealerAnalyticsService.getEvolution(params).then(data => {
-            analyticsCache.value[getCacheKey('evolution', params)] = data;
+            setCachedData('evolution', params, data);
           });
           await dealerAnalyticsService.getTopPdv(params).then(data => {
-            analyticsCache.value[getCacheKey('topPdv', params)] = data;
+            setCachedData('topPdv', params, data);
           });
           await dealerAnalyticsService.getGiveStats(params).then(data => {
-            analyticsCache.value[getCacheKey('giveStats', params)] = data;
+            setCachedData('giveStats', params, data);
           });
         }
       } catch (error) {
@@ -818,6 +857,7 @@ const changePeriod = (period) => {
 };
 
 onMounted(async () => {
+  hydrateFromCache();
   loadAllData();
   // Pré-charger les autres périodes en arrière-plan
   preloadAllPeriods();

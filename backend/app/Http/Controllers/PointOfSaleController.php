@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PointOfSale;
 use App\Services\ProximityAlertService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class PointOfSaleController extends Controller
 {
@@ -13,6 +14,19 @@ class PointOfSaleController extends Controller
     public function __construct(ProximityAlertService $proximityService)
     {
         $this->proximityService = $proximityService;
+    }
+
+    private function flushPdvCache(): void
+    {
+        try {
+            if (method_exists(Cache::getStore(), 'tags')) {
+                Cache::tags(['pdv-index'])->flush();
+            } else {
+                Cache::flush();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('PDV cache flush failed: ' . $e->getMessage());
+        }
     }
 
     public function index(Request $request)
@@ -80,7 +94,10 @@ class PointOfSaleController extends Controller
         }
 
         if ($request->has('organization_id')) {
-            $query->where('organization_id', $request->organization_id);
+            // Admins can filter; dealer owners already scoped above
+            if ($user->isAdmin()) {
+                $query->where('organization_id', $request->organization_id);
+            }
         }
 
         if ($request->has('search')) {
@@ -182,7 +199,7 @@ class PointOfSaleController extends Controller
             }
         }
 
-        // Pagination with performance optimization
+        // Pagination with performance optimization (cacheable)
         $perPage = $request->get('per_page', 50); // Default to 50 for better performance
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
@@ -192,7 +209,31 @@ class PointOfSaleController extends Controller
             $perPage = 100;
         }
         
-        return response()->json($query->orderBy($sortBy, $sortOrder)->paginate($perPage));
+        // Cache layer: vary by user/org and query string to avoid cross-tenant leaks
+        $cacheKeyParts = [
+            'pdv-index',
+            'user:' . $user->id,
+            'org:' . ($user->organization_id ?? 'none'),
+            'role:' . ($user->role->name ?? 'none'),
+            'params:' . md5(json_encode($request->all()))
+        ];
+        $cacheKey = implode('|', $cacheKeyParts);
+
+        $ttlSeconds = 300; // 5 minutes
+
+        $cache = cache();
+
+        if (method_exists($cache, 'tags')) {
+            $paginator = $cache->tags(['pdv-index'])->remember($cacheKey, $ttlSeconds, function () use ($query, $sortBy, $sortOrder, $perPage) {
+                return $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
+            });
+        } else {
+            $paginator = $cache->remember($cacheKey, $ttlSeconds, function () use ($query, $sortBy, $sortOrder, $perPage) {
+                return $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
+            });
+        }
+
+        return response()->json($paginator);
     }
 
     /**
@@ -348,6 +389,8 @@ class PointOfSaleController extends Controller
 
         $pdv = PointOfSale::create($validated);
 
+        $this->flushPdvCache();
+
         // Attach uploaded files
         if ($request->has('owner_id_document_ids')) {
             foreach ($request->owner_id_document_ids as $uploadId) {
@@ -482,6 +525,8 @@ class PointOfSaleController extends Controller
 
         $pdv->update($validated);
 
+        $this->flushPdvCache();
+
         return response()->json($pdv->load(['organization', 'creator']));
     }
 
@@ -504,6 +549,8 @@ class PointOfSaleController extends Controller
             'validated_by' => $user->id,
             'validated_at' => now(),
         ]);
+
+        $this->flushPdvCache();
 
         // Notifier le créateur du PDV
         if ($pdv->creator) {
@@ -550,6 +597,8 @@ class PointOfSaleController extends Controller
             'rejected_at' => now(),
             'rejection_reason' => $request->rejection_reason,
         ]);
+
+        $this->flushPdvCache();
 
         // Notifier le créateur du PDV
         if ($pdv->creator) {
@@ -752,6 +801,8 @@ class PointOfSaleController extends Controller
         }
 
         $pdv->delete();
+
+        $this->flushPdvCache();
 
         return response()->json(['message' => 'PDV deleted successfully']);
     }

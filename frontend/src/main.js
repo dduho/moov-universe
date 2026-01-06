@@ -22,8 +22,8 @@ offlineDB.init().then(() => {
   console.error('[App] Erreur d\'initialisation IndexedDB:', error);
 });
 
-// Enregistrer le Service Worker
-if ('serviceWorker' in navigator) {
+// Enregistrer le Service Worker uniquement en prod pour éviter d'interférer avec HMR en dev
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
       .then(registration => {

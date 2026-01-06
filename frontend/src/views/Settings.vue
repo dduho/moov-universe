@@ -465,6 +465,36 @@
           </div>
         </div>
 
+        <!-- Frontend Cache Controls -->
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
+            <div class="flex-1">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Caches Frontend (Vue/Pinia/IndexedDB)</h3>
+              <p class="text-xs sm:text-sm text-gray-600">Vide les caches locaux (analytics, IndexedDB) sans toucher au backend</p>
+            </div>
+            <button
+              @click="clearFrontendCaches"
+              :disabled="clearingFrontendCaches"
+              class="px-4 py-2 rounded-lg font-bold transition-all"
+              :class="[
+                clearingFrontendCaches
+                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                  : 'bg-red-500 text-white hover:bg-red-600 shadow-lg hover:shadow-xl'
+              ]"
+            >
+              <span v-if="clearingFrontendCaches" class="flex items-center gap-2">
+                <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Vidage en cours...
+              </span>
+              <span v-else>Vider les caches frontend</span>
+            </button>
+          </div>
+          <p class="text-xs text-gray-500">Utilisez ceci si vous constatez des données périmées ou des problèmes de rafraîchissement des dashboards.</p>
+        </div>
+
         <!-- Advanced Cache Management Section -->
         <div v-if="authStore.isAdmin && !cacheSettingsError" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mt-10">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
@@ -561,6 +591,8 @@ import TransactionService from '../services/transactionService';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 import SettingService from '../services/SettingService';
+import { useAnalyticsCacheStore } from '../stores/analyticsCache';
+import { offlineDB } from '../utils/offlineDB';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -577,6 +609,10 @@ const mailNotificationsEnabled = ref(true);
 const savingMailNotifications = ref(false);
 const smtpConfigured = ref(false);
 const checkingSmtp = ref(false);
+
+// Frontend cache controls
+const analyticsCacheStore = useAnalyticsCacheStore();
+const clearingFrontendCaches = ref(false);
 
 // Transaction import
 const fileInput = ref(null);
@@ -905,6 +941,20 @@ async function clearAllCaches() {
     toast.error('Erreur lors du vidage de tous les caches');
   } finally {
     clearingAllCaches.value = false;
+  }
+}
+
+async function clearFrontendCaches() {
+  try {
+    clearingFrontendCaches.value = true;
+    analyticsCacheStore.clearAll();
+    await offlineDB.clearAll();
+    toast.success('Caches frontend vidés');
+  } catch (error) {
+    console.error('Error clearing frontend caches:', error);
+    toast.error('Erreur lors du vidage des caches frontend');
+  } finally {
+    clearingFrontendCaches.value = false;
   }
 }
 
