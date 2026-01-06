@@ -68,9 +68,9 @@
           </div>
 
           <!-- Actual Content -->
-          <div v-if="stats.total > 0 || !loadingStates.stats">
+          <div v-if="stats.total > 0 || !loadingStates.stats" class="space-y-8">
           <!-- Incomplete required fields alert -->
-          <div v-if="incompletePdvs.length" class="mb-8">
+          <div v-if="incompletePdvs.length">
             <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500 via-orange-500 to-red-500 p-[2px] shadow-2xl">
               <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl rounded-3xl bg-white p-6 sm:p-8">
                 <!-- Header -->
@@ -211,7 +211,7 @@
           </div>
 
           <!-- Stats Cards -->
-          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <StatsCard 
               label="Total PDV"
               :value="stats.total || 0"
@@ -245,7 +245,7 @@
           </div>
 
           <!-- Statistiques supplémentaires -->
-          <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3 mb-8">
+          <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:grid sm:grid-cols-3">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl bg-gradient-to-br from-blue-50/50 to-blue-100/30 border border-blue-200 flex-shrink-0 w-48 sm:w-auto">
               <div class="flex items-center gap-3 sm:gap-4">
                 <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-lg">
@@ -290,7 +290,7 @@
           </div>
 
           <!-- Pending Validation Alert (Admin Only) -->
-          <div v-if="authStore.isAdmin && stats.pending > 0" class="mb-8">
+          <div v-if="authStore.isAdmin && stats.pending > 0">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-yellow-300 bg-yellow-50/50">
               <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="flex items-center gap-3 sm:gap-4">
@@ -433,7 +433,7 @@
           </div>
 
           <!-- Geographic Inconsistency Alert (Admin only) -->
-          <div v-if="authStore.isAdmin && geoAlerts.alerts_count > 0" class="mb-8">
+          <div v-if="authStore.isAdmin && geoAlerts.alerts_count > 0">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -725,7 +725,7 @@
           </div>
 
           <!-- Distribution par Région et Dealer -->
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          <div :class="authStore.isAdmin ? 'grid grid-cols-1 lg:grid-cols-2 gap-8' : 'max-w-2xl mx-auto'">
             <!-- PDV par Région -->
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
               <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
