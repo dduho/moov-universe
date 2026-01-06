@@ -321,8 +321,24 @@
             </div>
           </div>
 
+          <!-- GPS Missing Alert - Loading Skeleton -->
+          <div v-if="loadingStates.gpsStats" class="mb-8">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-red-200 bg-red-50/30 animate-pulse">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4 flex-1">
+                  <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-red-200"></div>
+                  <div class="flex-1">
+                    <div class="h-5 bg-red-200 rounded w-48 mb-2"></div>
+                    <div class="h-4 bg-red-100 rounded w-64"></div>
+                  </div>
+                </div>
+                <div class="h-10 w-32 bg-red-200 rounded-xl"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- GPS Missing Alert -->
-          <div v-if="gpsStats.without_gps > 0" class="mb-8">
+          <div v-else-if="gpsStats.without_gps > 0" class="mb-8">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-red-300 bg-red-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -432,8 +448,24 @@
             </div>
           </div>
 
+          <!-- Geographic Inconsistency Alert - Loading Skeleton (Admin only) -->
+          <div v-if="authStore.isAdmin && loadingStates.geoAlerts" class="mb-8">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-purple-200 bg-purple-50/30 animate-pulse">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4 flex-1">
+                  <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-purple-200"></div>
+                  <div class="flex-1">
+                    <div class="h-5 bg-purple-200 rounded w-56 mb-2"></div>
+                    <div class="h-4 bg-purple-100 rounded w-72"></div>
+                  </div>
+                </div>
+                <div class="h-10 w-32 bg-purple-200 rounded-xl"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Geographic Inconsistency Alert (Admin only) -->
-          <div v-if="authStore.isAdmin && geoAlerts.alerts_count > 0">
+          <div v-else-if="authStore.isAdmin && geoAlerts.alerts_count > 0" class="mb-8">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-purple-300 bg-purple-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -543,8 +575,24 @@
             </div>
           </div>
 
+          <!-- Proximity Alerts - Loading Skeleton -->
+          <div v-if="loadingStates.proximityAlerts" class="mb-8">
+            <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-orange-200 bg-orange-50/30 animate-pulse">
+              <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="flex items-center gap-3 sm:gap-4 flex-1">
+                  <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-orange-200"></div>
+                  <div class="flex-1">
+                    <div class="h-5 bg-orange-200 rounded w-52 mb-2"></div>
+                    <div class="h-4 bg-orange-100 rounded w-80"></div>
+                  </div>
+                </div>
+                <div class="h-10 w-32 bg-orange-200 rounded-xl"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Proximity Alerts -->
-          <div v-if="proximityAlerts.count > 0" class="mb-8">
+          <div v-else-if="proximityAlerts.count > 0" class="mb-8">
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl border-2 border-orange-300 bg-orange-50/50">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

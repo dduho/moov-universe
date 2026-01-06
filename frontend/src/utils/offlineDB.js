@@ -64,8 +64,16 @@ class OfflineDB {
     });
   }
 
+  // Ensure database is initialized
+  async ensureReady() {
+    if (!this.db) {
+      await this.init();
+    }
+  }
+
   // Méthodes génériques pour toutes les stores
   async add(storeName, data) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -76,6 +84,7 @@ class OfflineDB {
   }
 
   async put(storeName, data) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -86,6 +95,7 @@ class OfflineDB {
   }
 
   async get(storeName, key) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readonly');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -96,6 +106,7 @@ class OfflineDB {
   }
 
   async getAll(storeName) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readonly');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -106,6 +117,7 @@ class OfflineDB {
   }
 
   async delete(storeName, key) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -116,6 +128,7 @@ class OfflineDB {
   }
 
   async clear(storeName) {
+    await this.ensureReady();
     const tx = this.db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -127,6 +140,7 @@ class OfflineDB {
 
   // Méthodes spécifiques pour les PDV
   async savePDVList(pdvList) {
+    await this.ensureReady();
     // Effacer les anciennes données d'abord
     await this.clear(STORES.PDV);
     
@@ -239,10 +253,7 @@ class OfflineDB {
   }
 
   async clearAll() {
-    if (!this.db) {
-      // Safe guard: initialize if not ready yet
-      await this.init();
-    }
+    await this.ensureReady();
     const storeNames = Object.values(STORES);
     for (const store of storeNames) {
       try {

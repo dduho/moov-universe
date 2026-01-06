@@ -15,25 +15,29 @@ setActivePinia(pinia)
 app.use(pinia)
 app.use(router)
 
-// Initialiser IndexedDB au démarrage
-offlineDB.init().then(() => {
-  console.log('[App] IndexedDB prête');
-}).catch(error => {
-  console.error('[App] Erreur d\'initialisation IndexedDB:', error);
-});
+// Initialiser IndexedDB au démarrage et attendre qu'elle soit prête
+;(async () => {
+  try {
+    await offlineDB.init();
+    console.log('[App] IndexedDB prête');
+  } catch (error) {
+    console.error('[App] Erreur d\'initialisation IndexedDB:', error);
+    // Continue anyway - l'app peut fonctionner sans IndexedDB
+  }
 
-// Enregistrer le Service Worker uniquement en prod pour éviter d'interférer avec HMR en dev
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/service-worker.js')
-      .then(registration => {
-        console.log('[App] Service Worker enregistré:', registration.scope);
-      })
-      .catch(error => {
-        console.error('[App] Erreur d\'enregistrement du Service Worker:', error);
-      });
-  });
-}
+  // Enregistrer le Service Worker uniquement en prod pour éviter d'interférer avec HMR en dev
+  if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('[App] Service Worker enregistré:', registration.scope);
+        })
+        .catch(error => {
+          console.error('[App] Erreur d\'enregistrement du Service Worker:', error);
+        });
+    });
+  }
 
-app.mount('#app')
+  app.mount('#app');
+})()
 
