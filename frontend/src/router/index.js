@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { setActivePinia } from 'pinia';
 import { useAuthStore } from '../stores/auth';
+import pinia from '../plugins/pinia';
 
 // Prefetch function for probable routes
 const prefetchRoute = (componentImport) => {
@@ -169,7 +171,10 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
+  // Assure un contexte Pinia actif même avant le mount de l'app
+  setActivePinia(pinia);
+  // Inject shared pinia instance to avoid getActivePinia errors on cold reloads
+  const authStore = useAuthStore(pinia);
   
   // Si l'utilisateur n'est pas authentifié et la route nécessite l'authentification
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

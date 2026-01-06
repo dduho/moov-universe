@@ -2,6 +2,7 @@
 import { RouterView } from 'vue-router';
 import { useAuthStore } from './stores/auth';
 import { onMounted, ref } from 'vue';
+import { setActivePinia } from 'pinia';
 import { useToast } from './composables/useToast';
 import Toast from './components/Toast.vue';
 import GlobalSearch from './components/GlobalSearch.vue';
@@ -9,7 +10,10 @@ import ConfirmModal from './components/ConfirmModal.vue';
 import PWAInstallPrompt from './components/PWAInstallPrompt.vue';
 import OfflineIndicator from './components/OfflineIndicator.vue';
 
-const authStore = useAuthStore();
+// Inject explicit pinia instance to avoid getActivePinia issues on reloads
+import pinia from './plugins/pinia';
+setActivePinia(pinia);
+const authStore = useAuthStore(pinia);
 const { setToastComponent } = useToast();
 const toastRef = ref(null);
 

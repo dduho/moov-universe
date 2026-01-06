@@ -559,9 +559,9 @@ class DealerAnalyticsController extends Controller
         $yesterdayEnd = $now->copy()->subDay()->endOfDay();
         
         return match($period) {
-            // Jours du mois courant
+            // J-1 uniquement pour le filtre Jour
             'day' => [
-                $now->copy()->startOfMonth(),
+                $yesterdayEnd->copy()->startOfDay(),
                 $yesterdayEnd
             ],
             // Semaines de l'année courante

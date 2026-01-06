@@ -1,13 +1,16 @@
 import { createApp } from 'vue'
-import { createPinia } from 'pinia'
 import './style.css'
 import 'leaflet/dist/leaflet.css'
 import App from './App.vue'
 import router from './router'
 import { offlineDB } from './utils/offlineDB'
+import pinia from './plugins/pinia'
+import { setActivePinia } from 'pinia'
 
 const app = createApp(App)
-const pinia = createPinia()
+
+// Activer Pinia avant toute utilisation de stores (garde de route incluse)
+setActivePinia(pinia)
 
 app.use(pinia)
 app.use(router)
