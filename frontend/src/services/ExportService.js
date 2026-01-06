@@ -75,22 +75,25 @@ const ExportService = {
         "TYPE D'ACTIVITE": pdv.type_activite || '',
         'LOCALISATION': localization,
         'REGION': pdv.region || '',
-      'PREFECTURE': pdv.prefecture || '',
-      'COMMUNE': pdv.commune || '',
-      'CANTON': pdv.canton || '',
-      'QUARTIER': pdv.quartier || '',
-      'VILLE': pdv.ville || '',
-      'LATITUDE': pdv.latitude || '',
-      'LONGITUDE': pdv.longitude || '',
-      'PROPRIETAIRE': pdv.numero_proprietaire || '',
-      'AUTRE CONTACT': pdv.autre_contact || '',
-      'SEXE DU GERANT': pdv.sexe_gerant || '',
-      'NIF': pdv.nif || '',
-      'REGIME FISCAL': pdv.regime_fiscal || '',
-      'SUPPORT DE VISIBILITE': pdv.support_visibilite || '',
-      'ETAT DU SUPPORT DE VISIBILITE': pdv.etat_support || '',
-      'NUMERO_CAGNT': pdv.numero_cagnt || ''
+        'PREFECTURE': pdv.prefecture || '',
+        'COMMUNE': pdv.commune || '',
+        'CANTON': pdv.canton || '',
+        'QUARTIER': pdv.quartier || '',
+        'VILLE': pdv.ville || '',
+        'LATITUDE': pdv.latitude || '',
+        'LONGITUDE': pdv.longitude || '',
+        'PROPRIETAIRE': pdv.numero_proprietaire || '',
+        'AUTRE CONTACT': pdv.autre_contact || '',
+        'SEXE DU GERANT': pdv.sexe_gerant || '',
+        'NIF': pdv.nif || '',
+        'REGIME FISCAL': pdv.regime_fiscal || '',
+        'SUPPORT DE VISIBILITE': pdv.support_visibilite || '',
+        'ETAT DU SUPPORT DE VISIBILITE': pdv.etat_support || '',
+        'NUMERO_CAGNT': pdv.numero_cagnt || ''
       };
+    });
+
+    const filename = `pdv_export_${new Date().toISOString().split('T')[0]}`;
     
     if (format === 'excel') {
       this.exportToExcel(exportData, filename, 'Points de Vente');
