@@ -6,6 +6,11 @@ use App\Models\PointOfSale;
 use App\Services\ProximityAlertService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class PointOfSaleController extends Controller
 {
@@ -30,8 +35,8 @@ class PointOfSaleController extends Controller
     }
 
     /**
-     * Export all PDVs without pagination for export feature
-     * Returns all PDVs based on user permissions
+     * Export all PDVs to formatted Excel file
+     * Returns Excel file with styling similar to fraud detection export
      */
     public function exportAll(Request $request)
     {
@@ -43,7 +48,7 @@ class PointOfSaleController extends Controller
         }
         
         // Charger toutes les colonnes nécessaires pour l'export
-        $query = PointOfSale::with(['organization:id,name']);
+        $query = PointOfSale::with(['organization:id,name', 'creator:id,name']);
         
         // Filter based on user role (same as index)
         if ($user->isAdmin()) {
@@ -87,10 +92,203 @@ class PointOfSaleController extends Controller
         // Get all PDVs (no pagination, limit to 50k for safety)
         $pdvs = $query->orderBy('created_at', 'desc')->limit(50000)->get();
 
-        return response()->json([
-            'data' => $pdvs,
-            'total' => $pdvs->count()
-        ]);
+        // Create Excel file with formatting
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Points de Vente');
+
+        // Define headers
+        $headers = [
+            'A1' => 'Dealer',
+            'B1' => 'Numéro Flooz',
+            'C1' => 'Shortcode',
+            'D1' => 'Nom du Point',
+            'E1' => 'Profil',
+            'F1' => 'Prénom Gérant',
+            'G1' => 'Nom Gérant',
+            'H1' => 'Genre',
+            'I1' => 'Type de Pièce',
+            'J1' => 'Numéro Pièce',
+            'K1' => 'Expiration Pièce',
+            'L1' => 'Nationalité',
+            'M1' => 'Profession',
+            'N1' => 'Type d\'Activité',
+            'O1' => 'Région',
+            'P1' => 'Préfecture',
+            'Q1' => 'Commune',
+            'R1' => 'Canton',
+            'S1' => 'Quartier',
+            'T1' => 'Ville',
+            'U1' => 'Latitude',
+            'V1' => 'Longitude',
+            'W1' => 'Téléphone Propriétaire',
+            'X1' => 'Autre Contact',
+            'Y1' => 'NIF',
+            'Z1' => 'Régime Fiscal',
+            'AA1' => 'Support Visibilité',
+            'AB1' => 'État Support',
+            'AC1' => 'Numéro CAGNT',
+            'AD1' => 'Statut',
+            'AE1' => 'Date de Création',
+            'AF1' => 'Créé par'
+        ];
+
+        // Style headers
+        $headerStyle = [
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF'],
+                'size' => 12
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => 'FF6B35'] // Moov Orange
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ];
+
+        // Set headers
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+        $sheet->getStyle('A1:AF1')->applyFromArray($headerStyle);
+
+        // Set row height for header
+        $sheet->getRowDimension(1)->setRowHeight(30);
+
+        // Fill data
+        $row = 2;
+        foreach ($pdvs as $pdv) {
+            $statusLabels = [
+                'pending' => 'En attente',
+                'validated' => 'Validé',
+                'rejected' => 'Rejeté'
+            ];
+
+            $sheet->setCellValue('A' . $row, $pdv->organization->name ?? '');
+            $sheet->setCellValue('B' . $row, $pdv->numero_flooz ?? '');
+            $sheet->setCellValue('C' . $row, $pdv->shortcode ?? '');
+            $sheet->setCellValue('D' . $row, $pdv->nom_point ?? '');
+            $sheet->setCellValue('E' . $row, $pdv->profil ?? '');
+            $sheet->setCellValue('F' . $row, $pdv->firstname ?? '');
+            $sheet->setCellValue('G' . $row, $pdv->lastname ?? '');
+            $sheet->setCellValue('H' . $row, $pdv->gender ?? '');
+            $sheet->setCellValue('I' . $row, $pdv->id_description ?? '');
+            $sheet->setCellValue('J' . $row, $pdv->id_number ?? '');
+            $sheet->setCellValue('K' . $row, $pdv->id_expiry_date ?? '');
+            $sheet->setCellValue('L' . $row, $pdv->nationality ?? '');
+            $sheet->setCellValue('M' . $row, $pdv->profession ?? '');
+            $sheet->setCellValue('N' . $row, $pdv->type_activite ?? '');
+            $sheet->setCellValue('O' . $row, $pdv->region ?? '');
+            $sheet->setCellValue('P' . $row, $pdv->prefecture ?? '');
+            $sheet->setCellValue('Q' . $row, $pdv->commune ?? '');
+            $sheet->setCellValue('R' . $row, $pdv->canton ?? '');
+            $sheet->setCellValue('S' . $row, $pdv->quartier ?? '');
+            $sheet->setCellValue('T' . $row, $pdv->ville ?? '');
+            $sheet->setCellValue('U' . $row, $pdv->latitude ?? '');
+            $sheet->setCellValue('V' . $row, $pdv->longitude ?? '');
+            $sheet->setCellValue('W' . $row, $pdv->numero_proprietaire ?? '');
+            $sheet->setCellValue('X' . $row, $pdv->autre_contact ?? '');
+            $sheet->setCellValue('Y' . $row, $pdv->nif ?? '');
+            $sheet->setCellValue('Z' . $row, $pdv->regime_fiscal ?? '');
+            $sheet->setCellValue('AA' . $row, $pdv->support_visibilite ?? '');
+            $sheet->setCellValue('AB' . $row, $pdv->etat_support ?? '');
+            $sheet->setCellValue('AC' . $row, $pdv->numero_cagnt ?? '');
+            $sheet->setCellValue('AD' . $row, $statusLabels[$pdv->status] ?? $pdv->status);
+            $sheet->setCellValue('AE' . $row, $pdv->created_at ? $pdv->created_at->format('d/m/Y H:i') : '');
+            $sheet->setCellValue('AF' . $row, $pdv->creator->name ?? '');
+
+            // Apply row styling
+            $rowStyle = [
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_TOP,
+                    'wrapText' => false
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ]
+                ]
+            ];
+
+            $sheet->getStyle('A' . $row . ':AF' . $row)->applyFromArray($rowStyle);
+
+            // Color code status
+            $statusColors = [
+                'pending' => 'FEF3C7',    // Yellow-100
+                'validated' => 'D1FAE5',  // Green-100
+                'rejected' => 'FEE2E2'    // Red-100
+            ];
+
+            if (isset($statusColors[$pdv->status])) {
+                $sheet->getStyle('AD' . $row)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => $statusColors[$pdv->status]]
+                    ],
+                    'font' => ['bold' => true]
+                ]);
+            }
+
+            $row++;
+        }
+
+        // Set specific column widths
+        $sheet->getColumnDimension('A')->setWidth(20);  // Dealer
+        $sheet->getColumnDimension('B')->setWidth(15);  // Numéro Flooz
+        $sheet->getColumnDimension('C')->setWidth(12);  // Shortcode
+        $sheet->getColumnDimension('D')->setWidth(30);  // Nom du Point
+        $sheet->getColumnDimension('E')->setWidth(15);  // Profil
+        $sheet->getColumnDimension('F')->setWidth(15);  // Prénom
+        $sheet->getColumnDimension('G')->setWidth(15);  // Nom
+        $sheet->getColumnDimension('H')->setWidth(10);  // Genre
+        $sheet->getColumnDimension('I')->setWidth(15);  // Type Pièce
+        $sheet->getColumnDimension('J')->setWidth(15);  // Num Pièce
+        $sheet->getColumnDimension('K')->setWidth(15);  // Expiration
+        $sheet->getColumnDimension('L')->setWidth(15);  // Nationalité
+        $sheet->getColumnDimension('M')->setWidth(20);  // Profession
+        $sheet->getColumnDimension('N')->setWidth(20);  // Type Activité
+        $sheet->getColumnDimension('O')->setWidth(15);  // Région
+        $sheet->getColumnDimension('P')->setWidth(15);  // Préfecture
+        $sheet->getColumnDimension('Q')->setWidth(15);  // Commune
+        $sheet->getColumnDimension('R')->setWidth(15);  // Canton
+        $sheet->getColumnDimension('S')->setWidth(15);  // Quartier
+        $sheet->getColumnDimension('T')->setWidth(15);  // Ville
+        $sheet->getColumnDimension('U')->setWidth(12);  // Latitude
+        $sheet->getColumnDimension('V')->setWidth(12);  // Longitude
+        $sheet->getColumnDimension('W')->setWidth(15);  // Tel Proprio
+        $sheet->getColumnDimension('X')->setWidth(15);  // Autre Contact
+        $sheet->getColumnDimension('Y')->setWidth(15);  // NIF
+        $sheet->getColumnDimension('Z')->setWidth(15);  // Régime Fiscal
+        $sheet->getColumnDimension('AA')->setWidth(20); // Support Visibilité
+        $sheet->getColumnDimension('AB')->setWidth(15); // État Support
+        $sheet->getColumnDimension('AC')->setWidth(15); // Numéro CAGNT
+        $sheet->getColumnDimension('AD')->setWidth(12); // Statut
+        $sheet->getColumnDimension('AE')->setWidth(18); // Date Création
+        $sheet->getColumnDimension('AF')->setWidth(20); // Créé par
+
+        // Generate file
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'pdv_export_' . date('Ymd_His') . '.xlsx';
+        
+        // Create temporary file
+        $tempFile = tempnam(sys_get_temp_dir(), 'pdv_export_');
+        $writer->save($tempFile);
+
+        // Return file as download
+        return response()->download($tempFile, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ])->deleteFileAfterSend(true);
     }
 
     public function index(Request $request)

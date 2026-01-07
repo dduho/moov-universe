@@ -469,10 +469,12 @@ import ExportService from '../services/ExportService';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import { formatPhone, formatShortcode } from '../utils/formatters';
+import { useToast } from '../composables/useToast';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
+const { toast } = useToast();
 
 const loading = ref(true);
 const loadingMore = ref(false);
@@ -614,47 +616,72 @@ const handleExport = async (format) => {
   exportLoading.value = true;
 
   try {
-    // Utiliser le nouvel endpoint dédié pour éviter le rate limiting
-    const params = {
-      sort_by: filters.value.sortBy,
-      sort_order: 'desc'
-    };
+    // Construire les paramètres pour l'export
+    const params = new URLSearchParams();
+    
+    params.append('sort_by', filters.value.sortBy);
+    params.append('sort_order', 'desc');
 
     // Forcer la scope organisation pour les dealer owners
     if (authStore.isDealerOwner && authStore.organizationId) {
-      params.organization_id = authStore.organizationId;
+      params.append('organization_id', authStore.organizationId);
     } else if (filters.value.dealer) {
-      params.organization_id = filters.value.dealer;
+      params.append('organization_id', filters.value.dealer);
     }
 
     // Ajouter les filtres actifs
-    if (filters.value.search) params.search = filters.value.search;
-    if (filters.value.status) params.status = filters.value.status;
-    if (filters.value.region) params.region = filters.value.region;
-    if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
-    if (filters.value.commune) params.commune = filters.value.commune;
-    if (filters.value.ville) params.ville = filters.value.ville;
-    if (filters.value.quartier) params.quartier = filters.value.quartier;
-    if (filters.value.dealer) params.organization_id = filters.value.dealer;
+    if (filters.value.search) params.append('search', filters.value.search);
+    if (filters.value.status) params.append('status', filters.value.status);
+    if (filters.value.region) params.append('region', filters.value.region);
+    if (filters.value.prefecture) params.append('prefecture', filters.value.prefecture);
+    if (filters.value.commune) params.append('commune', filters.value.commune);
+    if (filters.value.ville) params.append('ville', filters.value.ville);
+    if (filters.value.quartier) params.append('quartier', filters.value.quartier);
 
     // Filtres de qualité des données
-    if (filters.value.incompleteData) params.incomplete_data = true;
-    if (filters.value.noGPS) params.no_gps = true;
-    if (filters.value.geoInconsistency) params.geo_inconsistency = true;
-    if (filters.value.proximityAlert) params.proximity_alert = true;
+    if (filters.value.incompleteData) params.append('incomplete_data', 'true');
+    if (filters.value.noGPS) params.append('no_gps', 'true');
+    if (filters.value.geoInconsistency) params.append('geo_inconsistency', 'true');
+    if (filters.value.proximityAlert) params.append('proximity_alert', 'true');
 
-    // Utiliser le nouvel endpoint qui retourne tout en une seule requête
-    const response = await PointOfSaleService.getAllForExport(params);
-    const allPDV = Array.isArray(response.data) ? response.data : [];
+    // Télécharger le fichier Excel formaté depuis le backend
+    const token = authStore.token;
+    const url = `${import.meta.env.VITE_API_URL}/point-of-sales/export-all?${params.toString()}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      }
+    });
 
-    if (allPDV.length === 0) {
-      toast.error('Aucune donnée à exporter');
-      return;
+    if (!response.ok) {
+      throw new Error('Erreur lors de l\'export');
     }
 
-    ExportService.exportPDV(allPDV, format);
+    // Créer un blob et déclencher le téléchargement
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    
+    // Extraire le nom du fichier de l'en-tête Content-Disposition ou utiliser un nom par défaut
+    const contentDisposition = response.headers.get('Content-Disposition');
+    const filename = contentDisposition 
+      ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+      : `pdv_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    toast.success(`${filteredPOS.value.length} PDV exportés avec succès`);
   } catch (error) {
     console.error('Erreur lors de l\'export:', error);
+    toast.error('Erreur lors de l\'export des données');
   } finally {
     exportLoading.value = false;
   }
