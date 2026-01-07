@@ -46,9 +46,9 @@ Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
 // Advanced cache management (Admin only) - doit être avant la route générique settings/{key}
 Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
     Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
-    Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
+    Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']); // Spécifique avant dynamique
     Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
-    Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']);
+    Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
 });
 
 // Public system settings (read-only)
@@ -270,8 +270,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Advanced cache management (Admin only)
     Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
         Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
-        Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
+        Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']); // Spécifique avant dynamique
         Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
-        Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']);
+        Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
     });
 });

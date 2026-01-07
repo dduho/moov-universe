@@ -288,16 +288,81 @@ class TransactionAnalyticsController extends Controller
                 ->get();
         }
 
-        return $evolution->map(function ($item) use ($period) {
-            return [
-                'period' => $item->period,
-                'label' => $this->formatPeriodLabel($item->period, $period),
-                'chiffre_affaire' => round($item->chiffre_affaire, 2),
-                'volume' => round($item->volume, 2),
-                'transactions' => $item->transactions,
-                'pdv_actifs' => $item->pdv_actifs,
-            ];
-        });
+        // Remplir les périodes manquantes avec des zéros
+        return $this->fillMissingPeriods($evolution, $period, $startDate, $endDate);
+    }
+
+    /**
+     * Remplir les périodes manquantes avec des valeurs à zéro
+     */
+    private function fillMissingPeriods($evolution, $period, $startDate, $endDate)
+    {
+        $data = $evolution->keyBy('period');
+        $filled = collect();
+
+        if ($period === 'day') {
+            // Remplir jour par jour (tous les jours de la semaine)
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $key = $current->format('Y-m-d');
+                $filled->push([
+                    'period' => $key,
+                    'label' => $this->formatPeriodLabel($key, $period),
+                    'chiffre_affaire' => isset($data[$key]) ? round($data[$key]->chiffre_affaire, 2) : 0,
+                    'volume' => isset($data[$key]) ? round($data[$key]->volume, 2) : 0,
+                    'transactions' => isset($data[$key]) ? $data[$key]->transactions : 0,
+                    'pdv_actifs' => isset($data[$key]) ? $data[$key]->pdv_actifs : 0,
+                ]);
+                $current->addDay();
+            }
+        } elseif ($period === 'week') {
+            // Remplir les 8 dernières semaines
+            $current = $endDate->copy()->subWeeks(7)->startOfWeek();
+            for ($i = 0; $i < 8; $i++) {
+                $key = $current->format('Y-m-d');
+                $filled->push([
+                    'period' => $key,
+                    'label' => $this->formatPeriodLabel($key, $period),
+                    'chiffre_affaire' => isset($data[$key]) ? round($data[$key]->chiffre_affaire, 2) : 0,
+                    'volume' => isset($data[$key]) ? round($data[$key]->volume, 2) : 0,
+                    'transactions' => isset($data[$key]) ? $data[$key]->transactions : 0,
+                    'pdv_actifs' => isset($data[$key]) ? $data[$key]->pdv_actifs : 0,
+                ]);
+                $current->addWeek();
+            }
+        } elseif (in_array($period, ['month', 'quarter', 'historical_year'])) {
+            // Remplir mois par mois
+            $current = $startDate->copy()->startOfMonth();
+            while ($current <= $endDate) {
+                $key = $current->format('Y-m');
+                $filled->push([
+                    'period' => $key,
+                    'label' => $this->formatPeriodLabel($key, $period),
+                    'chiffre_affaire' => isset($data[$key]) ? round($data[$key]->chiffre_affaire, 2) : 0,
+                    'volume' => isset($data[$key]) ? round($data[$key]->volume, 2) : 0,
+                    'transactions' => isset($data[$key]) ? $data[$key]->transactions : 0,
+                    'pdv_actifs' => isset($data[$key]) ? $data[$key]->pdv_actifs : 0,
+                ]);
+                $current->addMonth();
+            }
+        } else {
+            // Pour les autres cas (historical_month, historical_week), remplir jour par jour
+            $current = $startDate->copy();
+            while ($current <= $endDate) {
+                $key = $current->format('Y-m-d');
+                $filled->push([
+                    'period' => $key,
+                    'label' => $this->formatPeriodLabel($key, $period),
+                    'chiffre_affaire' => isset($data[$key]) ? round($data[$key]->chiffre_affaire, 2) : 0,
+                    'volume' => isset($data[$key]) ? round($data[$key]->volume, 2) : 0,
+                    'transactions' => isset($data[$key]) ? $data[$key]->transactions : 0,
+                    'pdv_actifs' => isset($data[$key]) ? $data[$key]->pdv_actifs : 0,
+                ]);
+                $current->addDay();
+            }
+        }
+
+        return $filled;
     }
 
     /**
@@ -440,13 +505,18 @@ class TransactionAnalyticsController extends Controller
      */
     private function getPeriodDates($period, $now, $year = null, $month = null, $week = null)
     {
-        $yesterdayEnd = $now->copy()->subDay()->endOfDay();
+        $yesterday = $now->copy()->subDay();
+        $yesterdayEnd = $yesterday->copy()->endOfDay();
 
         return match ($period) {
-            // Jours du mois courant jusqu'à J-1
+            // Jour : tous les jours du mois jusqu'à J-1
             'day' => [$now->copy()->startOfMonth(), $yesterdayEnd],
-            // Semaines de l'année courante jusqu'à J-1
-            'week' => [$now->copy()->startOfYear(), $yesterdayEnd],
+            // Semaine : semaine en cours (lundi au dimanche) jusqu'à J-1
+            'week' => [
+                $now->copy()->startOfWeek(),  // Lundi de cette semaine
+                $yesterdayEnd  // Jusqu'à hier
+            ],
+            // Trimestre : trimestre en cours jusqu'à J-1
             'quarter' => [$now->copy()->startOfQuarter(), $yesterdayEnd],
             'historical_year' => [
                 Carbon::create($year, 1, 1)->startOfDay(),
@@ -457,7 +527,11 @@ class TransactionAnalyticsController extends Controller
                 Carbon::create($year, $month, 1)->endOfMonth()->endOfDay()
             ],
             'historical_week' => $this->getHistoricalWeekDates($year, $week),
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()],
+            // Mois : mois complet (du 1er au dernier jour)
+            default => [
+                $now->copy()->startOfMonth(),
+                $now->copy()->endOfMonth()->endOfDay()
+            ],
         };
     }
 

@@ -14,7 +14,7 @@
           <!-- Year Selector -->
           <select
             v-model="selectedYear"
-            class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange w-full sm:w-auto"
+            class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange w-full sm:w-[180px] md:w-[200px] lg:w-[220px] sm:self-start"
           >
             <option v-for="year in availableYears" :key="year" :value="year">
               {{ year }}
@@ -84,9 +84,15 @@
       </div>
 
       <!-- Content -->
-      <div v-else-if="analytics" class="space-y-6">
+      <div v-else-if="analytics" class="space-y-6" :class="{ 'opacity-50 pointer-events-none': refreshing }">
         <!-- Date Range Info -->
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4 relative">
+          <div v-if="refreshing" class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-2xl flex items-center justify-center z-10">
+            <div class="flex items-center gap-2 text-moov-orange">
+              <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-moov-orange"></div>
+              <span class="text-xs font-semibold">Actualisation...</span>
+            </div>
+          </div>
           <div class="flex items-center gap-2 text-gray-600">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -667,6 +673,7 @@ const cacheNamespace = 'transaction';
 
 // State
 const loading = ref(false);
+const refreshing = ref(false);
 const analytics = ref(null);
 const insights = ref([]);
 const loadingInsights = ref(false);
@@ -778,17 +785,25 @@ const safeClone = (value) => {
 };
 
 // Obtenir les données depuis le cache ou charger depuis l'API
-const getAnalyticsData = async (params) => {
+const getAnalyticsData = async (params, { forceRefresh = false } = {}) => {
   const cacheKey = getCacheKey(params);
   const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
 
-  if (cached) {
+  if (cached && !forceRefresh) {
     return cached;
   }
 
-  const response = await TransactionAnalyticsService.getAnalytics(params);
-  analyticsCacheStore.set(cacheNamespace, cacheKey, response.data);
-  return safeClone(response.data);
+  try {
+    const response = await TransactionAnalyticsService.getAnalytics(params);
+    analyticsCacheStore.set(cacheNamespace, cacheKey, response.data);
+    return safeClone(response.data);
+  } catch (error) {
+    if (cached) {
+      // En cas d'erreur réseau, revenir au cache existant
+      return cached;
+    }
+    throw error;
+  }
 };
 
 // Pré-charger toutes les périodes au montage
@@ -808,7 +823,7 @@ const preloadAllPeriods = async () => {
 };
 
 // Load analytics
-const loadAnalytics = async () => {
+const loadAnalytics = async (forceRefresh = false) => {
   let params = {};
   
   if (isCurrentYear.value) {
@@ -836,24 +851,31 @@ const loadAnalytics = async () => {
     }
   }
 
-  // Si déjà en cache, servir immédiatement et éviter le loader global
+  // Si déjà en cache et pas de refresh forcé, servir immédiatement et éviter le loader global
   const cacheKey = getCacheKey(params);
   const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
-  if (cached) {
+  if (cached && !forceRefresh) {
     analytics.value = cached;
     loading.value = false;
     return;
   }
 
-  // Activer le loader seulement si aucune donnée en cache
-  loading.value = true;
+  // Afficher le loader principal si aucune donnée, sinon skeleton de refresh
+  if (!cached) {
+    loading.value = true;
+  } else {
+    refreshing.value = true;
+    analytics.value = cached; // Afficher le cache pendant le rafraîchissement
+  }
+  
   try {
-    analytics.value = await getAnalyticsData(params);
+    analytics.value = await getAnalyticsData(params, { forceRefresh });
   } catch (error) {
     console.error('Error loading analytics:', error);
     toast.error('Erreur lors du chargement des analytics');
   } finally {
     loading.value = false;
+    refreshing.value = false;
   }
 };
 
@@ -904,7 +926,7 @@ const refreshInsights = () => {
 // Watch period changes
 watch(selectedPeriod, () => {
   if (isCurrentYear.value) {
-    loadAnalytics();
+    loadAnalytics(true);
     loadInsights();
   }
 });
@@ -1098,6 +1120,9 @@ const getMonthIcon = (monthNumber) => {
 
 // Initial load
 onMounted(async () => {
+  // Nettoyer le cache au démarrage pour éviter les données obsolètes
+  analyticsCacheStore.clearNamespace(cacheNamespace);
+  
   // Charger les données de la période sélectionnée
   loadAnalytics();
   loadInsights();
