@@ -29,6 +29,70 @@ class PointOfSaleController extends Controller
         }
     }
 
+    /**
+     * Export all PDVs without pagination for export feature
+     * Returns all PDVs based on user permissions
+     */
+    public function exportAll(Request $request)
+    {
+        $user = $request->user();
+        
+        // S'assurer que la relation role est chargée
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+        
+        // Charger toutes les colonnes nécessaires pour l'export
+        $query = PointOfSale::with(['organization:id,name']);
+        
+        // Filter based on user role (same as index)
+        if ($user->isAdmin()) {
+            // Admins see all PDV
+        } elseif ($user->isDealerOwner()) {
+            $query->where('organization_id', $user->organization_id);
+        } elseif ($user->isCommercial()) {
+            $query->where(function($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
+                      $taskQuery->where('assigned_to', $user->id);
+                  });
+            });
+        } elseif ($user->isDealerAgent()) {
+            $query->where('created_by', $user->id);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+
+        // Apply same filters as index
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->has('region')) {
+            $query->where('region', $request->region);
+        }
+        if ($request->has('prefecture')) {
+            $query->where('prefecture', $request->prefecture);
+        }
+        if ($request->has('organization_id') && $user->isAdmin()) {
+            $query->where('organization_id', $request->organization_id);
+        }
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nom_point', 'like', "%{$search}%")
+                  ->orWhere('numero_flooz', 'like', "%{$search}%");
+            });
+        }
+
+        // Get all PDVs (no pagination, limit to 50k for safety)
+        $pdvs = $query->orderBy('created_at', 'desc')->limit(50000)->get();
+
+        return response()->json([
+            'data' => $pdvs,
+            'total' => $pdvs->count()
+        ]);
+    }
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -203,6 +267,31 @@ class PointOfSaleController extends Controller
         $perPage = $request->get('per_page', 50); // Default to 50 for better performance
         $sortBy = $request->get('sort_by', 'created_at');
         $sortOrder = $request->get('sort_order', 'desc');
+        
+        // Map frontend column names to actual database column names
+        $columnMap = [
+            'point_name' => 'nom_point',
+            'flooz_number' => 'numero_flooz',
+            'owner_phone' => 'numero_proprietaire',
+            'manager_firstname' => 'firstname',
+            'manager_lastname' => 'lastname',
+        ];
+        
+        // Apply column mapping if exists
+        if (isset($columnMap[$sortBy])) {
+            $sortBy = $columnMap[$sortBy];
+        }
+        
+        // Validate sort column to prevent SQL injection
+        $allowedColumns = [
+            'id', 'nom_point', 'numero_flooz', 'shortcode', 'status', 
+            'region', 'prefecture', 'commune', 'ville', 'quartier',
+            'firstname', 'lastname', 'numero_proprietaire', 'created_at', 'updated_at'
+        ];
+        
+        if (!in_array($sortBy, $allowedColumns)) {
+            $sortBy = 'created_at';
+        }
         
         // Limiter le per_page max à 100 pour éviter les surcharges
         if ($perPage > 100) {

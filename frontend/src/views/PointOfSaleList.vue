@@ -614,54 +614,42 @@ const handleExport = async (format) => {
   exportLoading.value = true;
 
   try {
-    // Note: l'API limite per_page à 100. On boucle pour tout récupérer.
-    // Récupérer tous les PDV correspondant aux filtres en paginant côté API
-    let allPDV = [];
-    let currentExportPage = 1;
-    let hasMore = true;
+    // Utiliser le nouvel endpoint dédié pour éviter le rate limiting
+    const params = {
+      sort_by: filters.value.sortBy,
+      sort_order: 'desc'
+    };
 
-    while (hasMore) {
-      const params = {
-        page: currentExportPage,
-        per_page: 100, // aligné avec la limite API
-        sort_by: filters.value.sortBy,
-        sort_order: 'desc'
-      };
+    // Forcer la scope organisation pour les dealer owners
+    if (authStore.isDealerOwner && authStore.organizationId) {
+      params.organization_id = authStore.organizationId;
+    } else if (filters.value.dealer) {
+      params.organization_id = filters.value.dealer;
+    }
 
-      // Forcer la scope organisation pour les dealer owners
-      if (authStore.isDealerOwner && authStore.organizationId) {
-        params.organization_id = authStore.organizationId;
-      } else if (filters.value.dealer) {
-        params.organization_id = filters.value.dealer;
-      }
+    // Ajouter les filtres actifs
+    if (filters.value.search) params.search = filters.value.search;
+    if (filters.value.status) params.status = filters.value.status;
+    if (filters.value.region) params.region = filters.value.region;
+    if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
+    if (filters.value.commune) params.commune = filters.value.commune;
+    if (filters.value.ville) params.ville = filters.value.ville;
+    if (filters.value.quartier) params.quartier = filters.value.quartier;
+    if (filters.value.dealer) params.organization_id = filters.value.dealer;
 
-      // Ajouter les filtres actifs
-      if (filters.value.search) params.search = filters.value.search;
-      if (filters.value.status) params.status = filters.value.status;
-      if (filters.value.region) params.region = filters.value.region;
-      if (filters.value.prefecture) params.prefecture = filters.value.prefecture;
-      if (filters.value.commune) params.commune = filters.value.commune;
-      if (filters.value.ville) params.ville = filters.value.ville;
-      if (filters.value.quartier) params.quartier = filters.value.quartier;
-      if (filters.value.dealer) params.organization_id = filters.value.dealer;
+    // Filtres de qualité des données
+    if (filters.value.incompleteData) params.incomplete_data = true;
+    if (filters.value.noGPS) params.no_gps = true;
+    if (filters.value.geoInconsistency) params.geo_inconsistency = true;
+    if (filters.value.proximityAlert) params.proximity_alert = true;
 
-      // Filtres de qualité des données
-      if (filters.value.incompleteData) params.incomplete_data = true;
-      if (filters.value.noGPS) params.no_gps = true;
-      if (filters.value.geoInconsistency) params.geo_inconsistency = true;
-      if (filters.value.proximityAlert) params.proximity_alert = true;
+    // Utiliser le nouvel endpoint qui retourne tout en une seule requête
+    const response = await PointOfSaleService.getAllForExport(params);
+    const allPDV = Array.isArray(response.data) ? response.data : [];
 
-      const response = await PointOfSaleService.getAll(params);
-      const pageData = Array.isArray(response.data) ? response.data : [];
-      allPDV = allPDV.concat(pageData);
-
-      const lastPage = response.last_page;
-      if (!lastPage || pageData.length === 0 || currentExportPage >= lastPage) {
-        hasMore = false;
-      } else {
-        hasMore = true;
-      }
-      currentExportPage++;
+    if (allPDV.length === 0) {
+      toast.error('Aucune donnée à exporter');
+      return;
     }
 
     ExportService.exportPDV(allPDV, format);

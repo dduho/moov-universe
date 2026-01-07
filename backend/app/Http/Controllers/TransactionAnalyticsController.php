@@ -511,9 +511,9 @@ class TransactionAnalyticsController extends Controller
         return match ($period) {
             // Jour : tous les jours du mois jusqu'à J-1
             'day' => [$now->copy()->startOfMonth(), $yesterdayEnd],
-            // Semaine : semaine en cours (lundi au dimanche) jusqu'à J-1
+            // Semaine : 8 dernières semaines (8 semaines avant aujourd'hui jusqu'à hier)
             'week' => [
-                $now->copy()->startOfWeek(),  // Lundi de cette semaine
+                $now->copy()->subWeeks(7)->startOfWeek(),  // Il y a 8 semaines (début lundi)
                 $yesterdayEnd  // Jusqu'à hier
             ],
             // Trimestre : trimestre en cours jusqu'à J-1

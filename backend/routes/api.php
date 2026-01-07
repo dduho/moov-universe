@@ -92,6 +92,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Point of Sale routes
     Route::prefix('point-of-sales')->group(function () {
         Route::get('/', [PointOfSaleController::class, 'index']);
+        Route::get('/export-all', [PointOfSaleController::class, 'exportAll']); // Endpoint dédié pour export
         Route::get('/for-map', [PointOfSaleController::class, 'forMap']);
         Route::get('/gps-stats', [PointOfSaleController::class, 'getGpsStats']);
         Route::get('/proximity-alerts', [PointOfSaleController::class, 'getProximityAlerts']);

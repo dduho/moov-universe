@@ -12,6 +12,34 @@ const buildCacheKey = (params = {}) => {
 };
 
 export default {
+  /**
+   * Get all PDVs for export (single request, no pagination)
+   * Uses dedicated endpoint to avoid rate limiting
+   */
+  async getAllForExport(params = {}) {
+    try {
+      console.log('[PDV Service] Fetching all PDVs for export...');
+      const response = await api.get('/point-of-sales/export-all', { params });
+      console.log(`[PDV Service] Export: ${response.data.total} PDVs retrieved`);
+      return response.data;
+    } catch (error) {
+      console.error('[PDV Service] Error fetching export data:', error);
+      
+      // Fallback: try to get from IndexedDB
+      try {
+        const cachedList = await offlineDB.getAllPDVs();
+        if (cachedList && cachedList.length > 0) {
+          console.log('[PDV Service] Using cached data for export');
+          return { data: cachedList, total: cachedList.length };
+        }
+      } catch (dbError) {
+        console.error('[PDV Service] IndexedDB fallback failed:', dbError);
+      }
+      
+      throw error;
+    }
+  },
+
   async getAll(params = {}) {
     try {
       const cacheKey = buildCacheKey(params);
