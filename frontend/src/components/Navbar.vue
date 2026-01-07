@@ -178,78 +178,106 @@
       <!-- Mobile Menu -->
       <div
         v-if="mobileMenuOpen"
-        class="lg:hidden border-t border-white/20 py-4 space-y-2"
+        class="lg:hidden border-t border-white/20 pb-6 max-h-[calc(100vh-5rem)] overflow-y-auto"
       >
         <!-- Mobile Main Navigation -->
-        <router-link
-          v-for="item in mainNavigation"
-          :key="item.name"
-          :to="item.path"
-          @click="mobileMenuOpen = false"
-          class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all"
-          :class="isActive(item.path) 
-            ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg' 
-            : 'text-gray-700 hover:bg-white/30'"
-        >
-          <component :is="item.icon" class="w-5 h-5 shrink-0" />
-          <span>{{ item.name }}</span>
-        </router-link>
+        <div class="py-3 space-y-1">
+          <router-link
+            v-for="item in mainNavigation"
+            :key="item.name"
+            :to="item.path"
+            @click="mobileMenuOpen = false"
+            class="flex items-center gap-4 px-5 py-4 text-base font-bold transition-all active:scale-95 touch-manipulation"
+            :class="isActive(item.path) 
+              ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg' 
+              : 'text-gray-800 hover:bg-white/40 active:bg-white/50'"
+          >
+            <component :is="item.icon" class="w-6 h-6 shrink-0" />
+            <span class="text-base">{{ item.name }}</span>
+          </router-link>
+        </div>
 
         <!-- Mobile Admin Navigation -->
-        <div v-if="authStore.isAdmin" class="pt-2 border-t border-white/20 mt-2">
-          <p class="px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider">Administration</p>
+        <div v-if="authStore.isAdmin" class="py-3 mt-2 border-t-2 border-white/30 space-y-1">
+          <div class="px-5 py-2 flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+            </svg>
+            <span class="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Administration</span>
+          </div>
           <router-link
             v-for="item in adminNavigation"
             :key="item.name"
             :to="item.path"
             @click="mobileMenuOpen = false"
-            class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all"
+            class="flex items-center gap-4 px-5 py-4 text-base font-semibold transition-all active:scale-95 touch-manipulation"
             :class="isActive(item.path)
-              ? 'bg-moov-orange text-white'
-              : 'text-gray-700 hover:bg-moov-orange/10 hover:text-moov-orange'"
+              ? 'bg-moov-orange text-white shadow-md'
+              : 'text-gray-700 hover:bg-moov-orange/10 hover:text-moov-orange active:bg-moov-orange/20'"
           >
-            <component :is="item.icon" class="w-5 h-5 shrink-0" />
-            <span>{{ item.name }}</span>
+            <component :is="item.icon" class="w-6 h-6 shrink-0" />
+            <span class="text-base">{{ item.name }}</span>
           </router-link>
         </div>
 
         <!-- Mobile User Info & Actions -->
-        <div class="pt-4 border-t border-white/20 mt-4 space-y-3">
-          <div class="px-4 py-3 rounded-xl bg-white/30 border border-white/40">
-            <p class="text-sm font-bold text-gray-900">{{ authStore.user?.name }}</p>
-            <p class="text-xs font-semibold text-gray-600">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
+        <div class="py-4 mt-3 border-t-2 border-white/30 space-y-2">
+          <!-- User Info Card -->
+          <div class="mx-4 px-4 py-4 rounded-2xl bg-gradient-to-br from-white/60 to-white/40 border border-white/60 shadow-sm">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 rounded-full bg-gradient-to-r from-moov-orange to-moov-orange-dark flex items-center justify-center text-white font-bold text-lg shadow-md">
+                {{ getInitials(authStore.user?.name) }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-gray-900 truncate">{{ authStore.user?.name }}</p>
+                <p class="text-xs font-medium text-gray-600 truncate">{{ authStore.user?.role?.display_name || 'Utilisateur' }}</p>
+              </div>
+            </div>
           </div>
 
-          <router-link
-            to="/profile"
-            @click="mobileMenuOpen = false"
-            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/30 border border-white/40 text-gray-700 hover:bg-white/50 transition-all"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-            <span class="text-sm font-semibold">Mon Profil</span>
-          </router-link>
-          
-          <button
-            @click="openGlobalSearch"
-            class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/30 border border-white/40 text-gray-700 hover:bg-white/50 transition-all"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-            </svg>
-            <span class="text-sm font-semibold">Recherche globale</span>
-          </button>
+          <!-- Quick Actions -->
+          <div class="px-4 space-y-2">
+            <router-link
+              to="/profile"
+              @click="mobileMenuOpen = false"
+              class="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl bg-white/50 border border-white/60 text-gray-800 hover:bg-white/70 active:bg-white/80 transition-all active:scale-95 touch-manipulation shadow-sm"
+            >
+              <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                </svg>
+                <span class="text-base font-semibold">Mon Profil</span>
+              </div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </router-link>
+            
+            <button
+              @click="openGlobalSearch"
+              class="w-full flex items-center justify-between gap-3 px-5 py-4 rounded-xl bg-white/50 border border-white/60 text-gray-800 hover:bg-white/70 active:bg-white/80 transition-all active:scale-95 touch-manipulation shadow-sm"
+            >
+              <div class="flex items-center gap-3">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                </svg>
+                <span class="text-base font-semibold">Recherche globale</span>
+              </div>
+              <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </button>
 
-          <button
-            @click="handleLogout"
-            class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white text-sm font-bold hover:shadow-xl hover:shadow-moov-orange/40 transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-            </svg>
-            <span>Déconnexion</span>
-          </button>
+            <button
+              @click="handleLogout"
+              class="w-full px-5 py-4 rounded-xl bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange text-white text-base font-bold hover:shadow-lg hover:shadow-moov-orange/40 active:scale-95 transition-all duration-200 flex items-center justify-center gap-3 touch-manipulation mt-3 shadow-md"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+              </svg>
+              <span>Déconnexion</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

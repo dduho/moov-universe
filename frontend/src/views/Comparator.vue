@@ -4,21 +4,21 @@
     
     <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       <!-- Header -->
-      <div class="mb-6">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Comparateur de Performance</h1>
-        <p class="text-sm text-gray-600 mt-1">Comparez jusqu'à 4 entités côte à côte</p>
+      <div class="mb-4 sm:mb-6">
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Comparateur de Performance</h1>
+        <p class="text-xs sm:text-sm text-gray-600 mt-1">Comparez jusqu'à 4 entités côte à côte</p>
       </div>
 
       <!-- Configuration Panel -->
-      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 mb-6 relative z-40">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4 sm:p-6 mb-6 relative z-40">
         <!-- Type Selection -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Type de comparaison</label>
+            <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Type de comparaison</label>
             <select 
               v-model="comparisonType" 
               @change="resetSelection"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
+              class="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
             >
               <option value="pdv">PDV</option>
               <option value="dealer">Dealers</option>
@@ -27,10 +27,10 @@
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Période d'analyse</label>
+            <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Période d'analyse</label>
             <select 
               v-model="period"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
+              class="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
             >
               <option value="day">Jour</option>
               <option value="week">Semaine</option>
@@ -40,18 +40,18 @@
           </div>
 
           <div>
-            <label class="block text-sm font-semibold text-gray-700 mb-2">Date de référence</label>
+            <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">Date de référence</label>
             <input 
               type="date" 
               v-model="referenceDate"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
+              class="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
             />
           </div>
         </div>
 
         <!-- Entity Selection -->
         <div class="mb-4 relative z-50">
-          <label class="block text-sm font-semibold text-gray-700 mb-2">
+          <label class="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5 sm:mb-2">
             Sélectionner {{ getEntityLabel() }} (2 à 4)
           </label>
           
@@ -63,7 +63,7 @@
               v-model="searchQuery"
               @input="handleSearch"
               :placeholder="`Rechercher ${getEntityLabel()}...`"
-              class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
+              class="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-moov-orange focus:border-transparent"
             />
             
             <!-- Search Results -->
@@ -118,11 +118,11 @@
         </div>
 
         <!-- Compare Button -->
-        <div class="flex gap-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <button
             @click="performComparison"
             :disabled="!canCompare || loading"
-            class="flex-1 px-6 py-3 bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            class="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span v-if="!loading">🔍 Comparer ({{ selectedCount }}/4)</span>
             <span v-else>⏳ Chargement...</span>
@@ -131,7 +131,7 @@
           <button
             v-if="comparisonResults"
             @click="exportToPDF"
-            class="px-6 py-3 bg-white border-2 border-moov-orange text-moov-orange rounded-xl font-semibold hover:bg-moov-orange/5 transition-all"
+            class="px-4 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base bg-white border-2 border-moov-orange text-moov-orange rounded-xl font-semibold hover:bg-moov-orange/5 transition-all"
           >
             📄 Export PDF
           </button>
@@ -139,18 +139,19 @@
       </div>
 
       <!-- Comparison Results -->
-      <div v-if="comparisonResults && !loading" class="space-y-6">
-        <!-- Metrics Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div v-if="comparisonResults && !loading" class="space-y-4 sm:space-y-6">
+        <!-- Metrics Cards Grid - Scrollable sur mobile -->
+        <div class="-mx-4 sm:mx-0 px-4 sm:px-0">
+          <div class="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory md:grid md:grid-cols-2 xl:grid-cols-4 custom-scrollbar">
           <div 
             v-for="(result, index) in comparisonResults.comparisons"
             :key="result.id"
-            class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6"
+            class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4 sm:p-6 min-w-[280px] flex-shrink-0 snap-center md:min-w-0"
           >
             <!-- Header -->
-            <div class="mb-4 pb-4 border-b border-gray-200">
-              <h3 class="font-bold text-lg text-gray-900 truncate">{{ result.name }}</h3>
-              <div v-if="result.info" class="text-xs text-gray-500 mt-1 space-y-1">
+            <div class="mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200">
+              <h3 class="font-bold text-base sm:text-lg text-gray-900 truncate">{{ result.name }}</h3>
+              <div v-if="result.info" class="text-xs text-gray-500 mt-1 space-y-0.5 sm:space-y-1">
                 <div v-for="(value, key) in result.info" :key="key">
                   <span class="capitalize">{{ formatKey(key) }}:</span> {{ value }}
                 </div>
@@ -192,6 +193,7 @@
               </div>
             </div>
           </div>
+        </div>
         </div>
 
         <!-- Evolution Chart -->

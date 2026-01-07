@@ -2,12 +2,12 @@
   <div class="min-h-screen">
     <Navbar />
 
-    <div class="py-8">
+    <div class="py-6 sm:py-8">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Back Button -->
         <button
           @click="$router.push('/dealers')"
-          class="mb-6 flex items-center gap-2 text-gray-600 hover:text-moov-orange font-semibold transition-colors"
+          class="mb-5 sm:mb-6 flex items-center gap-2 text-gray-600 hover:text-moov-orange font-semibold transition-colors text-sm sm:text-base"
         >
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
@@ -15,23 +15,23 @@
           Retour a la liste
         </button>
 
-        <div v-if="!loading && organization" class="space-y-6">
+        <div v-if="!loading && organization" class="space-y-5 sm:space-y-6">
           <!-- Header Card -->
-          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-8 rounded-2xl">
-            <div class="flex items-start justify-between">
-              <div class="flex items-center gap-4">
-                <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center">
-                  <span class="text-white font-bold text-2xl">{{ organization.code?.substring(0, 2) || 'XX' }}</span>
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl">
+            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 md:gap-6">
+              <div class="flex items-center gap-3 sm:gap-4">
+                <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-moov-orange to-moov-orange-dark flex items-center justify-center">
+                  <span class="text-white font-bold text-xl sm:text-2xl">{{ organization.code?.substring(0, 2) || 'XX' }}</span>
                 </div>
                 <div>
-                  <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ organization.name }}</h1>
-                  <p class="text-gray-600 font-medium">Code: {{ organization.code }}</p>
+                  <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1 sm:mb-2 break-words">{{ organization.name }}</h1>
+                  <p class="text-sm sm:text-base text-gray-600 font-medium">Code: {{ organization.code }}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="flex flex-wrap items-center gap-2 sm:gap-3">
                 <span
                   :class="{
-                    'px-4 py-2 rounded-full text-sm font-semibold': true,
+                    'px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold': true,
                     'bg-green-100 text-green-800': organization.is_active,
                     'bg-gray-100 text-gray-800': !organization.is_active,
                   }"
@@ -40,7 +40,7 @@
                 </span>
                 <button
                   @click="editOrganization"
-                  class="px-6 py-2 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:border-moov-orange transition-all"
+                  class="px-4 sm:px-5 py-2 rounded-xl bg-white border-2 border-gray-200 text-gray-700 font-bold hover:border-moov-orange transition-all text-sm"
                 >
                   Modifier
                 </button>
@@ -48,9 +48,9 @@
             </div>
 
             <!-- Contact Info -->
-            <div class="mt-8 pt-8 border-t border-gray-200">
-              <h3 class="text-lg font-bold text-gray-900 mb-4">Contact / Responsable</h3>
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200">
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">Contact / Responsable</h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div v-if="organization.contact_firstname || organization.contact_lastname" class="flex items-start gap-3">
                   <svg class="w-5 h-5 text-moov-orange mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
@@ -85,11 +85,11 @@
           </div>
 
           <!-- Dealer Stats -->
-          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl space-y-6">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl space-y-5 sm:space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div>
-                <h2 class="text-xl font-bold text-gray-900">Statistiques Dealer</h2>
-                <p class="text-sm text-gray-600">Transactions et performances sur la periode selectionnee</p>
+                <h2 class="text-lg sm:text-xl font-bold text-gray-900">Statistiques Dealer</h2>
+                <p class="text-xs sm:text-sm text-gray-600">Transactions et performances sur la periode selectionnee</p>
               </div>
               <div class="flex flex-wrap gap-2">
                 <button
@@ -97,7 +97,7 @@
                   :key="opt.value"
                   @click="changePeriod(opt.value)"
                   :class="[
-                    'px-3 py-2 rounded-lg text-sm font-semibold transition-all',
+                    'px-3 py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all',
                     selectedPeriod === opt.value
                       ? 'bg-moov-orange text-white shadow-lg'
                       : 'bg-white text-gray-700 border border-gray-200 hover:border-moov-orange'
@@ -116,41 +116,41 @@
             <template v-else>
               <div v-if="dealerStats">
                 <!-- Summary Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div v-if="showCa" class="p-4 rounded-xl border border-orange-100 bg-orange-50">
-                    <p class="text-sm font-semibold text-orange-700">Chiffre d'affaires (CA)</p>
-                    <p class="text-2xl font-bold text-orange-900">{{ formatCurrency(dealerStats.summary.ca) }}</p>
-                    <p class="text-xs text-gray-500">Total transactions: {{ formatNumber(dealerStats.summary.total_transactions) }}</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
+                  <div v-if="showCa" class="p-3 sm:p-4 rounded-xl border border-orange-100 bg-orange-50">
+                    <p class="text-xs sm:text-sm font-semibold text-orange-700">Chiffre d'affaires (CA)</p>
+                    <p class="text-xl sm:text-2xl font-bold text-orange-900">{{ formatCurrency(dealerStats.summary.ca) }}</p>
+                    <p class="text-[11px] sm:text-xs text-gray-500">Total transactions: {{ formatNumber(dealerStats.summary.total_transactions) }}</p>
                   </div>
-                  <div class="p-4 rounded-xl border border-purple-100 bg-purple-50" :class="!showCa ? 'md:col-span-2 lg:col-span-2' : ''">
-                    <p class="text-sm font-semibold text-purple-700">Commissions dealer</p>
-                    <p class="text-2xl font-bold text-purple-900">{{ formatCurrency(dealerStats.summary.dealer_commissions) }}</p>
-                    <p class="text-xs text-gray-500">Commissions PDV: {{ formatCurrency(dealerStats.summary.pdv_commissions) }}</p>
+                  <div class="p-3 sm:p-4 rounded-xl border border-purple-100 bg-purple-50" :class="!showCa ? 'md:col-span-2 lg:col-span-2' : ''">
+                    <p class="text-xs sm:text-sm font-semibold text-purple-700">Commissions dealer</p>
+                    <p class="text-xl sm:text-2xl font-bold text-purple-900">{{ formatCurrency(dealerStats.summary.dealer_commissions) }}</p>
+                    <p class="text-[11px] sm:text-xs text-gray-500">Commissions PDV: {{ formatCurrency(dealerStats.summary.pdv_commissions) }}</p>
                   </div>
-                  <div class="p-4 rounded-xl border border-green-100 bg-green-50">
-                    <p class="text-sm font-semibold text-green-700">Depots</p>
-                    <p class="text-2xl font-bold text-green-900">{{ formatCurrency(dealerStats.summary.depot_amount) }}</p>
-                    <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.summary.depot_count) }} operations</p>
+                  <div class="p-3 sm:p-4 rounded-xl border border-green-100 bg-green-50">
+                    <p class="text-xs sm:text-sm font-semibold text-green-700">Depots</p>
+                    <p class="text-xl sm:text-2xl font-bold text-green-900">{{ formatCurrency(dealerStats.summary.depot_amount) }}</p>
+                    <p class="text-[11px] sm:text-xs text-gray-500">{{ formatNumber(dealerStats.summary.depot_count) }} operations</p>
                   </div>
-                  <div class="p-4 rounded-xl border border-red-100 bg-red-50">
-                    <p class="text-sm font-semibold text-red-700">Retraits</p>
-                    <p class="text-2xl font-bold text-red-900">{{ formatCurrency(dealerStats.summary.retrait_amount) }}</p>
-                    <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.summary.retrait_count) }} operations</p>
+                  <div class="p-3 sm:p-4 rounded-xl border border-red-100 bg-red-50">
+                    <p class="text-xs sm:text-sm font-semibold text-red-700">Retraits</p>
+                    <p class="text-xl sm:text-2xl font-bold text-red-900">{{ formatCurrency(dealerStats.summary.retrait_amount) }}</p>
+                    <p class="text-[11px] sm:text-xs text-gray-500">{{ formatNumber(dealerStats.summary.retrait_count) }} operations</p>
                   </div>
                 </div>
 
                 <!-- GIVE + Actifs -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                  <div class="p-4 rounded-xl border border-indigo-100 bg-indigo-50">
+                  <div class="p-3 sm:p-4 rounded-xl border border-indigo-100 bg-indigo-50">
                     <h3 class="font-bold text-gray-900 mb-3">Transferts GIVE</h3>
                     <div class="grid grid-cols-2 gap-3">
-                      <div class="p-3 rounded-lg bg-white border border-gray-100">
+                      <div class="p-2 sm:p-3 rounded-lg bg-white border border-gray-100">
                         <p class="text-sm font-semibold text-blue-700">Envoyes</p>
                         <p class="text-lg font-bold text-blue-900">{{ formatCurrency(dealerStats.transfers.sent.amount) }}</p>
                         <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.transfers.sent.count) }} operations</p>
                         <p class="text-[11px] text-gray-500">Dans reseau: {{ formatCurrency(dealerStats.transfers.sent.in_amount) }} / Hors: {{ formatCurrency(dealerStats.transfers.sent.out_amount) }}</p>
                       </div>
-                      <div class="p-3 rounded-lg bg-white border border-gray-100">
+                      <div class="p-2 sm:p-3 rounded-lg bg-white border border-gray-100">
                         <p class="text-sm font-semibold text-cyan-700">Recus</p>
                         <p class="text-lg font-bold text-cyan-900">{{ formatCurrency(dealerStats.transfers.received.amount) }}</p>
                         <p class="text-xs text-gray-500">{{ formatNumber(dealerStats.transfers.received.count) }} operations</p>
@@ -159,11 +159,11 @@
                     </div>
                   </div>
 
-                  <div class="p-4 rounded-xl border border-teal-100 bg-teal-50">
+                  <div class="p-3 sm:p-4 rounded-xl border border-teal-100 bg-teal-50">
                     <h3 class="font-bold text-gray-900 mb-3">PDV actifs</h3>
                     <p class="text-3xl font-bold text-teal-900">{{ formatNumber(dealerStats.summary.active_pdvs) }}</p>
                     <p class="text-sm text-gray-500 mb-3">PDV ayant au moins un depot ou retrait sur la periode</p>
-                    <div class="grid grid-cols-5 gap-2">
+                    <div class="grid grid-cols-3 sm:grid-cols-5 gap-2">
                       <div
                         v-for="item in dealerStats.actives.breakdown"
                         :key="item.days"
@@ -177,21 +177,21 @@
                 </div>
 
                 <!-- Charts -->
-                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl mb-4 space-y-6">
-                  <div class="flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-900">Evolution</h3>
+                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 rounded-2xl mb-4 space-y-5 sm:space-y-6">
+                  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <h3 class="text-base sm:text-lg font-bold text-gray-900">Evolution</h3>
                     <p class="text-xs text-gray-500">Du {{ dealerStats.period.start }} au {{ dealerStats.period.end }}</p>
                   </div>
                   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div class="p-3 rounded-xl border border-orange-100 bg-orange-50/50" style="height: 320px;">
-                      <p class="text-sm font-semibold text-orange-700 mb-2">
+                    <div class="p-3 rounded-xl border border-orange-100 bg-orange-50/50" style="height: 300px;">
+                      <p class="text-xs sm:text-sm font-semibold text-orange-700 mb-2">
                         {{ showCa ? 'CA, depots, retraits (journalier)' : 'Depots, retraits (journalier)' }}
                       </p>
                       <Line v-if="dealerStats.chart.labels.length" :data="amountsChartData" :options="chartOptions" />
                       <p v-else class="text-xs text-gray-500 text-center py-6">Pas de donnees pour tracer le graphe</p>
                     </div>
-                    <div class="p-3 rounded-xl border border-blue-100 bg-blue-50/50" style="height: 320px;">
-                      <p class="text-sm font-semibold text-blue-700 mb-2">Transactions, actifs, commissions dealer</p>
+                    <div class="p-3 rounded-xl border border-blue-100 bg-blue-50/50" style="height: 300px;">
+                      <p class="text-xs sm:text-sm font-semibold text-blue-700 mb-2">Transactions, actifs, commissions dealer</p>
                       <Bar v-if="dealerStats.chart.labels.length" :data="activityChartData" :options="chartOptions" />
                       <p v-else class="text-xs text-gray-500 text-center py-6">Pas de donnees pour tracer le graphe</p>
                     </div>
@@ -199,20 +199,20 @@
                 </div>
 
                 <!-- Top PDV -->
-                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
-                  <h3 class="text-lg font-bold text-gray-900 mb-4">
+                <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl">
+                  <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">
                     {{ showCa ? 'Top PDV (CA sur la periode)' : 'Top PDV (depots/retraits sur la periode)' }}
                   </h3>
                   <div class="overflow-x-auto">
                     <table class="w-full">
                       <thead>
                         <tr class="border-b border-gray-200">
-                          <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">PDV</th>
-                          <th class="px-4 py-3 text-left text-sm font-bold text-gray-700">Region / Prefecture</th>
-                          <th v-if="showCa" class="px-4 py-3 text-right text-sm font-bold text-gray-700">CA</th>
-                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Depots</th>
-                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Retraits</th>
-                          <th class="px-4 py-3 text-right text-sm font-bold text-gray-700">Transactions</th>
+                          <th class="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold text-gray-700">PDV</th>
+                          <th class="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-bold text-gray-700">Region / Prefecture</th>
+                          <th v-if="showCa" class="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-gray-700">CA</th>
+                          <th class="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-gray-700">Depots</th>
+                          <th class="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-gray-700">Retraits</th>
+                          <th class="px-3 sm:px-4 py-2 sm:py-3 text-right text-xs sm:text-sm font-bold text-gray-700">Transactions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -221,12 +221,12 @@
                           :key="pdv.id"
                           class="border-b border-gray-100 hover:bg-white/60 transition-colors"
                         >
-                          <td class="px-4 py-3 text-sm font-semibold text-gray-900">{{ pdv.nom_point }}</td>
-                          <td class="px-4 py-3 text-sm text-gray-700">{{ pdv.region }} / {{ pdv.prefecture }}</td>
-                          <td v-if="showCa" class="px-4 py-3 text-sm text-right font-bold text-moov-orange">{{ formatCurrency(pdv.ca) }}</td>
-                          <td class="px-4 py-3 text-sm text-right text-green-700">{{ formatCurrency(pdv.depot_amount) }}</td>
-                          <td class="px-4 py-3 text-sm text-right text-red-700">{{ formatCurrency(pdv.retrait_amount) }}</td>
-                          <td class="px-4 py-3 text-sm text-right text-gray-700">{{ formatNumber(pdv.tx_count) }}</td>
+                          <td class="px-3 sm:px-4 py-2 sm:py-3 text-sm font-semibold text-gray-900">{{ pdv.nom_point }}</td>
+                          <td class="px-3 sm:px-4 py-2 sm:py-3 text-sm text-gray-700">{{ pdv.region }} / {{ pdv.prefecture }}</td>
+                          <td v-if="showCa" class="px-3 sm:px-4 py-2 sm:py-3 text-sm text-right font-bold text-moov-orange">{{ formatCurrency(pdv.ca) }}</td>
+                          <td class="px-3 sm:px-4 py-2 sm:py-3 text-sm text-right text-green-700">{{ formatCurrency(pdv.depot_amount) }}</td>
+                          <td class="px-3 sm:px-4 py-2 sm:py-3 text-sm text-right text-red-700">{{ formatCurrency(pdv.retrait_amount) }}</td>
+                          <td class="px-3 sm:px-4 py-2 sm:py-3 text-sm text-right text-gray-700">{{ formatNumber(pdv.tx_count) }}</td>
                         </tr>
                         <tr v-if="dealerStats.top_pdvs.length === 0">
                           <td colspan="6" class="px-4 py-4 text-center text-sm text-gray-500">Aucune donnee</td>
@@ -241,19 +241,19 @@
           </div>
 
           <!-- PDV List for this dealer -->
-          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 rounded-2xl">
-            <div class="flex items-center justify-between mb-6">
-              <h2 class="text-xl font-bold text-gray-900">Points de vente</h2>
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 rounded-2xl">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <h2 class="text-lg sm:text-xl font-bold text-gray-900">Points de vente</h2>
               <router-link
                 :to="{ name: 'CreatePdv', query: { organization_id: organization.id } }"
-                class="px-4 py-2 rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white font-bold hover:shadow-lg transition-all"
+                class="w-full sm:w-auto text-center px-4 py-2 rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white font-bold hover:shadow-lg transition-all"
               >
                 + Nouveau PDV
               </router-link>
             </div>
 
             <!-- Filters -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
               <FormInput
                 v-model="searchQuery"
                 label="Rechercher"

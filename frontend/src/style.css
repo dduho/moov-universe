@@ -59,20 +59,155 @@ body {
 
 /* Minimum touch target size (44x44px Apple HIG, Material Design) */
 @media (max-width: 768px) {
-  button,
-  [role="button"],
+  button:not(.btn-icon),
+  [role="button"]:not(.btn-icon),
   a.btn,
-  .touch-target,
-  input[type="checkbox"],
-  input[type="radio"] {
+  .touch-target {
     min-height: 44px;
     min-width: 44px;
   }
   
   /* Augmenter les zones de touch pour les liens */
-  a {
+  /* a {
     padding: 0.25rem;
     margin: -0.25rem;
+  } */
+}
+
+/* ================================
+   CUSTOM CHECKBOXES & RADIO BUTTONS
+   ================================ */
+
+/* Styles généraux pour checkboxes */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d1d5db;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  flex-shrink: 0;
+  position: relative;
+}
+
+input[type="checkbox"] {
+  border-radius: 4px;
+}
+
+input[type="radio"] {
+  border-radius: 50%;
+}
+
+/* Hover state */
+input[type="checkbox"]:hover:not(:disabled),
+input[type="radio"]:hover:not(:disabled) {
+  border-color: #ff6600;
+}
+
+/* Focus state */
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  outline: 2px solid rgba(255, 102, 0, 0.3);
+  outline-offset: 2px;
+}
+
+/* Checked state */
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  background-color: #ff6600;
+  border-color: #ff6600;
+}
+
+/* Checkmark icon */
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 1px;
+  width: 6px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Radio dot */
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: white;
+}
+
+/* Disabled state */
+input[type="checkbox"]:disabled,
+input[type="radio"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f3f4f6;
+}
+
+/* Optimisation pour mobile - taille légèrement plus grande pour faciliter le clic */
+@media (max-width: 768px) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    width: 22px;
+    height: 22px;
+  }
+  
+  input[type="checkbox"]:checked::after {
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+  }
+  
+  input[type="radio"]:checked::after {
+    width: 10px;
+    height: 10px;
+  }
+  
+  /* Augmenter la zone tactile sans augmenter la taille visuelle */
+  input[type="checkbox"]::before,
+  input[type="radio"]::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 44px;
+    height: 44px;
+    z-index: -1;
+  }
+}
+
+/* Labels associés aux checkboxes/radio - meilleure clickabilité */
+label:has(> input[type="checkbox"]),
+label:has(> input[type="radio"]) {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+@media (max-width: 768px) {
+  label:has(> input[type="checkbox"]),
+  label:has(> input[type="radio"]) {
+    gap: 0.75rem;
+    padding: 0.5rem 0;
+    min-height: 44px;
   }
 }
 

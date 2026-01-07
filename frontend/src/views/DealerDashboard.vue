@@ -26,17 +26,17 @@
     
     <div class="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 relative z-10">
       <!-- Header -->
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div class="flex flex-col gap-3 mb-4 sm:mb-6">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Tableau de Bord Dealer</h1>
-          <p class="text-sm text-gray-600 mt-1">Vue d'ensemble de vos commissions et activités réseau</p>
+          <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Tableau de Bord Dealer</h1>
+          <p class="text-xs sm:text-sm text-gray-600 mt-1">Vue d'ensemble de vos commissions et activités réseau</p>
         </div>
         
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <div class="flex flex-col gap-2">
           <!-- Year Selector -->
           <select
             v-model="selectedYear"
-            class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+            class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange w-full sm:w-auto"
           >
             <option v-for="year in availableYears" :key="year" :value="year">
               {{ year }}
@@ -44,13 +44,13 @@
           </select>
           
           <!-- Period Selector (visible uniquement pour année en cours) -->
-          <div v-if="isCurrentYear" class="flex items-center gap-2">
+          <div v-if="isCurrentYear" class="flex flex-wrap items-center gap-2">
             <button
               v-for="period in periods"
               :key="period.value"
               @click="changePeriod(period.value)"
               :class="[
-                'px-4 py-2 rounded-xl font-semibold text-sm transition-all',
+                'px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm transition-all flex-1 sm:flex-initial',
                 selectedPeriod === period.value
                   ? 'bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white shadow-lg'
                   : 'bg-white/90 text-gray-700 hover:bg-white border border-gray-200'
@@ -61,11 +61,11 @@
           </div>
           
           <!-- Filtres pour années passées -->
-          <div v-else class="flex items-center gap-2">
+          <div v-else class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <!-- Sélecteur de type de période -->
             <select
               v-model="historicalPeriodType"
-              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+              class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange flex-1 sm:flex-initial"
             >
               <option value="year">Année complète</option>
               <option value="month">Par mois</option>
@@ -76,7 +76,7 @@
             <select
               v-if="historicalPeriodType === 'month'"
               v-model.number="selectedMonth"
-              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+              class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange flex-1 sm:flex-initial"
             >
               <option v-for="month in monthsList" :key="month.value" :value="month.value">
                 {{ month.label }}
@@ -87,7 +87,7 @@
             <select
               v-if="historicalPeriodType === 'week'"
               v-model.number="selectedWeek"
-              class="px-4 py-2 rounded-xl font-semibold text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange"
+              class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange flex-1 sm:flex-initial"
             >
               <option v-for="week in weeksList" :key="week.value" :value="week.value">
                 {{ week.label }}
@@ -111,10 +111,10 @@
         </div>
 
         <!-- KPI Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <!-- Skeleton KPI Cards -->
           <template v-if="loadingStates.kpi">
-            <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+            <div v-for="i in 4" :key="i" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4 sm:p-6">
               <div class="animate-pulse">
                 <div class="w-12 h-12 bg-gray-200 rounded-xl mb-4"></div>
                 <div class="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
@@ -127,16 +127,16 @@
           <!-- Real KPI Cards -->
           <template v-else-if="analytics.kpi">
           <!-- Commissions Totales -->
-          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6 hover:shadow-2xl transition-shadow">
-            <div class="flex items-center justify-between mb-4">
-              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-4 sm:p-6 hover:shadow-2xl transition-shadow">
+            <div class="flex items-center justify-between mb-3 sm:mb-4">
+              <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
             </div>
-            <h3 class="text-sm font-semibold text-gray-600 mb-1">Commissions Totales</h3>
-            <p class="text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.commissions.total) }}</p>
+            <h3 class="text-xs sm:text-sm font-semibold text-gray-600 mb-1">Commissions Totales</h3>
+            <p class="text-xl sm:text-2xl font-bold text-gray-900">{{ formatCurrency(analytics.kpi.commissions.total) }}</p>
             <div class="flex items-center gap-2 mt-2">
               <p class="text-xs text-gray-500">Moy: {{ formatCurrency(analytics.kpi.commissions.moyenne_par_transaction) }}/tx</p>
               <div v-if="analytics.kpi.commissions.comparison" class="ml-auto flex items-center gap-1">
