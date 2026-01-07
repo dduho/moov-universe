@@ -10,11 +10,11 @@
           <p class="text-xs sm:text-sm text-gray-600 mt-1">Vue d'ensemble et analyse des transactions importées</p>
         </div>
         
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-2 sm:items-end">
           <!-- Year Selector -->
           <select
             v-model="selectedYear"
-            class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange w-full sm:w-[180px] md:w-[200px] lg:w-[220px] sm:self-start"
+            class="px-3 sm:px-4 py-2 rounded-xl font-semibold text-xs sm:text-sm bg-white/90 text-gray-700 border border-gray-200 hover:bg-white transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-moov-orange w-full sm:w-[180px] md:w-[200px] lg:w-[220px]"
           >
             <option v-for="year in availableYears" :key="year" :value="year">
               {{ year }}
@@ -22,7 +22,7 @@
           </select>
           
           <!-- Period Selector (visible uniquement pour année en cours) -->
-          <div v-if="isCurrentYear" class="flex flex-wrap items-center gap-2">
+          <div v-if="isCurrentYear" class="flex flex-wrap items-center gap-2 sm:justify-end">
             <button
               v-for="period in periods"
               :key="period.value"
@@ -39,7 +39,7 @@
           </div>
           
           <!-- Filtres pour années passées -->
-          <div v-else class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <div v-else class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:justify-end">
             <!-- Sélecteur de type de période -->
             <select
               v-model="historicalPeriodType"

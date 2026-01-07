@@ -678,7 +678,7 @@ const handleExport = async (format) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(downloadUrl);
 
-    toast.success(`${filteredPOS.value.length} PDV exportés avec succès`);
+    toast.success(`Export Excel terminé avec succès`);
   } catch (error) {
     console.error('Erreur lors de l\'export:', error);
     toast.error('Erreur lors de l\'export des données');
