@@ -1,143 +1,110 @@
-const CACHE_NAME = 'moov-universe-v1';
-const STATIC_CACHE = 'moov-static-v1';
-const DYNAMIC_CACHE = 'moov-dynamic-v1';
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching'
+import { registerRoute, NavigationRoute } from 'workbox-routing'
+import { StaleWhileRevalidate, NetworkFirst, CacheFirst } from 'workbox-strategies'
+import { ExpirationPlugin } from 'workbox-expiration'
+import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
-// Ressources critiques à mettre en cache
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/offline.html',
-];
+const APP_SHELL_CACHE = 'moov-app-shell-v2'
+const ASSETS_CACHE = 'moov-assets-v2'
+const IMAGES_CACHE = 'moov-images-v2'
+const API_CACHE = 'moov-api-v2'
 
-// Installation du Service Worker
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installation en cours...');
-  
-  event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      console.log('[SW] Mise en cache des ressources statiques');
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
-  
-  self.skipWaiting();
-});
+const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 
-// Activation du Service Worker
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activation...');
-  
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== STATIC_CACHE && name !== DYNAMIC_CACHE)
-          .map((name) => caches.delete(name))
-      );
-    })
-  );
-  
-  self.clients.claim();
-});
+// Pré-cache de l'app shell + page offline pour rendre toutes les routes accessibles hors ligne
+precacheAndRoute([
+  ...PRECACHE_MANIFEST,
+  { url: '/offline.html', revision: null }
+])
 
-// Interception des requêtes réseau
+cleanupOutdatedCaches()
+
+// Navigation (SPA) : app shell avec fallback offline
+const navigationHandler = createHandlerBoundToURL('/index.html')
+
+registerRoute(
+  new NavigationRoute(async (context) => {
+    try {
+      return await navigationHandler.handle(context)
+    } catch (error) {
+      const offline = await caches.match('/offline.html')
+      if (offline) return offline
+      return Response.error()
+    }
+  }, { denylist: [/^\/api\//] })
+)
+
+// JS/CSS/workers : stale-while-revalidate
+registerRoute(
+  ({ request }) => ['script', 'style', 'worker'].includes(request.destination),
+  new StaleWhileRevalidate({
+    cacheName: ASSETS_CACHE,
+    plugins: [
+      new ExpirationPlugin({
+        maxEntries: 120,
+        maxAgeSeconds: 60 * 60 * 24 * 14
+      })
+    ]
+  })
+)
+
+// Images : cache-first avec expiration
+registerRoute(
+  ({ request }) => request.destination === 'image',
+  new CacheFirst({
+    cacheName: IMAGES_CACHE,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 60 * 60 * 24 * 30
+      })
+    ]
+  })
+)
+
+// API GET : network-first avec cache de secours
+registerRoute(
+  ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
+  new NetworkFirst({
+    cacheName: API_CACHE,
+    networkTimeoutSeconds: 5,
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }),
+      new ExpirationPlugin({
+        maxEntries: 100,
+        maxAgeSeconds: 60 * 60 * 24
+      })
+    ]
+  })
+)
+
+// API non-GET : réponse claire en mode hors ligne
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const { request } = event
+  const url = new URL(request.url)
 
-  // Ignorer les requêtes non-HTTP
-  if (!url.protocol.startsWith('http')) {
-    return;
-  }
-
-  // Stratégie Network First pour les API
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith('/api/') && request.method !== 'GET') {
     event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Mettre en cache UNIQUEMENT les requêtes GET réussies
-          if (response.status === 200 && request.method === 'GET') {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Si offline, retourner depuis le cache UNIQUEMENT pour GET
-          if (request.method === 'GET') {
-            return caches.match(request).then((cached) => {
-              if (cached) {
-                return cached;
-              }
-              // Retourner une réponse par défaut
-              return new Response(
-                JSON.stringify({ 
-                  error: 'offline', 
-                  message: 'Vous êtes hors ligne. Données en cache non disponibles.' 
-                }),
-                {
-                  headers: { 'Content-Type': 'application/json' },
-                  status: 503
-                }
-              );
-            });
-          } else {
-            // Pour POST/PUT/DELETE offline, retourner erreur immédiatement
-            return new Response(
-              JSON.stringify({ 
-                error: 'offline', 
-                message: 'Impossible d\'envoyer des données en mode hors ligne.' 
-              }),
-              {
-                headers: { 'Content-Type': 'application/json' },
-                status: 503
-              }
-            );
-          }
-        })
-    );
-    return;
+      fetch(request).catch(() => new Response(
+        JSON.stringify({
+          error: 'offline',
+          message: 'Impossible d\'envoyer des données en mode hors ligne.'
+        }),
+        { status: 503, headers: { 'Content-Type': 'application/json' } }
+      ))
+    )
   }
-
-  // Stratégie Cache First pour les assets statiques
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-
-      return fetch(request)
-        .then((response) => {
-          // Mettre en cache les nouveaux assets
-          if (response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(DYNAMIC_CACHE).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Page offline par défaut
-          if (request.destination === 'document') {
-            return caches.match('/offline.html');
-          }
-          return new Response('Offline', { status: 503 });
-        });
-    })
-  );
-});
+})
 
 // Gestion de la synchronisation en arrière-plan
 self.addEventListener('sync', (event) => {
-  console.log('[SW] Sync event:', event.tag);
+  console.log('[SW] Sync event:', event.tag)
   
   if (event.tag === 'sync-pending-actions') {
-    event.waitUntil(syncPendingActions());
+    event.waitUntil(syncPendingActions())
   }
-});
+})
 
 async function syncPendingActions() {
   try {
