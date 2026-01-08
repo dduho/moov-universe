@@ -154,8 +154,12 @@ deploy_backend() {
     log_info "Déploiement du backend Laravel..."
     
     cd "$BACKEND_DIR"
-    
-    # Mode maintenance
+        # Vérifier que predis est installé
+    if ! grep -q '"predis/predis"' composer.json; then
+        log_info "Installation de Predis pour Redis..."
+        composer require predis/predis --no-interaction
+    fi
+        # Mode maintenance
     log_info "Activation du mode maintenance..."
     php artisan down || true
     
@@ -201,6 +205,14 @@ deploy_backend() {
     php artisan route:cache
     php artisan view:cache
     php artisan event:cache
+    
+    # Test de connexion Redis
+    log_info "Vérification de Redis..."
+    if php artisan tinker --execute="try { Cache::put('deploy_test', 'ok', 10); echo 'Redis OK'; } catch (\Exception \$e) { echo 'Redis Error: ' . \$e->getMessage(); exit(1); }" 2>&1 | grep -q "Redis OK"; then
+        log_success "Redis connecté et fonctionnel"
+    else
+        log_warning "Redis non disponible, utilisation du cache file"
+    fi
     
     # Liens de stockage
     php artisan storage:link 2>/dev/null || true
