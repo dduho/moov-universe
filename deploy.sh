@@ -195,7 +195,11 @@ deploy_backend() {
     log_info "Nettoyage des caches..."
     php artisan config:clear
     php artisan route:clear
-    php artisan cache:clear
+    
+    # cache:clear peut échouer si FLUSHDB est désactivé dans Redis
+    # On l'exécute mais on ignore l'erreur
+    php artisan cache:clear 2>/dev/null || log_warning "Cache:clear échoué (FLUSHDB désactivé) - Le cache sera recréé automatiquement"
+    
     php artisan view:clear
     php artisan event:clear
     
