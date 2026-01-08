@@ -392,11 +392,12 @@ class TransactionImportController extends Controller
             $periods = ['day', 'week', 'month', 'quarter'];
             $dateStr = $carbonDate->format('Y-m-d');
             
-            foreach ($periods as $period) {
-                // Chercher et supprimer toutes les clés contenant cette date
-                // Comme on ne peut pas lister les clés facilement, on vide tout le cache analytics
-                Cache::flush();
-                break; // Une fois suffit
+            // Invalider les clés de cache analytics avec tags
+            try {
+                Cache::tags(['analytics', 'transactions'])->flush();
+            } catch (\Exception $e) {
+                // Si les tags ne sont pas supportés ou FLUSHDB désactivé, on ignore
+                Log::warning('Cache flush failed (Redis command may be disabled): ' . $e->getMessage());
             }
             
             // Recalculer IMMÉDIATEMENT les analytics pour cette date (synchrone)

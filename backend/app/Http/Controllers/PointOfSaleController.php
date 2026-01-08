@@ -24,13 +24,12 @@ class PointOfSaleController extends Controller
     private function flushPdvCache(): void
     {
         try {
-            if (method_exists(Cache::getStore(), 'tags')) {
-                Cache::tags(['pdv-index'])->flush();
-            } else {
-                Cache::flush();
-            }
+            // Predis/Redis supporte les tags, on utilise uniquement cette méthode
+            Cache::tags(['pdv-index'])->flush();
         } catch (\Throwable $e) {
-            \Log::warning('PDV cache flush failed: ' . $e->getMessage());
+            // Si les tags ne sont pas supportés, on ne fait rien
+            // plutôt que d'appeler Cache::flush() qui est désactivé en production
+            \Log::warning('PDV cache flush failed (tags not supported or Redis command disabled): ' . $e->getMessage());
         }
     }
 
