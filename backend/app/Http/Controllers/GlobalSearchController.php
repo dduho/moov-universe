@@ -120,6 +120,7 @@ class GlobalSearchController extends Controller
               ->orWhere('shortcode', 'LIKE', "%{$query}%")
               ->orWhere('firstname', 'LIKE', "%{$query}%")
               ->orWhere('lastname', 'LIKE', "%{$query}%")
+              ->orWhere('numero_proprietaire', 'LIKE', "%{$query}%")
               ->orWhere('ville', 'LIKE', "%{$query}%")
               ->orWhere('quartier', 'LIKE', "%{$query}%");
         });
@@ -410,8 +411,7 @@ class GlobalSearchController extends Controller
 
             // Top 3 PDV matches
             $pdvQuery = PointOfSale::query()
-                ->select(['id', 'nom_point', 'numero_flooz', 'region', 'ville'])
-                ->where('status', 'validated');
+                ->select(['id', 'nom_point', 'numero_flooz', 'numero_proprietaire', 'region', 'ville', 'status']);
 
             if ($user->isDealerOwner()) {
                 $pdvQuery->where('organization_id', $user->organization_id);
@@ -422,6 +422,7 @@ class GlobalSearchController extends Controller
             $pdvs = $pdvQuery->where(function ($q) use ($query) {
                     $q->where('nom_point', 'LIKE', "%{$query}%")
                       ->orWhere('numero_flooz', 'LIKE', "%{$query}%")
+                      ->orWhere('numero_proprietaire', 'LIKE', "%{$query}%")
                       ->orWhere('ville', 'LIKE', "%{$query}%");
                 })
                 ->limit(3)

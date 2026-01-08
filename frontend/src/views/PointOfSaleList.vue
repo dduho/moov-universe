@@ -47,7 +47,7 @@
               v-model="filters.search"
               label="Recherche"
               type="text"
-              placeholder="Nom, Flooz, Dealer..."
+              placeholder="Nom, Flooz, Dealer, N° Propriétaire..."
             />
           </div>
           

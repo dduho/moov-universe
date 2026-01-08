@@ -85,7 +85,8 @@ class PointOfSaleController extends Controller
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('nom_point', 'like', "%{$search}%")
-                  ->orWhere('numero_flooz', 'like', "%{$search}%");
+                  ->orWhere('numero_flooz', 'like', "%{$search}%")
+                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
             });
         }
 
@@ -367,7 +368,8 @@ class PointOfSaleController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('nom_point', 'like', "%{$search}%")
                   ->orWhere('dealer_name', 'like', "%{$search}%")
-                  ->orWhere('numero_flooz', 'like', "%{$search}%");
+                  ->orWhere('numero_flooz', 'like', "%{$search}%")
+                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
             });
         }
 
