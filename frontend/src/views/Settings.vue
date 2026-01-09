@@ -469,8 +469,8 @@
         <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
           <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-4">
             <div class="flex-1">
-              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Caches Frontend (Vue/Pinia/IndexedDB)</h3>
-              <p class="text-xs sm:text-sm text-gray-600">Vide les caches locaux (analytics, IndexedDB) sans toucher au backend</p>
+              <h3 class="text-base sm:text-lg font-bold text-gray-900 mb-1">Caches Frontend (Vue/Pinia/IndexedDB/PWA)</h3>
+              <p class="text-xs sm:text-sm text-gray-600">Vide tous les caches locaux (analytics, IndexedDB, Service Worker). L'application se rechargera automatiquement.</p>
             </div>
             <button
               @click="clearFrontendCaches"
@@ -492,7 +492,7 @@
               <span v-else>Vider les caches frontend</span>
             </button>
           </div>
-          <p class="text-xs text-gray-500">Utilisez ceci si vous constatez des données périmées ou des problèmes de rafraîchissement des dashboards.</p>
+          <p class="text-xs text-gray-500">⚠️ Vide TOUS les caches (analytics, Service Worker PWA, IndexedDB). Utilisez ceci pour forcer la mise à jour complète de l'interface.</p>
         </div>
 
         <!-- Advanced Cache Management Section -->
@@ -947,13 +947,44 @@ async function clearAllCaches() {
 async function clearFrontendCaches() {
   try {
     clearingFrontendCaches.value = true;
+    
+    // 1. Vider les stores Pinia
     analyticsCacheStore.clearAll();
+    
+    // 2. Vider IndexedDB
     await offlineDB.clearAll();
-    toast.success('Caches frontend vidés');
+    
+    // 3. Vider tous les caches du Service Worker (PWA)
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(
+        cacheNames.map(cacheName => caches.delete(cacheName))
+      );
+      console.log('Service Worker caches vidés:', cacheNames);
+    }
+    
+    // 4. Désinscrire et réinscrire le Service Worker pour forcer la mise à jour
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      if (registration) {
+        await registration.unregister();
+        console.log('Service Worker désinscrit');
+        // Réinscrire immédiatement
+        await navigator.serviceWorker.register('/service-worker.js');
+        console.log('Service Worker réinscrit');
+      }
+    }
+    
+    toast.success('Caches frontend vidés - Rechargement dans 2s...');
+    
+    // Recharger la page après 2s pour activer le nouveau SW
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 2000);
+    
   } catch (error) {
     console.error('Error clearing frontend caches:', error);
     toast.error('Erreur lors du vidage des caches frontend');
-  } finally {
     clearingFrontendCaches.value = false;
   }
 }

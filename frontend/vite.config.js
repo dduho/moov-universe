@@ -26,7 +26,9 @@ export default defineConfig({
       srcDir: 'public',
       filename: 'service-worker.js',
       injectManifest: {
-        injectionPoint: 'self.__WB_MANIFEST'
+        injectionPoint: 'self.__WB_MANIFEST',
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,txt,woff2}'],
+        globIgnores: ['**/registerSW.js', '**/workbox-*.js']
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.svg', 'icon.svg'],
       manifest: {
