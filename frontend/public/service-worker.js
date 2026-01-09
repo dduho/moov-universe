@@ -11,11 +11,9 @@ const API_CACHE = 'moov-api-v2'
 
 const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 
-// Pré-cache de l'app shell + page offline pour rendre toutes les routes accessibles hors ligne
-precacheAndRoute([
-  ...PRECACHE_MANIFEST,
-  { url: '/offline.html', revision: null }
-])
+// Pré-cache de l'app shell
+// Note: offline.html est déjà dans PRECACHE_MANIFEST, ne pas l'ajouter en double
+precacheAndRoute(PRECACHE_MANIFEST)
 
 cleanupOutdatedCaches()
 
