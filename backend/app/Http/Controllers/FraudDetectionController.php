@@ -158,7 +158,7 @@ class FraudDetectionController extends Controller
                     $alerts[] = [
                         'type' => 'split_deposit_fraud',
                         'pdv_id' => $pdv->id,
-                        'pdv_name' => $pdv->nom_pdv,
+                        'pdv_name' => $pdv->nom_point,
                         'pdv_numero' => $pdv->numero_flooz,
                         'dealer_name' => $pdv->organization->name ?? 'Unknown',
                         'region' => $pdv->region,
@@ -236,7 +236,7 @@ class FraudDetectionController extends Controller
                 $alerts[] = [
                     'type' => 'off_hours_large_transaction',
                     'pdv_id' => $pdvId,
-                    'pdv_name' => $pdv->nom_pdv ?? 'Unknown',
+                    'pdv_name' => $pdv->nom_point ?? 'Unknown',
                     'pdv_numero' => $numeroFlooz,
                     'dealer_name' => $pdv->organization->name ?? 'Unknown',
                     'region' => $pdv->region ?? 'Unknown',
@@ -291,7 +291,7 @@ class FraudDetectionController extends Controller
                         $alerts[] = [
                             'type' => 'activity_spike',
                             'pdv_id' => $pdv->id,
-                            'pdv_name' => $pdv->nom_pdv,
+                            'pdv_name' => $pdv->nom_point,
                             'pdv_numero' => $pdv->numero_flooz,
                             'dealer_name' => $pdv->organization->name ?? 'Unknown',
                             'region' => $pdv->region,
@@ -359,7 +359,7 @@ class FraudDetectionController extends Controller
                     $alerts[] = [
                         'type' => 'commission_over_ca',
                         'pdv_id' => $pdv->id,
-                        'pdv_name' => $pdv->nom_pdv,
+                        'pdv_name' => $pdv->nom_point,
                         'pdv_numero' => $pdv->numero_flooz,
                         'dealer_name' => $pdv->organization->name ?? 'Unknown',
                         'region' => $pdv->region,

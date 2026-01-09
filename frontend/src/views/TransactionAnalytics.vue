@@ -513,21 +513,21 @@
         />
 
         <!-- AI Insights Section -->
-        <div v-if="insights && insights.length > 0" class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 shadow-2xl rounded-2xl p-6">
-          <div class="flex items-center gap-3 mb-6">
-            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="insights && insights.length > 0" class="bg-gradient-to-br from-indigo-50 to-purple-50 border-2 border-indigo-200 shadow-2xl rounded-2xl p-3 sm:p-6">
+          <div class="flex flex-wrap items-center gap-3 mb-4 sm:mb-6">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <svg class="w-6 h-6 sm:w-7 sm:h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
               </svg>
             </div>
-            <div>
-              <h3 class="text-xl font-bold text-gray-900">🤖 Insights & Recommandations</h3>
-              <p class="text-sm text-gray-600">Analyse intelligente de vos données</p>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base sm:text-xl font-bold text-gray-900 truncate">🤖 Insights & Recommandations</h3>
+              <p class="text-xs sm:text-sm text-gray-600 truncate">Analyse intelligente de vos données</p>
             </div>
             <button 
               @click="refreshInsights" 
               :disabled="loadingInsights"
-              class="ml-auto px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-all text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
+              class="w-full sm:w-auto px-3 sm:px-4 py-2 bg-white rounded-lg shadow hover:shadow-md transition-all text-xs sm:text-sm font-semibold text-indigo-600 hover:bg-indigo-50 disabled:opacity-50"
             >
               <svg v-if="!loadingInsights" class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -537,12 +537,12 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
             <div 
               v-for="(insight, index) in insights" 
               :key="index"
               :class="[
-                'p-5 rounded-xl border-l-4 transition-all hover:shadow-lg',
+                'p-3 sm:p-5 rounded-xl border-l-4 transition-all hover:shadow-lg',
                 insight.severity === 'high' && insight.type === 'alert' ? 'bg-red-50 border-red-500' : '',
                 insight.severity === 'high' && insight.type !== 'alert' ? 'bg-orange-50 border-orange-500' : '',
                 insight.severity === 'medium' ? 'bg-yellow-50 border-yellow-500' : '',
@@ -550,10 +550,10 @@
                 insight.type === 'recommendation' && insight.severity !== 'medium' ? 'bg-blue-50 border-blue-500' : '',
               ]"
             >
-              <div class="flex items-start gap-3">
-                <div class="flex-1">
-                  <h4 class="font-bold text-gray-900 text-lg mb-2">{{ insight.title }}</h4>
-                  <p class="text-gray-700 mb-3">{{ insight.message }}</p>
+              <div class="flex flex-col sm:flex-row items-start gap-3">
+                <div class="flex-1 min-w-0 w-full">
+                  <h4 class="font-bold text-gray-900 text-base sm:text-lg mb-2 break-words">{{ insight.title }}</h4>
+                  <p class="text-sm sm:text-base text-gray-700 mb-3 break-words">{{ insight.message }}</p>
                   
                   <!-- Details -->
                   <div v-if="insight.details && insight.details.length > 0" class="mb-3">
@@ -592,10 +592,10 @@
                 </div>
 
                 <!-- Badge -->
-                <div class="flex-shrink-0">
+                <div class="flex-shrink-0 self-start sm:self-center">
                   <span 
                     :class="[
-                      'inline-block px-3 py-1 rounded-full text-xs font-bold uppercase',
+                      'inline-block px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase whitespace-nowrap',
                       insight.category === 'inactivity' ? 'bg-red-200 text-red-800' : '',
                       insight.category === 'trend' ? 'bg-purple-200 text-purple-800' : '',
                       insight.category === 'anomaly' ? 'bg-orange-200 text-orange-800' : '',

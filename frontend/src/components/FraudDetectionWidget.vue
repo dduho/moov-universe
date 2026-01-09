@@ -1,21 +1,21 @@
 <template>
-  <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-6">
+  <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-xl rounded-2xl p-3 sm:p-6">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div class="flex items-center gap-3">
-        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center">
-          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+      <div class="flex items-center gap-3 flex-1 min-w-0">
+        <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center flex-shrink-0">
+          <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
         </div>
-        <div>
-          <h3 class="text-lg font-bold text-gray-900">Comportements suspicieux</h3>
-          <p class="text-sm text-gray-600">Alertes basées sur patterns suspects</p>
+        <div class="min-w-0">
+          <h3 class="text-base sm:text-lg font-bold text-gray-900 truncate">Comportements suspicieux</h3>
+          <p class="text-xs sm:text-sm text-gray-600 truncate">Alertes basées sur patterns suspects</p>
         </div>
       </div>
 
       <!-- Actions & Summary -->
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
         <!-- Export Button - Always visible -->
         <button
           @click="exportExcel"
@@ -34,14 +34,14 @@
         </button>
 
         <!-- Summary Badges -->
-        <div v-if="!loading && summary" class="flex items-center gap-2">
-          <span class="px-3 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+        <div v-if="!loading && summary" class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <span class="px-2 sm:px-3 py-1 rounded-full bg-red-100 text-red-700 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
             {{ summary.high_risk }} Risque élevé
           </span>
-          <span class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold">
+          <span class="px-2 sm:px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
             {{ summary.medium_risk }} Risque moyen
           </span>
-          <span class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-semibold">
+          <span class="px-2 sm:px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
             {{ summary.total_alerts }} Total
           </span>
         </div>
@@ -114,36 +114,38 @@
           }"
         >
           <!-- Header -->
-          <div class="flex items-start justify-between mb-3">
-            <div class="flex-1">
-              <div class="flex items-center gap-2 mb-2">
-                <h4 class="text-lg font-bold text-gray-900">{{ alert.pdv_name }}</h4>
-                <span class="text-xs font-mono text-gray-500">{{ alert.pdv_numero }}</span>
-                <span
-                  class="px-2 py-0.5 rounded-full text-xs font-bold"
-                  :class="{
-                    'bg-red-100 text-red-700': alert.risk_level === 'high',
-                    'bg-yellow-100 text-yellow-700': alert.risk_level === 'medium',
-                    'bg-blue-100 text-blue-700': alert.risk_level === 'low'
-                  }"
-                >
-                  Risque {{ alert.risk_level === 'high' ? 'Élevé' : alert.risk_level === 'medium' ? 'Moyen' : 'Faible' }}
-                </span>
+          <div class="flex flex-col sm:flex-row items-start gap-3 mb-3">
+            <div class="flex-1 min-w-0 w-full">
+              <div class="mb-2">
+                <h4 v-if="alert.pdv_name" class="text-base sm:text-lg font-bold text-gray-900 mb-1.5">{{ alert.pdv_name }}</h4>
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <span class="text-[10px] sm:text-xs font-mono text-gray-500">{{ alert.pdv_numero }}</span>
+                  <span
+                    class="px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-bold whitespace-nowrap"
+                    :class="{
+                      'bg-red-100 text-red-700': alert.risk_level === 'high',
+                      'bg-yellow-100 text-yellow-700': alert.risk_level === 'medium',
+                      'bg-blue-100 text-blue-700': alert.risk_level === 'low'
+                    }"
+                  >
+                    Risque {{ alert.risk_level === 'high' ? 'Élevé' : alert.risk_level === 'medium' ? 'Moyen' : 'Faible' }}
+                  </span>
+                </div>
               </div>
-              <div class="flex items-center gap-3 text-sm text-gray-600">
-                <span>{{ alert.region }}</span>
-                <span>•</span>
-                <span>{{ alert.dealer_name }}</span>
-                <span>•</span>
-                <span>{{ formatDate(alert.date) }}</span>
+              <div class="flex flex-wrap items-center gap-1.5 sm:gap-3 text-xs sm:text-sm text-gray-600">
+                <span class="truncate">{{ alert.region }}</span>
+                <span class="hidden sm:inline">•</span>
+                <span class="truncate">{{ alert.dealer_name }}</span>
+                <span class="hidden sm:inline">•</span>
+                <span class="whitespace-nowrap">{{ formatDate(alert.date) }}</span>
               </div>
             </div>
-            <div class="flex flex-col items-end gap-2">
-              <div class="px-3 py-1 rounded-lg bg-red-100">
-                <span class="text-xs text-red-600 font-semibold">Score</span>
-                <span class="text-lg font-bold text-red-700 ml-1">{{ alert.risk_score }}</span>
+            <div class="flex sm:flex-col items-center sm:items-end gap-2 self-end sm:self-start">
+              <div class="px-2 sm:px-3 py-1 rounded-lg bg-red-100">
+                <span class="text-[10px] sm:text-xs text-red-600 font-semibold">Score</span>
+                <span class="text-base sm:text-lg font-bold text-red-700 ml-1">{{ alert.risk_score }}</span>
               </div>
-              <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-semibold">
+              <span class="px-2 py-1 rounded bg-gray-100 text-gray-700 text-[10px] sm:text-xs font-semibold whitespace-nowrap">
                 {{ getAlertTypeLabel(alert.type) }}
               </span>
             </div>
@@ -168,11 +170,11 @@
       </div>
 
       <!-- Pagination -->
-      <div v-if="totalPages > 1" class="flex items-center justify-center gap-2 mt-6">
+      <div v-if="totalPages > 1" class="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 mt-6">
         <button
           @click="currentPage = 1"
           :disabled="currentPage === 1"
-          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
         >
           ‹‹
@@ -180,18 +182,18 @@
         <button
           @click="currentPage--"
           :disabled="currentPage === 1"
-          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           :class="currentPage === 1 ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
         >
           ‹
         </button>
         
-        <div class="flex gap-1">
+        <div class="flex flex-wrap gap-1 justify-center">
           <button
             v-for="page in visiblePages"
             :key="page"
             @click="currentPage = page"
-            class="w-10 h-10 rounded-lg text-sm font-semibold transition-all"
+            class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg text-xs sm:text-sm font-semibold transition-all"
             :class="currentPage === page ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
           >
             {{ page }}
@@ -201,7 +203,7 @@
         <button
           @click="currentPage++"
           :disabled="currentPage === totalPages"
-          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           :class="currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
         >
           ›
@@ -209,7 +211,7 @@
         <button
           @click="currentPage = totalPages"
           :disabled="currentPage === totalPages"
-          class="px-3 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           :class="currentPage === totalPages ? 'bg-gray-100 text-gray-400' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
         >
           ››
