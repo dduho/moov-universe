@@ -636,6 +636,11 @@
         class="mt-8"
         scope="global"
       />
+
+      <!-- Rentability Analysis Widget -->
+      <RentabilityWidget 
+        class="mt-8"
+      />
     </div>
   </div>
 </template>
@@ -658,6 +663,7 @@ import Navbar from '../components/Navbar.vue';
 import ForecastWidget from '../components/ForecastWidget.vue';
 import RecommendationsWidget from '../components/RecommendationsWidget.vue';
 import FraudDetectionWidget from '../components/FraudDetectionWidget.vue';
+import RentabilityWidget from '../components/RentabilityWidget.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
 import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';

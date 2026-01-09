@@ -49,5 +49,52 @@ class SystemSettingSeeder extends Seeder
                 'description' => 'Durée du cache pour la détection de fraudes en minutes (défaut: 180 min = 3h)',
             ]
         );
+
+        // Cache settings for rentability analysis
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_rentability_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour l\'analyse de rentabilité',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_rentability_ttl'],
+            [
+                'value' => '240',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour l\'analyse de rentabilité en minutes (défaut: 240 min = 4h)',
+            ]
+        );
+
+        // Rentability calculation parameters
+        SystemSetting::firstOrCreate(
+            ['key' => 'pdv_activation_cost'],
+            [
+                'value' => '50000',
+                'type' => 'integer',
+                'description' => 'Coût d\'activation moyen d\'un PDV en FCFA (défaut: 50 000 FCFA)',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'commission_rate_depot'],
+            [
+                'value' => '1.0',
+                'type' => 'float',
+                'description' => 'Taux de commission sur les dépôts en pourcentage (défaut: 1.0%)',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'operational_cost_per_pdv'],
+            [
+                'value' => '10000',
+                'type' => 'integer',
+                'description' => 'Coût opérationnel mensuel par PDV en FCFA (défaut: 10 000 FCFA/mois)',
+            ]
+        );
     }
 }

@@ -28,6 +28,7 @@ use App\Http\Controllers\RecommendationsController;
 use App\Http\Controllers\FraudDetectionController;
 use App\Http\Controllers\GeolocationController;
 use App\Http\Controllers\CacheSettingController;
+use App\Http\Controllers\RentabilityController;
 use App\Http\Controllers\DealerAnalyticsController;
 use Illuminate\Support\Facades\Route;
 
@@ -260,6 +261,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('fraud-detection')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/', [FraudDetectionController::class, 'detect']);
         Route::get('/export', [FraudDetectionController::class, 'exportExcel']);
+    });
+
+    // Rentability Analysis routes (Admin only)
+    Route::prefix('rentability')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/analyze', [RentabilityController::class, 'analyze']);
+        Route::post('/clear-cache', [RentabilityController::class, 'clearCache']);
     });
 
     // Geolocation routes (Admin only)
