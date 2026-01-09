@@ -7,7 +7,15 @@
       <div class="flex flex-col gap-3 mb-4 sm:mb-6">
         <div>
           <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900">Tableau de Bord Transactionnel</h1>
-          <p class="text-xs sm:text-sm text-gray-600 mt-1">Vue d'ensemble et analyse des transactions importées</p>
+          <p class="text-xs sm:text-sm text-gray-600 mt-1">
+            Vue d'ensemble et analyse des transactions importées
+            <span v-if="analytics?.last_import_date" class="inline-flex items-center gap-1 ml-2 px-2 py-0.5 bg-moov-orange/10 text-moov-orange rounded-full font-semibold">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Dernière MAJ : {{ formatDate(analytics.last_import_date) }}
+            </span>
+          </p>
         </div>
         
         <div class="flex flex-col gap-2 sm:items-end">

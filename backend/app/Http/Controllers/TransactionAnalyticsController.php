@@ -36,12 +36,16 @@ class TransactionAnalyticsController extends Controller
             $currentKPI = $this->calculateKPI($startDate, $endDate);
             $previousKPI = $this->calculateKPI($prevStartDate, $prevEndDate);
             
+            // Récupérer la dernière date de transaction importée
+            $lastTransactionDate = PdvTransaction::max('transaction_date');
+            
             return [
                 'period' => $period,
                 'date_range' => [
                     'start' => $startDate->format('Y-m-d'),
                     'end' => $endDate->format('Y-m-d'),
                 ],
+                'last_import_date' => $lastTransactionDate ? Carbon::parse($lastTransactionDate)->format('Y-m-d') : null,
                 'kpi' => $this->addComparisons($currentKPI, $previousKPI),
                 'top_pdv' => $this->getTopPDV($startDate, $endDate, 10),
                 'top_dealers' => $this->getTopDealers($startDate, $endDate, 10),
