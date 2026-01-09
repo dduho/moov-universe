@@ -4,10 +4,10 @@ import { StaleWhileRevalidate, NetworkFirst, CacheFirst } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
-const APP_SHELL_CACHE = 'moov-app-shell-v3' // Incrémenter à chaque déploiement
-const ASSETS_CACHE = 'moov-assets-v3'
-const IMAGES_CACHE = 'moov-images-v3'
-const API_CACHE = 'moov-api-v3'
+const APP_SHELL_CACHE = 'moov-app-shell-v4' // Incrémenter à chaque déploiement
+const ASSETS_CACHE = 'moov-assets-v4'
+const IMAGES_CACHE = 'moov-images-v4'
+const API_CACHE = 'moov-api-v4'
 
 const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 
@@ -60,13 +60,22 @@ const navigationHandler = createHandlerBoundToURL('/index.html')
 registerRoute(
   new NavigationRoute(async (context) => {
     try {
+      // Essayer de récupérer la page depuis le réseau
       return await navigationHandler.handle(context)
     } catch (error) {
+      console.log('[SW] Navigation failed, trying offline page:', error)
+      // Si le réseau échoue, essayer la page offline
       const offline = await caches.match('/offline.html')
       if (offline) return offline
-      return Response.error()
+      // En dernier recours, laisser la requête passer (ne pas bloquer)
+      return fetch(context.request).catch(() => new Response('Offline', { status: 503, statusText: 'Service Unavailable' }))
     }
-  }, { denylist: [/^\/api\//] })
+  }, { 
+    denylist: [
+      /^\/api\//,           // Exclure les appels API
+      /\.(json|xml|txt)$/,  // Exclure les fichiers de données
+    ] 
+  })
 )
 
 // JS/CSS/workers : stale-while-revalidate
