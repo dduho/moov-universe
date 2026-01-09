@@ -28,9 +28,27 @@ class FraudDetectionController extends Controller
         $limit = $request->input('limit', 30); // Limite par type de fraude
         $offset = $request->input('offset', 0); // Pour pagination
 
+        // Get cache settings from system settings
+        $cacheEnabled = \App\Models\SystemSetting::getValue('cache_fraud_detection_enabled', true);
+        $cacheTtl = \App\Models\SystemSetting::getValue('cache_fraud_detection_ttl', 180); // minutes
+
         $cacheKey = "fraud_detection_{$scope}_{$entityId}_{$startDate}_{$endDate}_{$limit}_{$offset}";
 
-        return Cache::remember($cacheKey, 10800, function () use ($scope, $entityId, $startDate, $endDate, $limit, $offset) {
+        // If cache is disabled, bypass it
+        if (!$cacheEnabled) {
+            return $this->executeFraudDetection($scope, $entityId, $startDate, $endDate, $limit, $offset);
+        }
+
+        return Cache::tags(['fraud-detection'])->remember($cacheKey, $cacheTtl * 60, function () use ($scope, $entityId, $startDate, $endDate, $limit, $offset) {
+            return $this->executeFraudDetection($scope, $entityId, $startDate, $endDate, $limit, $offset);
+        });
+    }
+
+    /**
+     * Execute fraud detection logic
+     */
+    private function executeFraudDetection($scope, $entityId, $startDate, $endDate, $limit, $offset)
+    {
             $alerts = [];
 
             // 1. Split deposit fraud - Main fraud pattern (high depot count vs retrait)
@@ -75,7 +93,6 @@ class FraudDetectionController extends Controller
                 ],
                 'generated_at' => now()->toDateTimeString(),
             ]);
-        });
     }
 
     /**

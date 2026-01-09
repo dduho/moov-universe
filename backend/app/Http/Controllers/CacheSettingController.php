@@ -15,6 +15,7 @@ class CacheSettingController extends Controller
         'advanced_geospatial',
         'offline_dashboard',
         'dealer_analytics',
+        'fraud_detection',
     ];
 
     public function getCacheSettings()

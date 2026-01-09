@@ -4,10 +4,10 @@ import { StaleWhileRevalidate, NetworkFirst, CacheFirst } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
-const APP_SHELL_CACHE = 'moov-app-shell-v2'
-const ASSETS_CACHE = 'moov-assets-v2'
-const IMAGES_CACHE = 'moov-images-v2'
-const API_CACHE = 'moov-api-v2'
+const APP_SHELL_CACHE = 'moov-app-shell-v3' // Incrémenter à chaque déploiement
+const ASSETS_CACHE = 'moov-assets-v3'
+const IMAGES_CACHE = 'moov-images-v3'
+const API_CACHE = 'moov-api-v3'
 
 const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 
@@ -16,6 +16,43 @@ const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 precacheAndRoute(PRECACHE_MANIFEST)
 
 cleanupOutdatedCaches()
+
+// Forcer la prise de contrôle immédiate lors de l'installation
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installation - nouvelle version détectée')
+  // Skip waiting pour activer immédiatement le nouveau SW
+  self.skipWaiting()
+})
+
+// Prendre le contrôle de tous les clients immédiatement
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activation - prise de contrôle des clients')
+  event.waitUntil(
+    Promise.all([
+      // Supprimer les anciens caches
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            if (cacheName.startsWith('moov-') && 
+                ![APP_SHELL_CACHE, ASSETS_CACHE, IMAGES_CACHE, API_CACHE].includes(cacheName)) {
+              console.log('[SW] Suppression ancien cache:', cacheName)
+              return caches.delete(cacheName)
+            }
+          })
+        )
+      }),
+      // Prendre le contrôle de tous les clients
+      self.clients.claim()
+    ])
+  )
+})
+
+// Notifier les clients qu'une mise à jour est disponible
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting()
+  }
+})
 
 // Navigation (SPA) : app shell avec fallback offline
 const navigationHandler = createHandlerBoundToURL('/index.html')
@@ -61,21 +98,10 @@ registerRoute(
   })
 )
 
-// API GET : network-first avec cache de secours
-registerRoute(
-  ({ url, request }) => url.pathname.startsWith('/api/') && request.method === 'GET',
-  new NetworkFirst({
-    cacheName: API_CACHE,
-    networkTimeoutSeconds: 5,
-    plugins: [
-      new CacheableResponsePlugin({ statuses: [0, 200] }),
-      new ExpirationPlugin({
-        maxEntries: 100,
-        maxAgeSeconds: 60 * 60 * 24
-      })
-    ]
-  })
-)
+// IMPORTANT: Les appels API ne sont PAS mis en cache par le Service Worker
+// pour permettre au cache Redis backend de fonctionner efficacement.
+// Toutes les requêtes API passent directement au serveur qui gère le cache avec Redis.
+// Le Service Worker gère uniquement le mode offline avec des messages d'erreur clairs.
 
 // API non-GET : réponse claire en mode hors ligne
 self.addEventListener('fetch', (event) => {

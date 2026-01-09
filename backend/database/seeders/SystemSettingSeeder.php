@@ -30,5 +30,24 @@ class SystemSettingSeeder extends Seeder
                 'description' => 'Précision GPS maximale acceptée en mètres',
             ]
         );
+
+        // Cache settings for fraud detection
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_fraud_detection_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour la détection de fraudes',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_fraud_detection_ttl'],
+            [
+                'value' => '180',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour la détection de fraudes en minutes (défaut: 180 min = 3h)',
+            ]
+        );
     }
 }

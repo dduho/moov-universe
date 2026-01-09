@@ -291,6 +291,15 @@ deploy_frontend() {
     
     cd "$FRONTEND_DIR"
     
+    # Incrémenter automatiquement la version du cache Service Worker
+    log_info "Incrémentation de la version du cache..."
+    CACHE_VERSION=$(date +%s) # Timestamp comme version
+    sed -i "s/moov-app-shell-v[0-9]*/moov-app-shell-v${CACHE_VERSION}/g" public/service-worker.js
+    sed -i "s/moov-assets-v[0-9]*/moov-assets-v${CACHE_VERSION}/g" public/service-worker.js
+    sed -i "s/moov-images-v[0-9]*/moov-images-v${CACHE_VERSION}/g" public/service-worker.js
+    sed -i "s/moov-api-v[0-9]*/moov-api-v${CACHE_VERSION}/g" public/service-worker.js
+    log_info "Version du cache: v${CACHE_VERSION}"
+    
     # Création du fichier .env pour la production
     log_info "Configuration de l'environnement..."
     cat > .env.production << EOF
@@ -305,6 +314,17 @@ EOF
     # Build de production
     log_info "Build de production..."
     npm run build
+    
+    # Créer un fichier version.json dans dist pour traçabilité
+    cat > "$FRONTEND_DIR/dist/version.json" << EOF
+{
+  "version": "${CACHE_VERSION}",
+  "build_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+  "git_branch": "$GIT_BRANCH",
+  "git_commit": "$(git rev-parse --short HEAD 2>/dev/null || echo 'unknown')"
+}
+EOF
+    log_info "Fichier version.json créé"
     
     # Suppression des fichiers Service Worker si PWA désactivé
     if [[ "$DISABLE_PWA" == "true" ]]; then
