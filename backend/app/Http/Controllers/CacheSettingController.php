@@ -10,6 +10,8 @@ class CacheSettingController extends Controller
 {
     // Liste des widgets gérés
     private $widgets = [
+        'map',
+        'geolocation',
         'network_optimization',
         'risk_compliance',
         'advanced_geospatial',

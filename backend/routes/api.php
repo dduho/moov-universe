@@ -28,6 +28,7 @@ use App\Http\Controllers\RecommendationsController;
 use App\Http\Controllers\FraudDetectionController;
 use App\Http\Controllers\GeolocationController;
 use App\Http\Controllers\CacheSettingController;
+use App\Http\Controllers\PredictionController;
 use App\Http\Controllers\RentabilityController;
 use App\Http\Controllers\DealerAnalyticsController;
 use Illuminate\Support\Facades\Route;
@@ -228,6 +229,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Comparator routes (Admin only)
     Route::prefix('comparator')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::post('/compare', [ComparatorController::class, 'compare']);
+        Route::get('/similar-pdvs', [ComparatorController::class, 'getSimilarPdvs']);
     });
 
     // Search endpoints for comparator (Admin only)
@@ -267,6 +269,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('rentability')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/analyze', [RentabilityController::class, 'analyze']);
         Route::post('/clear-cache', [RentabilityController::class, 'clearCache']);
+    });
+
+    // Predictive Analytics (Temporaire - sans auth pour test)
+    Route::prefix('predictive-analytics')->group(function () {
+        Route::post('/predictions', [PredictionController::class, 'generatePredictions']);
+        Route::post('/trends', [PredictionController::class, 'analyzeTrends']);
+        Route::post('/alerts', [PredictionController::class, 'generatePredictiveAlerts']);
+        Route::post('/correlations', [PredictionController::class, 'analyzeCorrelations']);
+        Route::post('/optimization-recommendations', [PredictionController::class, 'getOptimizationRecommendations']);
+        Route::post('/simulation', [PredictionController::class, 'runScenarioSimulation']);
     });
 
     // Geolocation routes (Admin only)

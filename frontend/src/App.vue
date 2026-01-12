@@ -9,6 +9,7 @@ import GlobalSearch from './components/GlobalSearch.vue';
 import ConfirmModal from './components/ConfirmModal.vue';
 import PWAInstallPrompt from './components/PWAInstallPrompt.vue';
 import OfflineIndicator from './components/OfflineIndicator.vue';
+import ScrollToTop from './components/ScrollToTop.vue';
 
 // Inject explicit pinia instance to avoid getActivePinia issues on reloads
 import pinia from './plugins/pinia';
@@ -44,6 +45,7 @@ onMounted(() => {
     <GlobalSearch v-if="authStore.isAuthenticated" />
     <ConfirmModal />
     <PWAInstallPrompt />
+    <ScrollToTop />
   </div>
 </template>
 

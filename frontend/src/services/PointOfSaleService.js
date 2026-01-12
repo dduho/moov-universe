@@ -1,5 +1,6 @@
 import api from './api';
 import { offlineDB } from '../utils/offlineDB';
+import cacheService from './cacheService';
 
 const buildCacheKey = (params = {}) => {
   const sorted = Object.keys(params)
@@ -111,22 +112,38 @@ export default {
 
   async getForMap(params = {}) {
     try {
+      // Créer une clé de cache unique basée sur les paramètres
+      const cacheKey = 'map-pdv-' + buildCacheKey(params);
+      
+      // Vérifier le cache d'abord
+      const cachedData = cacheService.get(cacheKey);
+      if (cachedData) {
+        console.log('[PDV Service] Données carte depuis cache localStorage');
+        return cachedData;
+      }
+      
+      // Si pas en cache, récupérer depuis l'API
       if (navigator.onLine) {
         const response = await api.get('/point-of-sales/for-map', { params });
         
-        // Mettre en cache les données de la carte
+        // Mettre en cache les données (30 minutes, max 3MB)
         const mapData = response.data;
         if (mapData) {
+          const cached = cacheService.set(cacheKey, mapData, 30, 3);
+          if (!cached) {
+            console.warn('[PDV Service] Données trop volumineuses pour le cache localStorage');
+          }
+          // Garder aussi l'ancien cache offlineDB pour la compatibilité
           await offlineDB.cacheData('map-pdv-list', mapData, 60);
         }
         
         return response.data;
       }
       
-      // Mode offline : récupérer depuis le cache
+      // Mode offline : récupérer depuis le cache offlineDB
       const cached = await offlineDB.getCachedData('map-pdv-list');
       if (cached) {
-        console.log('[PDV Service] Données carte depuis cache');
+        console.log('[PDV Service] Données carte depuis cache offlineDB');
         return cached;
       }
       

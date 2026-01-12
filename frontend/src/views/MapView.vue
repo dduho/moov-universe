@@ -151,6 +151,51 @@
             option-value="value"
             @change="filterMarkers"
           />
+          
+          <FormSelect
+            v-model="displayMode"
+            label="Mode d'affichage"
+            :options="[
+              { label: '🏢 Par Dealer', value: 'dealer' },
+              { label: '📊 Par Performance', value: 'performance' },
+              { label: '✅ Par Statut', value: 'status' }
+            ]"
+            option-label="label"
+            option-value="value"
+            @change="refreshMarkers"
+          />
+        </div>
+
+        <!-- Performance Legend -->
+        <div v-if="displayMode === 'performance'" class="mt-4 bg-gradient-to-r from-blue-50 to-green-50 p-4 rounded-lg border-2 border-blue-200">
+          <h4 class="font-semibold text-sm text-gray-700 mb-2 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Légende Performance (ROI)
+          </h4>
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-red-500"></div>
+              <span>< 30%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-orange-500"></div>
+              <span>30-50%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-yellow-500"></div>
+              <span>50-70%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-green-500"></div>
+              <span>70-90%</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded-full bg-emerald-600"></div>
+              <span>> 90%</span>
+            </div>
+          </div>
         </div>
 
         <div class="flex justify-start mt-4">
@@ -279,6 +324,7 @@ import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
+import rentabilityService from '../services/rentabilityService';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -298,6 +344,8 @@ const loading = ref(true);
 const loadingProgress = ref(0);
 const zoom = ref(7);
 const center = ref([8.6195, 0.8248]); // Togo center coordinates
+const displayMode = ref('dealer'); // 'dealer', 'performance', 'status'
+const performanceData = ref(new Map()); // PDV ID -> ROI data
 
 const filters = ref({
   search: '',
@@ -346,6 +394,27 @@ const getStatusDotColor = (status) => {
   return colors[status] || '#6B7280';
 };
 
+const getPerformanceColor = (pdvId) => {
+  const perfData = performanceData.value.get(pdvId);
+  if (!perfData || perfData.roi === null) return '#6B7280'; // Gris par défaut
+  
+  const roi = perfData.roi;
+  if (roi < 30) return '#EF4444';      // Rouge - < 30%
+  if (roi < 50) return '#F97316';      // Orange - 30-50%
+  if (roi < 70) return '#FBBF24';      // Jaune - 50-70%
+  if (roi < 90) return '#10B981';      // Vert - 70-90%
+  return '#059669';                    // Vert foncé - > 90%
+};
+
+const getStatusColor = (status) => {
+  const colors = {
+    validated: '#10B981', // vert
+    pending: '#FBBF24',   // jaune
+    rejected: '#EF4444'   // rouge
+  };
+  return colors[status] || '#6B7280';
+};
+
 const getStatusClass = (status) => {
   const classes = {
     validated: 'bg-green-100 text-green-700',
@@ -370,7 +439,16 @@ const goToDetail = (id) => {
 
 // Create custom SVG icon for a marker
 const createMarkerIcon = (pos) => {
-  const dealerColor = getDealerColor(pos.organization_id);
+  let markerColor;
+  
+  if (displayMode.value === 'performance') {
+    markerColor = getPerformanceColor(pos.id);
+  } else if (displayMode.value === 'status') {
+    markerColor = getStatusColor(pos.status);
+  } else {
+    markerColor = getDealerColor(pos.organization_id);
+  }
+  
   const statusColor = getStatusDotColor(pos.status);
   const hasAlert = pos.has_proximity_alert;
   
@@ -382,7 +460,7 @@ const createMarkerIcon = (pos) => {
   const svgIcon = `
     <svg width="40" height="50" viewBox="0 0 40 50" xmlns="http://www.w3.org/2000/svg">
       <ellipse cx="20" cy="47" rx="8" ry="3" fill="rgba(0,0,0,0.2)"/>
-      <path d="M20 2C11.716 2 5 8.716 5 17c0 8.5 15 29 15 29s15-20.5 15-29c0-8.284-6.716-15-15-15z" fill="${dealerColor}"/>
+      <path d="M20 2C11.716 2 5 8.716 5 17c0 8.5 15 29 15 29s15-20.5 15-29c0-8.284-6.716-15-15-15z" fill="${markerColor}"/>
       <circle cx="20" cy="17" r="6" fill="white" opacity="0.9"/>
       <circle cx="20" cy="17" r="4" fill="${statusColor}"/>
       ${alertBadge}
@@ -625,6 +703,60 @@ watch(filteredPointsOfSale, () => {
   }
 });
 
+// Watcher pour le mode d'affichage
+watch(displayMode, async () => {
+  await refreshMarkers();
+});
+
+// Charger les données de performance pour la heatmap
+const loadPerformanceData = async () => {
+  if (displayMode.value !== 'performance') return;
+  
+  try {
+    const response = await rentabilityService.analyze({
+      start_date: '2025-12-01', // 30 derniers jours
+      end_date: '2026-01-06',
+      group_by: 'pdv',
+      limit: 1000
+    });
+    
+    if (response.success && response.data) {
+      // Créer une Map pour un accès rapide par PDV ID
+      const perfMap = new Map();
+      response.data.forEach(item => {
+        if (item.pdv_id) {
+          perfMap.set(item.pdv_id, {
+            roi: item.roi || 0,
+            ca: item.total_ca || 0,
+            revenue: item.revenue || 0
+          });
+        }
+      });
+      performanceData.value = perfMap;
+      console.log(`Données de performance chargées pour ${perfMap.size} PDVs`);
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des données de performance:', error);
+  }
+};
+
+// Rafraîchir tous les markers avec le nouveau mode d'affichage
+const refreshMarkers = async () => {
+  if (!leafletMap || !markersInitialized) return;
+  
+  // Charger les données de performance si nécessaire
+  if (displayMode.value === 'performance' && performanceData.value.size === 0) {
+    await loadPerformanceData();
+  }
+  
+  // Recréer tous les markers avec les nouvelles couleurs
+  if (markerClusterGroup) {
+    markerClusterGroup.clearLayers();
+    allMarkersMap.clear();
+    await addMarkersToMap(filteredPointsOfSale.value);
+  }
+};
+
 const filterMarkers = () => {
   // Filters are applied via watch on filters ref
   console.log('Filters applied:', filters.value);
@@ -801,11 +933,15 @@ const detectProximityAlerts = () => {
 
 // Centrer la carte sur une alerte
 const focusOnAlert = (alert) => {
-  const lat = (parseFloat(alert.pdv1.latitude) + parseFloat(alert.pdv2.latitude)) / 2;
-  const lng = (parseFloat(alert.pdv1.longitude) + parseFloat(alert.pdv2.longitude)) / 2;
+  if (!leafletMap) return;
   
-  if (leafletMap) {
-    leafletMap.setView([lat, lng], 16);
+  try {
+    const lat = (parseFloat(alert.pdv1.latitude) + parseFloat(alert.pdv2.latitude)) / 2;
+    const lng = (parseFloat(alert.pdv1.longitude) + parseFloat(alert.pdv2.longitude)) / 2;
+    
+    leafletMap.setView([lat, lng], 16, { animate: true });
+  } catch (e) {
+    console.warn('Error focusing on alert:', e);
   }
 };
 
@@ -914,6 +1050,9 @@ onMounted(async () => {
       const firstPoint = pointsOfSale.value[0];
       leafletMap.setView([parseFloat(firstPoint.latitude), parseFloat(firstPoint.longitude)], zoom.value);
     }
+    
+    // Précharger les données de performance pour un affichage rapide
+    await loadPerformanceData();
   } catch (error) {
     console.error('Error loading points of sale:', error);
   } finally {
@@ -925,17 +1064,27 @@ onUnmounted(() => {
   // Cleanup
   window.removeEventListener('pdv-detail', (e) => goToDetail(e.detail));
   
-  if (markerClusterGroup) {
-    markerClusterGroup.clearLayers();
-    markerClusterGroup = null;
+  try {
+    // Clear cluster group first
+    if (markerClusterGroup) {
+      markerClusterGroup.clearLayers();
+      if (leafletMap) {
+        leafletMap.removeLayer(markerClusterGroup);
+      }
+      markerClusterGroup = null;
+    }
+    
+    // Stop any ongoing animations before removing map
+    if (leafletMap) {
+      leafletMap.stop();
+      leafletMap.remove();
+      leafletMap = null;
+    }
+    
+    allMarkersMap.clear();
+  } catch (e) {
+    console.warn('Error during map cleanup:', e);
   }
-  
-  if (leafletMap) {
-    leafletMap.remove();
-    leafletMap = null;
-  }
-  
-  allMarkersMap.clear();
 });
 </script>
 

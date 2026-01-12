@@ -179,16 +179,7 @@ class RentabilityController extends Controller
             return $data;
         });
 
-        // Sort results
-        $sortField = $sortBy;
-        $rentabilityData = $rentabilityData->sortBy(function ($item) use ($sortField) {
-            return $item[$sortField];
-        }, SORT_REGULAR, $sortOrder === 'desc');
-
-        // Limit results
-        $rentabilityData = $rentabilityData->take($limit)->values();
-
-        // Calculate summary statistics
+        // Calculate summary statistics BEFORE filtering/limiting for accurate totals
         $summary = [
             'total_ca' => $rentabilityData->sum('total_ca'),
             'total_revenue' => $rentabilityData->sum('revenue'),
@@ -198,8 +189,26 @@ class RentabilityController extends Controller
             'avg_margin_rate' => $rentabilityData->avg('margin_rate'),
             'total_pdvs' => $rentabilityData->sum('pdv_count'),
             'profitable_count' => $rentabilityData->where('margin', '>', 0)->count(),
-            'unprofitable_count' => $rentabilityData->where('margin', '<', 0)->count(),
+            'total_records' => $rentabilityData->count(),
         ];
+
+        // Sort results with proper field mapping
+        $sortFieldMapping = [
+            'ca' => 'total_ca',
+            'revenue' => 'revenue', 
+            'margin' => 'margin_rate',
+            'roi' => 'roi',
+            'cost' => 'total_cost'
+        ];
+        
+        $actualSortField = $sortFieldMapping[$sortBy] ?? $sortBy;
+        
+        $rentabilityData = $rentabilityData->sortBy(function ($item) use ($actualSortField) {
+            return $item[$actualSortField];
+        }, SORT_REGULAR, $sortOrder === 'desc');
+
+        // Limit results
+        $rentabilityData = $rentabilityData->take($limit)->values();
 
         // Top/Bottom performers
         $topPerformers = $rentabilityData->sortByDesc('roi')->take(5)->values();

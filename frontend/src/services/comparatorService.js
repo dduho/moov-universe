@@ -65,6 +65,19 @@ const ComparatorService = {
     });
     return response.data.data;
   },
+
+  /**
+   * Obtenir des suggestions de PDV similaires
+   */
+  async getSimilarPdvs(pdvId, limit = 5) {
+    const response = await api.get('/comparator/similar-pdvs', {
+      params: {
+        pdv_id: pdvId,
+        limit: limit
+      }
+    });
+    return response.data.suggestions;
+  },
 };
 
 export default ComparatorService;

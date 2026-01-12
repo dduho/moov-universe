@@ -99,6 +99,64 @@
           </div>
         </div>
 
+        <!-- Smart Suggestions -->
+        <div v-if="comparisonType === 'pdv' && selectedEntities.length > 0 && showSuggestions" class="mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+              </svg>
+              Suggestions intelligentes
+            </h3>
+            <button @click="showSuggestions = false" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div v-if="loadingSuggestions" class="flex items-center justify-center py-4">
+            <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-moov-orange"></div>
+            <span class="ml-2 text-sm text-gray-600">Recherche de PDV similaires...</span>
+          </div>
+          
+          <div v-else-if="suggestions.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div 
+              v-for="suggestion in suggestions.slice(0, 6)" 
+              :key="suggestion.pdv.id"
+              class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 hover:shadow-md transition-all cursor-pointer"
+              @click="addSuggestion(suggestion)"
+            >
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="font-semibold text-sm text-gray-900">{{ suggestion.pdv.name }}</div>
+                  <div class="text-xs text-blue-600 font-mono">{{ suggestion.pdv.numero }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ suggestion.pdv.dealer }}</div>
+                  <div class="text-xs text-gray-400">📍 {{ suggestion.pdv.region }}</div>
+                </div>
+                <div class="text-right">
+                  <div class="text-lg font-bold text-blue-600">{{ suggestion.similarity_score }}%</div>
+                  <div class="text-xs text-blue-500">Similarité</div>
+                </div>
+              </div>
+              
+              <div class="mt-2 flex gap-1">
+                <span v-if="suggestion.similarity_factors.region" class="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">Région</span>
+                <span v-if="suggestion.similarity_factors.ca_range" class="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">CA</span>
+                <span v-if="suggestion.similarity_factors.activity_level" class="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">Activité</span>
+              </div>
+              
+              <div class="mt-2 text-xs text-gray-600">
+                CA: {{ formatCurrency(suggestion.stats.ca) }}
+              </div>
+            </div>
+          </div>
+          
+          <div v-else class="text-center py-4 text-sm text-gray-500">
+            Aucune suggestion trouvée pour ce PDV
+          </div>
+        </div>
+
         <!-- Selected Entities -->
         <div v-if="selectedEntities.length > 0" class="mb-4">
           <div class="flex flex-wrap gap-2">
@@ -273,6 +331,9 @@ const selectedEntities = ref([]);
 const periodInputs = ref(['', '', '', '']);
 const loading = ref(false);
 const comparisonResults = ref(null);
+const suggestions = ref([]);
+const loadingSuggestions = ref(false);
+const showSuggestions = ref(false);
 
 // Computed
 const selectedCount = computed(() => {
@@ -372,6 +433,9 @@ const resetSelection = () => {
   searchQuery.value = '';
   periodInputs.value = ['', '', '', ''];
   comparisonResults.value = null;
+  suggestions.value = [];
+  showSuggestions.value = false;
+  loadingSuggestions.value = false;
 };
 
 let searchTimeout = null;
@@ -419,6 +483,11 @@ const addEntity = (item) => {
   
   if (!isSelected(item.id)) {
     selectedEntities.value.push(item);
+    
+    // Déclencher suggestions pour PDV
+    if (comparisonType.value === 'pdv' && selectedEntities.value.length === 1) {
+      loadSuggestions(item.id);
+    }
   }
   
   // Vider le champ de recherche et réinitialiser les résultats
@@ -433,8 +502,54 @@ const addEntity = (item) => {
   });
 };
 
+const addSuggestion = (suggestion) => {
+  if (selectedEntities.value.length >= 4) {
+    toast.warning('Maximum 4 entités pour la comparaison');
+    return;
+  }
+  
+  const item = {
+    id: suggestion.pdv.id,
+    numero: suggestion.pdv.numero,
+    name: suggestion.pdv.name,
+    subtitle: `${suggestion.pdv.numero} - ${suggestion.pdv.dealer}`,
+  };
+  
+  if (!isSelected(item.id)) {
+    selectedEntities.value.push(item);
+    toast.success(`PDV similaire ajouté (${suggestion.similarity_score}% de similarité)`);
+  }
+};
+
+const loadSuggestions = async (pdvId) => {
+  if (comparisonType.value !== 'pdv') return;
+  
+  loadingSuggestions.value = true;
+  showSuggestions.value = true;
+  
+  try {
+    suggestions.value = await ComparatorService.getSimilarPdvs(pdvId, 6);
+    
+    if (suggestions.value.length === 0) {
+      toast.info('Aucun PDV similaire trouvé pour ce point de vente');
+    }
+  } catch (error) {
+    console.error('Erreur lors du chargement des suggestions:', error);
+    toast.error('Erreur lors du chargement des suggestions');
+    suggestions.value = [];
+  } finally {
+    loadingSuggestions.value = false;
+  }
+};
+
 const removeEntity = (id) => {
   selectedEntities.value = selectedEntities.value.filter(e => e.id !== id);
+  
+  // Cacher suggestions si plus de PDV sélectionnés
+  if (selectedEntities.value.length === 0) {
+    showSuggestions.value = false;
+    suggestions.value = [];
+  }
 };
 
 const performComparison = async () => {

@@ -27,17 +27,18 @@
     </div>
 
     <!-- Filters -->
-    <div v-if="!loading" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-4">
+    <div v-if="!loading" class="space-y-3 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
       <div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Région</label>
-        <select v-model="filters.region" @change="loadGeoData" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select v-model="filters.region" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
           <option value="">Toutes</option>
           <option v-for="region in availableRegions" :key="region" :value="region">{{ region }}</option>
         </select>
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Statut</label>
-        <select v-model="filters.status" @change="loadGeoData" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select v-model="filters.status" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
           <option value="">Tous</option>
           <option value="validated">Validé</option>
           <option value="pending">En attente</option>
@@ -45,11 +46,11 @@
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">CA Min (FCFA)</label>
-        <input v-model.number="filters.min_ca" @change="loadGeoData" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="0" />
+        <input v-model.number="filters.min_ca" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="0" />
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">CA Max (FCFA)</label>
-        <input v-model.number="filters.max_ca" @change="loadGeoData" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Illimité" />
+        <input v-model.number="filters.max_ca" type="number" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="Illimité" />
       </div>
       <div>
         <label class="block text-xs font-semibold text-gray-700 mb-1">Période (jours)</label>
@@ -59,6 +60,15 @@
           <option :value="90">90 jours</option>
         </select>
       </div>
+    </div>
+    <div class="flex justify-end">
+      <button
+        @click="loadGeoData"
+        class="px-6 py-2 bg-gradient-to-r from-green-500 to-green-600 text-white font-semibold rounded-lg hover:from-green-600 hover:to-green-700 transition-all shadow-md hover:shadow-lg"
+      >
+        🔍 Appliquer les filtres
+      </button>
+    </div>
     </div>
 
     <!-- Layer Controls -->
@@ -196,42 +206,67 @@ export default {
     }
   },
   beforeUnmount() {
+    // Clean up map layers before removing map
     if (this.map) {
-      this.map.remove();
+      try {
+        // Remove all layers first
+        if (this.mapLayers.heatmap) {
+          this.map.removeLayer(this.mapLayers.heatmap);
+          this.mapLayers.heatmap = null;
+        }
+        if (this.mapLayers.clusters) {
+          this.map.removeLayer(this.mapLayers.clusters);
+          this.mapLayers.clusters = null;
+        }
+        if (this.mapLayers.potential) {
+          this.map.removeLayer(this.mapLayers.potential);
+          this.mapLayers.potential = null;
+        }
+        
+        // Stop any ongoing animations
+        this.map.stop();
+        
+        // Remove the map
+        this.map.remove();
+        this.map = null;
+      } catch (e) {
+        console.warn('Error cleaning up map:', e);
+      }
     }
   },
   watch: {
-    isActive(newValue) {
+    isActive(newValue, oldValue) {
       if (newValue && !this.isInitialized) {
         // Use nextTick to ensure DOM is ready
         this.$nextTick(() => {
           this.initialize();
         });
+      } else if (!newValue && oldValue && this.map) {
+        // Clean up when switching away from this tab
+        try {
+          // Stop any ongoing animations
+          this.map.stop();
+          // Remove layers to prevent errors
+          if (this.mapLayers.heatmap) {
+            this.map.removeLayer(this.mapLayers.heatmap);
+            this.mapLayers.heatmap = null;
+          }
+          if (this.mapLayers.clusters) {
+            this.map.removeLayer(this.mapLayers.clusters);
+            this.mapLayers.clusters = null;
+          }
+          if (this.mapLayers.potential) {
+            this.map.removeLayer(this.mapLayers.potential);
+            this.mapLayers.potential = null;
+          }
+        } catch (e) {
+          console.warn('Error stopping map animations:', e);
+        }
       }
     },
     'filters.days'() {
       if (this.isInitialized) {
         this.updateDates();
-      }
-    },
-    'filters.region'() {
-      if (this.isInitialized) {
-        this.loadGeoData();
-      }
-    },
-    'filters.status'() {
-      if (this.isInitialized) {
-        this.loadGeoData();
-      }
-    },
-    'filters.min_ca'() {
-      if (this.isInitialized) {
-        this.loadGeoData();
-      }
-    },
-    'filters.max_ca'() {
-      if (this.isInitialized) {
-        this.loadGeoData();
       }
     },
   },
@@ -265,6 +300,10 @@ export default {
       try {
         this.map = L.map('pdv-map', {
           preferCanvas: true, // Use Canvas renderer for better performance
+          zoomAnimation: true,
+          fadeAnimation: true,
+          markerZoomAnimation: true,
+          zoomAnimationThreshold: 4,
         }).setView([9.30769, 2.315834], 7);
       } catch (e) {
         console.error('Error initializing map:', e);

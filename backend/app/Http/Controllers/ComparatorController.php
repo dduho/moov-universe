@@ -48,6 +48,31 @@ class ComparatorController extends Controller
     }
 
     /**
+     * Obtenir des suggestions de PDV similaires pour comparaison intelligente
+     */
+    public function getSimilarPdvs(Request $request)
+    {
+        $request->validate([
+            'pdv_id' => 'required|integer',
+            'limit' => 'nullable|integer|min:1|max:10',
+        ]);
+
+        $pdvId = $request->input('pdv_id');
+        $limit = $request->input('limit', 5);
+
+        $cacheKey = "similar_pdvs_{$pdvId}_{$limit}";
+
+        $suggestions = Cache::remember($cacheKey, 1800, function () use ($pdvId, $limit) {
+            return $this->findSimilarPdvs($pdvId, $limit);
+        });
+
+        return response()->json([
+            'success' => true,
+            'suggestions' => $suggestions,
+        ]);
+    }
+
+    /**
      * Effectuer la comparaison selon le type
      */
     private function performComparison($type, $entities, $startDate, $endDate)
@@ -379,5 +404,136 @@ class ComparatorController extends Controller
             'total' => $total,
             'last_page' => ceil($total / $perPage),
         ]);
+    }
+
+    /**
+     * Trouver des PDV similaires basé sur plusieurs critères
+     */
+    private function findSimilarPdvs($pdvId, $limit)
+    {
+        // Récupérer les infos du PDV de référence
+        $referencePdv = PointOfSale::with('organization')
+            ->where('id', $pdvId)
+            ->where('status', 'validated')
+            ->first();
+
+        if (!$referencePdv) {
+            return [];
+        }
+
+        // Récupérer les stats du PDV de référence (30 derniers jours)
+        $endDate = Carbon::now();
+        $startDate = $endDate->copy()->subDays(30);
+
+        $referenceStats = PdvTransaction::where('pdv_numero', $referencePdv->numero_flooz)
+            ->whereBetween('transaction_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+            ->selectRaw('
+                SUM(retrait_keycost) as total_ca,
+                SUM(count_depot + count_retrait) as total_transactions,
+                AVG(sum_depot + sum_retrait) as avg_volume,
+                COUNT(DISTINCT transaction_date) as active_days
+            ')
+            ->first();
+
+        // Si pas de données de référence, retourner vide
+        if (!$referenceStats || !$referenceStats->total_ca) {
+            return [];
+        }
+
+        // Chercher des PDV similaires
+        $candidatePdvs = PointOfSale::with(['organization'])
+            ->where('status', 'validated')
+            ->where('id', '!=', $pdvId)
+            ->when($referencePdv->region, function ($query) use ($referencePdv) {
+                $query->where('region', $referencePdv->region); // Même région priorité
+            })
+            ->limit(50) // Limiter pour performance
+            ->get();
+
+        $similarities = [];
+
+        foreach ($candidatePdvs as $candidatePdv) {
+            $candidateStats = PdvTransaction::where('pdv_numero', $candidatePdv->numero_flooz)
+                ->whereBetween('transaction_date', [$startDate->format('Y-m-d'), $endDate->format('Y-m-d')])
+                ->selectRaw('
+                    SUM(retrait_keycost) as total_ca,
+                    SUM(count_depot + count_retrait) as total_transactions,
+                    AVG(sum_depot + sum_retrait) as avg_volume,
+                    COUNT(DISTINCT transaction_date) as active_days
+                ')
+                ->first();
+
+            if (!$candidateStats || !$candidateStats->total_ca) {
+                continue;
+            }
+
+            // Calculer score de similarité (0-100)
+            $similarityScore = $this->calculateSimilarityScore($referenceStats, $candidateStats, $referencePdv, $candidatePdv);
+
+            if ($similarityScore > 50) { // Seuil minimum de similarité
+                $similarities[] = [
+                    'pdv' => [
+                        'id' => $candidatePdv->id,
+                        'numero' => $candidatePdv->numero_flooz,
+                        'name' => $candidatePdv->nom_point,
+                        'region' => $candidatePdv->region,
+                        'dealer' => $candidatePdv->organization->name ?? 'Non attribué',
+                    ],
+                    'similarity_score' => round($similarityScore, 1),
+                    'similarity_factors' => [
+                        'region' => $referencePdv->region === $candidatePdv->region,
+                        'ca_range' => abs(log($candidateStats->total_ca) - log($referenceStats->total_ca)) < 0.5,
+                        'activity_level' => abs($candidateStats->active_days - $referenceStats->active_days) <= 5,
+                    ],
+                    'stats' => [
+                        'ca' => round($candidateStats->total_ca, 2),
+                        'transactions' => $candidateStats->total_transactions,
+                        'active_days' => $candidateStats->active_days,
+                    ]
+                ];
+            }
+        }
+
+        // Trier par score de similarité et retourner top N
+        usort($similarities, function ($a, $b) {
+            return $b['similarity_score'] <=> $a['similarity_score'];
+        });
+
+        return array_slice($similarities, 0, $limit);
+    }
+
+    /**
+     * Calculer score de similarité entre deux PDV
+     */
+    private function calculateSimilarityScore($referenceStats, $candidateStats, $referencePdv, $candidatePdv)
+    {
+        $score = 0;
+
+        // 1. Similarité de CA (40 points)
+        $caRef = $referenceStats->total_ca;
+        $caCandidate = $candidateStats->total_ca;
+        $caSimilarity = 1 - min(abs($caRef - $caCandidate) / max($caRef, $caCandidate), 1);
+        $score += $caSimilarity * 40;
+
+        // 2. Similarité d'activité (20 points)
+        $activityRef = $referenceStats->active_days;
+        $activityCandidate = $candidateStats->active_days;
+        $activitySimilarity = 1 - min(abs($activityRef - $activityCandidate) / max($activityRef, $activityCandidate, 1), 1);
+        $score += $activitySimilarity * 20;
+
+        // 3. Similarité de volume moyen (20 points)
+        $volumeRef = $referenceStats->avg_volume ?? 0;
+        $volumeCandidate = $candidateStats->avg_volume ?? 0;
+        if ($volumeRef > 0 && $volumeCandidate > 0) {
+            $volumeSimilarity = 1 - min(abs($volumeRef - $volumeCandidate) / max($volumeRef, $volumeCandidate), 1);
+            $score += $volumeSimilarity * 20;
+        }
+
+        // 4. Bonus région (20 points)
+        if ($referencePdv->region === $candidatePdv->region) {
+            $score += 20;
+        }
+
+        return min($score, 100); // Cap à 100
     }
 }

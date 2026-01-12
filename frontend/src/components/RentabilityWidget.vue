@@ -60,6 +60,7 @@
             <option value="margin">Marge</option>
             <option value="revenue">Revenu</option>
             <option value="ca">CA</option>
+            <option value="cost">Commissions</option>
           </select>
         </div>
 
@@ -413,7 +414,7 @@ export default {
       startDate: '2025-12-11', // Date de début des vraies données
       endDate: '2026-01-06',   // Date de fin des vraies données
       groupBy: 'pdv',
-      sortBy: 'roi',
+      sortBy: 'ca',
       limit: 20
     });
 

@@ -69,6 +69,43 @@ class SystemSettingSeeder extends Seeder
             ]
         );
 
+        // Cache settings for map data
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_map_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour les données de carte',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_map_ttl'],
+            [
+                'value' => '30',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour les données de carte en minutes (défaut: 30 min)',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_geolocation_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour les données de géolocalisation',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_geolocation_ttl'],
+            [
+                'value' => '60',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour les données de géolocalisation en minutes (défaut: 60 min = 1h)',
+            ]
+        );
+
         // Rentability calculation parameters
         SystemSetting::firstOrCreate(
             ['key' => 'pdv_activation_cost'],

@@ -23,9 +23,13 @@ class GeolocationController extends Controller
         $minCa = $request->input('min_ca', 0);
         $maxCa = $request->input('max_ca');
 
+        // Check cache settings
+        $cacheEnabled = \App\Models\SystemSetting::getValue('cache_geolocation_enabled', true);
+        $cacheTtl = (int) \App\Models\SystemSetting::getValue('cache_geolocation_ttl', 60);
+
         $cacheKey = "geo_pdv_{$startDate}_{$endDate}_{$region}_{$status}_{$minCa}_{$maxCa}";
 
-        return Cache::remember($cacheKey, 1800, function () use ($startDate, $endDate, $region, $status, $minCa, $maxCa) {
+        return Cache::remember($cacheKey, $cacheEnabled ? $cacheTtl * 60 : 0, function () use ($startDate, $endDate, $region, $status, $minCa, $maxCa) {
             $query = PointOfSale::query()
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')

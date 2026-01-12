@@ -641,6 +641,11 @@
       <RentabilityWidget 
         class="mt-8"
       />
+
+      <!-- Predictive Trends Analytics -->
+      <TrendAnalytics 
+        class="mt-8"
+      />
     </div>
   </div>
 </template>
@@ -664,6 +669,7 @@ import ForecastWidget from '../components/ForecastWidget.vue';
 import RecommendationsWidget from '../components/RecommendationsWidget.vue';
 import FraudDetectionWidget from '../components/FraudDetectionWidget.vue';
 import RentabilityWidget from '../components/RentabilityWidget.vue';
+import TrendAnalytics from '../components/TrendAnalytics.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
 import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';

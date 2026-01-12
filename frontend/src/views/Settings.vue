@@ -625,6 +625,8 @@ const importResults = ref(null);
 
 // Advanced Cache Management
 const cacheWidgets = ref([
+  { key: 'map', label: 'Carte des PDV (Tab 1)', enabled: true, ttl: 30, _loading: false },
+  { key: 'geolocation', label: 'Heatmap Géolocalisation (Tab 2)', enabled: true, ttl: 60, _loading: false },
   { key: 'network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60, _loading: false },
   { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60, _loading: false },
   { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60, _loading: false },

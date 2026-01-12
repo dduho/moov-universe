@@ -536,6 +536,27 @@ class PointOfSaleController extends Controller
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
+
+        // Check cache settings
+        $cacheEnabled = \App\Models\SystemSetting::getValue('cache_map_enabled', true);
+        $cacheTtl = (int) \App\Models\SystemSetting::getValue('cache_map_ttl', 30);
+
+        // Create cache key based on user role and filters
+        $cacheKey = 'map_data_' . $user->id . '_' . md5(json_encode([
+            'role' => $user->role->name ?? 'unknown',
+            'org_id' => $user->organization_id,
+            'status' => $request->get('status'),
+            'region' => $request->get('region'),
+            'organization_id' => $request->get('organization_id'),
+        ]));
+
+        // Try to get from cache if enabled
+        if ($cacheEnabled) {
+            $cached = Cache::get($cacheKey);
+            if ($cached !== null) {
+                return response()->json($cached);
+            }
+        }
         
         // Sélectionner uniquement les champs nécessaires pour la carte
         $query = PointOfSale::select([
@@ -582,7 +603,14 @@ class PointOfSaleController extends Controller
               ->where('longitude', '!=', 0);
 
         // Retourner tous les résultats sans pagination
-        return response()->json($query->get());
+        $result = $query->get();
+
+        // Store in cache if enabled
+        if ($cacheEnabled) {
+            Cache::put($cacheKey, $result, $cacheTtl * 60); // Convert minutes to seconds
+        }
+
+        return response()->json($result);
     }
 
     public function store(Request $request)
