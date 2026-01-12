@@ -395,11 +395,13 @@
 <script>
 import { ref, onMounted } from 'vue';
 import rentabilityService from '@/services/rentabilityService';
+import { useCacheStore } from '@/composables/useCacheStore';
 
 export default {
   name: 'RentabilityWidget',
   
   setup() {
+    const { fetchWithCache } = useCacheStore();
     const loading = ref(false);
     const error = ref(null);
     const data = ref([]);
@@ -423,22 +425,28 @@ export default {
       error.value = null;
       
       try {
-        console.log('🔄 Chargement données rentabilité avec filtres:', filters.value);
-        const response = await rentabilityService.analyze(filters.value);
-        console.log('📊 Réponse rentabilité:', response);
-        
-        if (response.success) {
-          data.value = response.data.data || [];
-          summary.value = response.data.summary || null;
-          topPerformers.value = response.data.top_performers || [];
-          bottomPerformers.value = response.data.bottom_performers || [];
-          parameters.value = response.data.parameters || null;
-          cacheInfo.value = response.data.cache_info || null;
-          console.log('✅ Données chargées:', data.value.length, 'éléments');
-        } else {
-          error.value = response.error || 'Erreur lors du chargement des données';
-          console.error('❌ Erreur analyse:', response.error);
-        }
+        await fetchWithCache(
+          'rentability/analyze',
+          async () => {
+            const response = await rentabilityService.analyze(filters.value);
+            return response;
+          },
+          filters.value,
+          {
+            onDataUpdate: (response, fromCache) => {
+              if (response && response.success) {
+                data.value = response.data.data || [];
+                summary.value = response.data.summary || null;
+                topPerformers.value = response.data.top_performers || [];
+                bottomPerformers.value = response.data.bottom_performers || [];
+                parameters.value = response.data.parameters || null;
+                cacheInfo.value = response.data.cache_info || null;
+              } else {
+                error.value = response?.error || 'Erreur lors du chargement des données';
+              }
+            }
+          }
+        );
       } catch (err) {
         console.error('❌ Erreur analyse rentabilité:', err);
         error.value = 'Impossible de charger les données de rentabilité';

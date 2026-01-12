@@ -325,10 +325,12 @@ import { useOrganizationStore } from '../stores/organization';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
 import rentabilityService from '../services/rentabilityService';
+import { useCacheStore } from '../composables/useCacheStore';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
+const { fetchWithCache } = useCacheStore();
 
 // Tab state
 const activeTab = ref('basic');
@@ -713,28 +715,41 @@ const loadPerformanceData = async () => {
   if (displayMode.value !== 'performance') return;
   
   try {
-    const response = await rentabilityService.analyze({
+    const params = {
       start_date: '2025-12-01', // 30 derniers jours
       end_date: '2026-01-06',
       group_by: 'pdv',
       limit: 1000
-    });
-    
-    if (response.success && response.data) {
-      // Créer une Map pour un accès rapide par PDV ID
-      const perfMap = new Map();
-      response.data.forEach(item => {
-        if (item.pdv_id) {
-          perfMap.set(item.pdv_id, {
-            roi: item.roi || 0,
-            ca: item.total_ca || 0,
-            revenue: item.revenue || 0
-          });
-        }
-      });
-      performanceData.value = perfMap;
-      console.log(`Données de performance chargées pour ${perfMap.size} PDVs`);
-    }
+    };
+
+    await fetchWithCache(
+      'rentability/analyze-map',
+      async () => {
+        const response = await rentabilityService.analyze(params);
+        return response;
+      },
+      params,
+      {
+        onDataUpdate: (response, fromCache) => {
+          if (response && response.success && response.data) {
+            // Créer une Map pour un accès rapide par PDV ID
+            const perfMap = new Map();
+            response.data.forEach(item => {
+              if (item.pdv_id) {
+                perfMap.set(item.pdv_id, {
+                  roi: item.roi || 0,
+                  ca: item.total_ca || 0,
+                  revenue: item.revenue || 0
+                });
+              }
+            });
+            performanceData.value = perfMap;
+            console.log(`Données de performance chargées pour ${perfMap.size} PDVs`);
+          }
+        },
+        showSyncToast: false // Ne pas afficher de toast pour ce cas spécifique
+      }
+    );
   } catch (error) {
     console.error('Erreur lors du chargement des données de performance:', error);
   }

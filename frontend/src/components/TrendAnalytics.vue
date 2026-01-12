@@ -404,10 +404,12 @@ import { ref, onMounted, watch, nextTick } from 'vue';
 import Chart from 'chart.js/auto';
 import PredictionService from '../services/predictionService';
 import api from '../services/api';
+import { useCacheStore } from '../composables/useCacheStore';
 
 export default {
   name: 'TrendAnalytics',
   setup() {
+    const { fetchWithCache } = useCacheStore();
     // Reactive data
     const loading = ref(false);
     const loadingPredictions = ref(false);
@@ -464,19 +466,35 @@ export default {
     const fetchPredictions = async () => {
       loadingPredictions.value = true;
       try {
-        const response = await PredictionService.getPredictions({
+        const params = {
           forecast_days: forecastDays.value,
           model_type: selectedModel.value,
           confidence_level: confidenceLevel.value / 100,
           region: selectedRegion.value || undefined
-        });
-        
-        if (response.success) {
-          predictions.value = response.data.forecasts || [];
-          insights.value = response.data.insights || [];
-          modelAccuracy.value = Math.round((response.data.accuracy || 0) * 100);
-          updatePredictiveMetrics();
-        }
+        };
+
+        await fetchWithCache(
+          'predictive-analytics/predictions',
+          async () => {
+            const response = await PredictionService.getPredictions(params);
+            return response;
+          },
+          params,
+          {
+            onDataUpdate: async (data, fromCache) => {
+              if (data && data.success) {
+                predictions.value = data.data.forecasts || [];
+                insights.value = data.data.insights || [];
+                modelAccuracy.value = Math.round((data.data.accuracy || 0) * 100);
+                updatePredictiveMetrics();
+                // Attendre que le DOM soit mis à jour avant de créer le graphique
+                await nextTick();
+                await nextTick();
+                updatePredictionChart();
+              }
+            }
+          }
+        );
       } catch (error) {
         console.error('Erreur lors de la récupération des prédictions:', error);
       } finally {
@@ -487,29 +505,41 @@ export default {
     const fetchAlerts = async (page = 1) => {
       loadingAlerts.value = true;
       try {
-        const response = await PredictionService.getPredictiveAlerts({
+        const params = {
           threshold_roi: alertThresholds.value.roi,
           threshold_decline: alertThresholds.value.decline,
           forecast_days: 14,
           page: page,
           per_page: 15
-        });
+        };
 
-        if (response.success) {
-          activeAlerts.value = response.alerts || [];
-          
-          // Mise à jour des infos de pagination
-          if (response.data) {
-            alertsPagination.value = {
-              current_page: response.data.current_page || 1,
-              per_page: response.data.per_page || 15,
-              total_pages: response.data.total_pages || 1,
-              total_count: response.data.alert_count || 0,
-              has_next: response.data.has_next || false,
-              has_prev: response.data.has_prev || false
-            };
+        await fetchWithCache(
+          'predictive-analytics/alerts',
+          async () => {
+            const response = await PredictionService.getPredictiveAlerts(params);
+            return response;
+          },
+          params,
+          {
+            onDataUpdate: (data, fromCache) => {
+              if (data && data.success) {
+                activeAlerts.value = data.alerts || [];
+                
+                // Mise à jour des infos de pagination
+                if (data.data) {
+                  alertsPagination.value = {
+                    current_page: data.data.current_page || 1,
+                    per_page: data.data.per_page || 15,
+                    total_pages: data.data.total_pages || 1,
+                    total_count: data.data.alert_count || 0,
+                    has_next: data.data.has_next || false,
+                    has_prev: data.data.has_prev || false
+                  };
+                }
+              }
+            }
           }
-        }
+        );
       } catch (error) {
         console.error('Erreur lors de la récupération des alertes:', error);
       } finally {
@@ -538,13 +568,25 @@ export default {
     const fetchRecommendations = async () => {
       loadingRecommendations.value = true;
       try {
-        const response = await PredictionService.getOptimizationRecommendations({
+        const params = {
           optimization_type: 'roi'
-        });
-        
-        if (response.success) {
-          recommendations.value = response.recommendations || [];
-        }
+        };
+
+        await fetchWithCache(
+          'predictive-analytics/recommendations',
+          async () => {
+            const response = await PredictionService.getOptimizationRecommendations(params);
+            return response;
+          },
+          params,
+          {
+            onDataUpdate: (data, fromCache) => {
+              if (data && data.success) {
+                recommendations.value = data.recommendations || [];
+              }
+            }
+          }
+        );
       } catch (error) {
         console.error('Erreur lors de la récupération des recommandations:', error);
       } finally {

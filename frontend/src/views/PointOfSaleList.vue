@@ -470,11 +470,13 @@ import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import { formatPhone, formatShortcode } from '../utils/formatters';
 import { useToast } from '../composables/useToast';
+import { useCacheStore } from '../composables/useCacheStore';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 const { toast } = useToast();
+const { fetchWithCache } = useCacheStore();
 
 const loading = ref(true);
 const loadingMore = ref(false);
@@ -723,19 +725,32 @@ const fetchPointsOfSale = async (append = false) => {
     if (filters.value.geoInconsistency) params.geo_inconsistency = true;
     if (filters.value.proximityAlert) params.proximity_alert = true;
     
-    const response = await PointOfSaleService.getAll(params);
-    
-    if (append) {
-      // Ajouter à la liste existante (infinite scroll)
-      pointsOfSale.value = [...pointsOfSale.value, ...(response.data || [])];
-    } else {
-      // Remplacer la liste (nouveau chargement)
-      pointsOfSale.value = response.data || [];
-    }
-    
-    lastPage.value = response.last_page || 1;
-    total.value = response.total || 0;
-    currentPage.value = response.current_page || 1;
+    // Utiliser le cache hybride
+    await fetchWithCache(
+      'point-of-sales/list',
+      async () => {
+        const response = await PointOfSaleService.getAll(params);
+        return response;
+      },
+      params,
+      {
+        ttl: 10, // 10 minutes pour la liste des PDV
+        showSyncToast: false,
+        onDataUpdate: (response, fromCache) => {
+          if (append) {
+            // Ajouter à la liste existante (infinite scroll)
+            pointsOfSale.value = [...pointsOfSale.value, ...(response.data || [])];
+          } else {
+            // Remplacer la liste (nouveau chargement)
+            pointsOfSale.value = response.data || [];
+          }
+          
+          lastPage.value = response.last_page || 1;
+          total.value = response.total || 0;
+          currentPage.value = response.current_page || 1;
+        }
+      }
+    );
     
   } catch (error) {
     console.error('Error loading points of sale:', error);

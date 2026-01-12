@@ -674,6 +674,7 @@ import TransactionAnalyticsService from '../services/transactionAnalyticsService
 import TransactionService from '../services/transactionService';
 import { useToast } from '../composables/useToast';
 import { useAnalyticsCacheStore } from '../stores/analyticsCache';
+import { useCacheStore } from '../composables/useCacheStore';
 
 // Register ChartJS components
 ChartJS.register(
@@ -689,6 +690,7 @@ ChartJS.register(
 
 const { toast } = useToast();
 const analyticsCacheStore = useAnalyticsCacheStore();
+const { fetchWithCache } = useCacheStore();
 const cacheNamespace = 'transaction';
 
 // State
@@ -806,20 +808,35 @@ const safeClone = (value) => {
 
 // Obtenir les données depuis le cache ou charger depuis l'API
 const getAnalyticsData = async (params, { forceRefresh = false } = {}) => {
-  const cacheKey = getCacheKey(params);
-  const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
-
-  if (cached && !forceRefresh) {
-    return cached;
-  }
-
   try {
-    const response = await TransactionAnalyticsService.getAnalytics(params);
-    analyticsCacheStore.set(cacheNamespace, cacheKey, response.data);
-    return safeClone(response.data);
+    let analyticsData = null;
+    
+    await fetchWithCache(
+      'analytics/transactions',
+      async () => {
+        const response = await TransactionAnalyticsService.getAnalytics(params);
+        return response.data;
+      },
+      params,
+      {
+        ttl: 15, // 15 minutes pour les analytics
+        forceRefresh,
+        showSyncToast: false, // Pas de toast pour ne pas polluer
+        onDataUpdate: (data, fromCache) => {
+          analyticsData = safeClone(data);
+          // Garder aussi dans le store Pinia pour compatibilité
+          const cacheKey = getCacheKey(params);
+          analyticsCacheStore.set(cacheNamespace, cacheKey, data);
+        }
+      }
+    );
+    
+    return analyticsData;
   } catch (error) {
+    // En cas d'erreur, essayer le cache Pinia
+    const cacheKey = getCacheKey(params);
+    const cached = analyticsCacheStore.get(cacheNamespace, cacheKey);
     if (cached) {
-      // En cas d'erreur réseau, revenir au cache existant
       return cached;
     }
     throw error;
@@ -901,20 +918,31 @@ const loadAnalytics = async (forceRefresh = false) => {
 
 // Load monthly revenue
 const loadMonthlyRevenue = async () => {
-  const cachedMonthly = analyticsCacheStore.getMonthly(cacheNamespace, selectedYear.value);
-
-  if (cachedMonthly) {
-    monthlyRevenue.value = cachedMonthly;
-    return;
-  }
-
   try {
-    const response = await TransactionService.getMonthlyRevenue(selectedYear.value);
-    monthlyRevenue.value = response.data;
-    analyticsCacheStore.setMonthly(cacheNamespace, selectedYear.value, response.data);
+    await fetchWithCache(
+      'analytics/monthly-revenue',
+      async () => {
+        const response = await TransactionService.getMonthlyRevenue(selectedYear.value);
+        return response.data;
+      },
+      { year: selectedYear.value },
+      {
+        ttl: 60, // 1 heure pour les revenus mensuels
+        showSyncToast: false,
+        onDataUpdate: (data, fromCache) => {
+          monthlyRevenue.value = data;
+          // Garder aussi dans le store Pinia
+          analyticsCacheStore.setMonthly(cacheNamespace, selectedYear.value, data);
+        }
+      }
+    );
   } catch (error) {
     console.error('Error loading monthly revenue:', error);
-    // N'affiche pas de toast d'erreur pour ne pas polluer l'interface
+    // Essayer le cache Pinia en fallback
+    const cachedMonthly = analyticsCacheStore.getMonthly(cacheNamespace, selectedYear.value);
+    if (cachedMonthly) {
+      monthlyRevenue.value = cachedMonthly;
+    }
   }
 };
 
@@ -922,14 +950,28 @@ const loadMonthlyRevenue = async () => {
 const loadInsights = async () => {
   try {
     loadingInsights.value = true;
-    const response = await TransactionAnalyticsService.getInsights({
-      period: selectedPeriod.value
-    });
-    insights.value = response.data.insights.map(insight => ({
-      ...insight,
-      showDetails: false
-    }));
-    insightsGeneratedAt.value = new Date(response.data.generated_at).toLocaleString('fr-FR');
+    
+    await fetchWithCache(
+      'analytics/insights',
+      async () => {
+        const response = await TransactionAnalyticsService.getInsights({
+          period: selectedPeriod.value
+        });
+        return response.data;
+      },
+      { period: selectedPeriod.value },
+      {
+        ttl: 20, // 20 minutes pour les insights AI
+        showSyncToast: false,
+        onDataUpdate: (data, fromCache) => {
+          insights.value = data.insights.map(insight => ({
+            ...insight,
+            showDetails: false
+          }));
+          insightsGeneratedAt.value = new Date(data.generated_at).toLocaleString('fr-FR');
+        }
+      }
+    );
   } catch (error) {
     console.error('Error loading insights:', error);
     // Don't show error toast, insights are optional

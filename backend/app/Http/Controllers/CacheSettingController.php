@@ -10,22 +10,23 @@ class CacheSettingController extends Controller
 {
     // Liste des widgets gérés
     private $widgets = [
-        'map',
-        'geolocation',
-        'network_optimization',
-        'risk_compliance',
-        'advanced_geospatial',
-        'offline_dashboard',
-        'dealer_analytics',
-        'fraud_detection',
+        'cache_map',
+        'cache_geolocation',
+        'cache_rentability',
+        'cache_predictions',
+        'cache_analytics',
+        'cache_pdv',
+        'cache_fraud_detection',
+        'cache_network_optimization',
+        'cache_risk_compliance',
     ];
 
     public function getCacheSettings()
     {
         $settings = [];
         foreach ($this->widgets as $widget) {
-            $enabled = SystemSetting::getValue("cache_{$widget}_enabled", true);
-            $ttl = SystemSetting::getValue("cache_{$widget}_ttl", 60);
+            $enabled = SystemSetting::getValue("{$widget}_enabled", true);
+            $ttl = SystemSetting::getValue("{$widget}_ttl", 60);
             $settings[$widget] = [
                 'enabled' => (bool)$enabled,
                 'ttl' => (int)$ttl
@@ -43,8 +44,8 @@ class CacheSettingController extends Controller
             'enabled' => 'required|boolean',
             'ttl' => 'required|integer|min:1|max:1440',
         ]);
-        SystemSetting::setValue("cache_{$widget}_enabled", $request->enabled);
-        SystemSetting::setValue("cache_{$widget}_ttl", $request->ttl);
+        SystemSetting::setValue("{$widget}_enabled", $request->enabled);
+        SystemSetting::setValue("{$widget}_ttl", $request->ttl);
         return response()->json(['success' => true]);
     }
 

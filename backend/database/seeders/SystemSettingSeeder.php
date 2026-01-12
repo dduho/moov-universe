@@ -106,6 +106,63 @@ class SystemSettingSeeder extends Seeder
             ]
         );
 
+        // Cache settings for predictive analytics
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_predictions_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour l\'analyse prédictive',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_predictions_ttl'],
+            [
+                'value' => '30',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour l\'analyse prédictive en minutes (défaut: 30 min)',
+            ]
+        );
+
+        // Cache settings for analytics
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_analytics_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour les analytics de transactions',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_analytics_ttl'],
+            [
+                'value' => '15',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour les analytics en minutes (défaut: 15 min)',
+            ]
+        );
+
+        // Cache settings for point of sales list
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_pdv_enabled'],
+            [
+                'value' => 'true',
+                'type' => 'boolean',
+                'description' => 'Activer le cache pour la liste des PDV',
+            ]
+        );
+
+        SystemSetting::firstOrCreate(
+            ['key' => 'cache_pdv_ttl'],
+            [
+                'value' => '10',
+                'type' => 'integer',
+                'description' => 'Durée du cache pour la liste des PDV en minutes (défaut: 10 min)',
+            ]
+        );
+
         // Rentability calculation parameters
         SystemSetting::firstOrCreate(
             ['key' => 'pdv_activation_cost'],

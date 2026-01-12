@@ -593,10 +593,12 @@ import { useToast } from '../composables/useToast';
 import SettingService from '../services/SettingService';
 import { useAnalyticsCacheStore } from '../stores/analyticsCache';
 import { offlineDB } from '../utils/offlineDB';
+import { useCacheStore } from '../composables/useCacheStore';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const { toast } = useToast();
+const { clearAllCache, clearCacheForEndpoint, getCacheStats } = useCacheStore();
 const loading = ref(true);
 const saving = ref(false);
 const showSuccess = ref(false);
@@ -625,13 +627,15 @@ const importResults = ref(null);
 
 // Advanced Cache Management
 const cacheWidgets = ref([
-  { key: 'map', label: 'Carte des PDV (Tab 1)', enabled: true, ttl: 30, _loading: false },
-  { key: 'geolocation', label: 'Heatmap Géolocalisation (Tab 2)', enabled: true, ttl: 60, _loading: false },
-  { key: 'network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60, _loading: false },
-  { key: 'risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60, _loading: false },
-  { key: 'advanced_geospatial', label: 'Analyse Géospatiale', enabled: true, ttl: 60, _loading: false },
-  { key: 'offline_dashboard', label: 'Tableau de bord hors ligne', enabled: true, ttl: 60, _loading: false },
-  { key: 'dealer_analytics', label: 'Analytics Dealer', enabled: true, ttl: 60, _loading: false },
+  { key: 'cache_map', label: 'Carte des PDV', enabled: true, ttl: 30, _loading: false },
+  { key: 'cache_geolocation', label: 'Heatmap Géolocalisation', enabled: true, ttl: 60, _loading: false },
+  { key: 'cache_rentability', label: 'Analyse de Rentabilité', enabled: true, ttl: 240, _loading: false },
+  { key: 'cache_predictions', label: 'Prédictions & Alertes', enabled: true, ttl: 30, _loading: false },
+  { key: 'cache_analytics', label: 'Analytics Transactions', enabled: true, ttl: 15, _loading: false },
+  { key: 'cache_pdv', label: 'Liste des PDV', enabled: true, ttl: 10, _loading: false },
+  { key: 'cache_fraud_detection', label: 'Détection de Fraudes', enabled: true, ttl: 180, _loading: false },
+  { key: 'cache_network_optimization', label: 'Optimisation Réseau', enabled: true, ttl: 60, _loading: false },
+  { key: 'cache_risk_compliance', label: 'Risques & Conformité', enabled: true, ttl: 60, _loading: false },
 ]);
 const clearingAllCaches = ref(false);
 const cacheSettingsError = ref(null);
@@ -923,14 +927,40 @@ async function updateCacheSetting(widget) {
 async function clearWidgetCache(widget) {
   try {
     widget._loading = true;
+    
+    // Vider le cache backend
     await SettingService.clearCache(widget.key);
-    toast.success('Cache vidé');
+    
+    // Vider le cache localStorage pour ce widget
+    const endpoint = getEndpointFromWidgetKey(widget.key);
+    if (endpoint) {
+      const cleared = clearCacheForEndpoint(endpoint);
+      console.log(`Cache localStorage vidé pour ${endpoint}: ${cleared} entrées`);
+    }
+    
+    toast.success('Cache vidé (backend + localStorage)');
   } catch (error) {
     console.error('Error clearing widget cache:', error);
     toast.error('Erreur lors du vidage du cache');
   } finally {
     widget._loading = false;
   }
+}
+
+// Helper pour mapper les clés de widget aux endpoints
+function getEndpointFromWidgetKey(key) {
+  const mapping = {
+    'cache_rentability': 'rentability/analyze',
+    'cache_predictions': 'predictive-analytics/predictions',
+    'cache_analytics': 'analytics/transactions',
+    'cache_pdv': 'point-of-sales/list',
+    'cache_map': 'rentability/analyze-map',
+    'cache_fraud_detection': 'fraud-detection',
+    'cache_geolocation': 'geolocation',
+    'cache_network_optimization': 'network-optimization',
+    'cache_risk_compliance': 'risk-compliance'
+  };
+  return mapping[key] || null;
 }
 
 async function clearAllCaches() {
@@ -956,7 +986,11 @@ async function clearFrontendCaches() {
     // 2. Vider IndexedDB
     await offlineDB.clearAll();
     
-    // 3. Vider tous les caches du Service Worker (PWA)
+    // 3. Vider le localStorage (cache hybride)
+    const clearedLocalStorage = clearAllCache();
+    console.log(`localStorage vidé: ${clearedLocalStorage} entrées`);
+    
+    // 4. Vider tous les caches du Service Worker (PWA)
     if ('caches' in window) {
       const cacheNames = await caches.keys();
       await Promise.all(
@@ -965,7 +999,7 @@ async function clearFrontendCaches() {
       console.log('Service Worker caches vidés:', cacheNames);
     }
     
-    // 4. Désinscrire et réinscrire le Service Worker pour forcer la mise à jour
+    // 5. Désinscrire et réinscrire le Service Worker pour forcer la mise à jour
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
