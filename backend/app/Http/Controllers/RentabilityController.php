@@ -23,7 +23,7 @@ class RentabilityController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
             'group_by' => 'nullable|in:pdv,dealer,region',
-            'sort_by' => 'nullable|in:roi,ca,margin,cost',
+            'sort_by' => 'nullable|in:roi,ca,margin,cost,revenue,margin_rate',
             'sort_order' => 'nullable|in:asc,desc',
             'limit' => 'nullable|integer|min:1|max:100'
         ]);
@@ -195,8 +195,9 @@ class RentabilityController extends Controller
         // Sort results with proper field mapping
         $sortFieldMapping = [
             'ca' => 'total_ca',
-            'revenue' => 'revenue', 
-            'margin' => 'margin_rate',
+            'revenue' => 'revenue',
+            'margin' => 'margin',
+            'margin_rate' => 'margin_rate',
             'roi' => 'roi',
             'cost' => 'total_cost'
         ];
