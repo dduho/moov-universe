@@ -36,9 +36,21 @@ class TransactionAnalyticsController extends Controller
         
         // Cache de 1 heure (3600s) - les données changent peu fréquemment
         // Le cache sera invalidé automatiquement lors de l'import de nouvelles transactions
-        $data = Cache::tags(['cache_analytics', 'analytics', 'transactions'])->remember($cacheKey, 3600, function () use ($period, $startDate, $endDate, $prevStartDate, $prevEndDate, $evoStartDate, $evoEndDate) {
-            $currentKPI = $this->calculateKPI($startDate, $endDate);
-            $previousKPI = $this->calculateKPI($prevStartDate, $prevEndDate);
+        $data = Cache::tags(['cache_analytics', 'analytics', 'transactions'])->remember($cacheKey, 3600, function () use ($period, $startDate, $endDate, $prevStartDate, $prevEndDate, $evoStartDate, $evoEndDate, $now) {
+            // Précharger le mois courant pour réutiliser sur week/day
+            $monthBundle = null;
+            if (in_array($period, ['month', 'week', 'day'])) {
+                $monthBundle = $this->getMonthBundle($startDate->year, $startDate->month);
+            }
+
+            $currentKPI = $this->calculateKPIWithBundle($monthBundle, $startDate, $endDate);
+
+            // Charger le bundle de la période précédente si on reste dans le même mois
+            $prevBundle = null;
+            if (in_array($period, ['month', 'week', 'day']) && $prevStartDate->isSameMonth($prevEndDate)) {
+                $prevBundle = $this->getMonthBundle($prevStartDate->year, $prevStartDate->month);
+            }
+            $previousKPI = $this->calculateKPIWithBundle($prevBundle, $prevStartDate, $prevEndDate);
             
             // Récupérer la dernière date de transaction importée
             $lastTransactionDate = PdvTransaction::max('transaction_date');
@@ -167,6 +179,187 @@ class TransactionAnalyticsController extends Controller
                 'total' => round(($kpi->total_commission_pdv ?? 0) + ($kpi->total_commission_dealers ?? 0), 2),
             ],
         ];
+    }
+
+    /**
+     * Calculer les KPI en réutilisant un bundle mensuel si disponible (évite une requête complète)
+     */
+    private function calculateKPIWithBundle($monthBundle, Carbon $startDate, Carbon $endDate)
+    {
+        if ($monthBundle && $startDate->isSameMonth($endDate)) {
+            return $this->aggregateRangeFromBundle($monthBundle, $startDate, $endDate);
+        }
+
+        return $this->calculateKPI($startDate, $endDate);
+    }
+
+    /**
+     * Récupérer ou construire le bundle du mois (agrégats quotidiens + total mois)
+     */
+    private function getMonthBundle(int $year, int $month)
+    {
+        $cacheKey = "month_bundle_{$year}_{$month}";
+
+        return Cache::tags(['cache_analytics', 'analytics', 'transactions'])->remember($cacheKey, 3600, function () use ($year, $month) {
+            $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
+            $monthEnd = $monthStart->copy()->endOfMonth()->endOfDay();
+
+            $rows = DB::table('pdv_transactions')
+                ->whereBetween('transaction_date', [$monthStart, $monthEnd])
+                ->selectRaw('
+                    DATE(transaction_date) as d,
+                    SUM(retrait_keycost) as total_ca,
+                    SUM(count_depot + count_retrait) as total_transactions,
+                    SUM(sum_depot + sum_retrait) as total_volume,
+                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs,
+                    SUM(count_depot) as total_depot_count,
+                    SUM(sum_depot) as total_depot_amount,
+                    SUM(count_retrait) as total_retrait_count,
+                    SUM(sum_retrait) as total_retrait_amount,
+                    SUM(count_give_send) as total_transfers_sent,
+                    SUM(sum_give_send) as total_transfers_sent_amount,
+                    SUM(count_give_receive) as total_transfers_received,
+                    SUM(sum_give_receive) as total_transfers_received_amount,
+                    SUM(pdv_depot_commission + pdv_retrait_commission) as total_commission_pdv,
+                    SUM(dealer_depot_commission + dealer_retrait_commission) as total_commission_dealers
+                ')
+                ->groupBy('d')
+                ->get();
+
+            $daily = [];
+
+            foreach ($rows as $row) {
+                $day = $row->d;
+                $daily[$day] = $this->buildKpiArray($row);
+            }
+
+            return [
+                'year' => $year,
+                'month' => $month,
+                'daily' => $daily,
+                'month_total' => null, // calculé à la volée pour assurer l'unicité des PDV actifs
+            ];
+        });
+    }
+
+    private function aggregateRangeFromBundle(array $bundle, Carbon $startDate, Carbon $endDate)
+    {
+        $daily = $bundle['daily'] ?? [];
+        $agg = $this->emptyKpiArray();
+
+        $cursor = $startDate->copy();
+        while ($cursor <= $endDate) {
+            $key = $cursor->format('Y-m-d');
+            if (isset($daily[$key])) {
+                $agg = $this->sumKpi($agg, $daily[$key]);
+            }
+            $cursor->addDay();
+        }
+
+        // Recalculer les PDV actifs en s'assurant de l'unicité sur la période
+        $agg['pdv_actifs'] = DB::table('pdv_transactions')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->where(function($q) {
+                $q->where('count_depot', '>', 0)
+                  ->orWhere('count_retrait', '>', 0);
+            })
+            ->distinct('pdv_numero')
+            ->count('pdv_numero');
+
+        return $agg;
+    }
+
+    private function emptyKpiArray(): array
+    {
+        return [
+            'chiffre_affaire' => 0,
+            'total_transactions' => 0,
+            'volume_total' => 0,
+            'pdv_actifs' => 0,
+            'transactions_detail' => [
+                'depots' => ['count' => 0, 'amount' => 0, 'average' => 0],
+                'retraits' => ['count' => 0, 'amount' => 0, 'average' => 0],
+                'transfers_envoyes' => ['count' => 0, 'amount' => 0],
+                'transfers_recus' => ['count' => 0, 'amount' => 0],
+            ],
+            'commissions' => [
+                'pdv' => 0,
+                'dealers' => 0,
+                'total' => 0,
+            ],
+        ];
+    }
+
+    private function buildKpiArray($row): array
+    {
+        return [
+            'chiffre_affaire' => round($row->total_ca ?? 0, 2),
+            'total_transactions' => $row->total_transactions ?? 0,
+            'volume_total' => round($row->total_volume ?? 0, 2),
+            'pdv_actifs' => $row->pdv_actifs ?? 0,
+            'transactions_detail' => [
+                'depots' => [
+                    'count' => $row->total_depot_count ?? 0,
+                    'amount' => round($row->total_depot_amount ?? 0, 2),
+                    'average' => ($row->total_depot_count ?? 0) > 0
+                        ? round(($row->total_depot_amount ?? 0) / $row->total_depot_count, 2)
+                        : 0,
+                ],
+                'retraits' => [
+                    'count' => $row->total_retrait_count ?? 0,
+                    'amount' => round($row->total_retrait_amount ?? 0, 2),
+                    'average' => ($row->total_retrait_count ?? 0) > 0
+                        ? round(($row->total_retrait_amount ?? 0) / $row->total_retrait_count, 2)
+                        : 0,
+                ],
+                'transfers_envoyes' => [
+                    'count' => $row->total_transfers_sent ?? 0,
+                    'amount' => round($row->total_transfers_sent_amount ?? 0, 2),
+                ],
+                'transfers_recus' => [
+                    'count' => $row->total_transfers_received ?? 0,
+                    'amount' => round($row->total_transfers_received_amount ?? 0, 2),
+                ],
+            ],
+            'commissions' => [
+                'pdv' => round($row->total_commission_pdv ?? 0, 2),
+                'dealers' => round($row->total_commission_dealers ?? 0, 2),
+                'total' => round(($row->total_commission_pdv ?? 0) + ($row->total_commission_dealers ?? 0), 2),
+            ],
+        ];
+    }
+
+    private function sumKpi(array $base, array $addition): array
+    {
+        $base['chiffre_affaire'] += $addition['chiffre_affaire'];
+        $base['total_transactions'] += $addition['total_transactions'];
+        $base['volume_total'] += $addition['volume_total'];
+        $base['pdv_actifs'] += $addition['pdv_actifs'];
+
+        $base['transactions_detail']['depots']['count'] += $addition['transactions_detail']['depots']['count'];
+        $base['transactions_detail']['depots']['amount'] += $addition['transactions_detail']['depots']['amount'];
+        $base['transactions_detail']['retraits']['count'] += $addition['transactions_detail']['retraits']['count'];
+        $base['transactions_detail']['retraits']['amount'] += $addition['transactions_detail']['retraits']['amount'];
+        $base['transactions_detail']['transfers_envoyes']['count'] += $addition['transactions_detail']['transfers_envoyes']['count'];
+        $base['transactions_detail']['transfers_envoyes']['amount'] += $addition['transactions_detail']['transfers_envoyes']['amount'];
+        $base['transactions_detail']['transfers_recus']['count'] += $addition['transactions_detail']['transfers_recus']['count'];
+        $base['transactions_detail']['transfers_recus']['amount'] += $addition['transactions_detail']['transfers_recus']['amount'];
+
+        $base['commissions']['pdv'] += $addition['commissions']['pdv'];
+        $base['commissions']['dealers'] += $addition['commissions']['dealers'];
+        $base['commissions']['total'] += $addition['commissions']['total'];
+
+        // Recalculer les averages après somme
+        $depotsCount = $base['transactions_detail']['depots']['count'];
+        $retraitsCount = $base['transactions_detail']['retraits']['count'];
+        $base['transactions_detail']['depots']['average'] = $depotsCount > 0
+            ? round($base['transactions_detail']['depots']['amount'] / $depotsCount, 2)
+            : 0;
+        $base['transactions_detail']['retraits']['average'] = $retraitsCount > 0
+            ? round($base['transactions_detail']['retraits']['amount'] / $retraitsCount, 2)
+            : 0;
+
+        return $base;
     }
 
     /**
