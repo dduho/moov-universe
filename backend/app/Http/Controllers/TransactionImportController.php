@@ -394,7 +394,7 @@ class TransactionImportController extends Controller
             
             // Invalider les clés de cache analytics avec tags
             try {
-                Cache::tags(['analytics', 'transactions'])->flush();
+                Cache::tags(['cache_analytics', 'analytics', 'transactions'])->flush();
             } catch (\Exception $e) {
                 // Si les tags ne sont pas supportés ou FLUSHDB désactivé, on ignore
                 Log::warning('Cache flush failed (Redis command may be disabled): ' . $e->getMessage());

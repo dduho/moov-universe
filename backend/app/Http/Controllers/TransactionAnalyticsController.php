@@ -24,15 +24,19 @@ class TransactionAnalyticsController extends Controller
         $now = Carbon::now();
         
         // Définir la fenêtre temporelle selon la période sélectionnée
-        [$startDate, $endDate] = $this->getPeriodDates($period, $now, $year, $month, $week);
+        // Fenêtre principale affichée (ex: semaine en cours ou J-1)
+        [$startDate, $endDate] = $this->getDisplayPeriodDates($period, $now, $year, $month, $week);
         [$prevStartDate, $prevEndDate] = $this->getPreviousPeriodDates($period, $startDate, $endDate, $year, $month, $week);
+
+        // Fenêtre d'évolution/graph (ex: dernières 8 semaines pour le graphe semaine)
+        [$evoStartDate, $evoEndDate] = $this->getEvolutionPeriodDates($period, $now, $startDate, $endDate);
 
         // Clé de cache unique par période et dates
         $cacheKey = "analytics_{$period}_{$startDate->format('Y-m-d')}_{$endDate->format('Y-m-d')}";
         
         // Cache de 1 heure (3600s) - les données changent peu fréquemment
         // Le cache sera invalidé automatiquement lors de l'import de nouvelles transactions
-        $data = Cache::remember($cacheKey, 3600, function () use ($period, $startDate, $endDate, $prevStartDate, $prevEndDate) {
+        $data = Cache::tags(['cache_analytics', 'analytics', 'transactions'])->remember($cacheKey, 3600, function () use ($period, $startDate, $endDate, $prevStartDate, $prevEndDate, $evoStartDate, $evoEndDate) {
             $currentKPI = $this->calculateKPI($startDate, $endDate);
             $previousKPI = $this->calculateKPI($prevStartDate, $prevEndDate);
             
@@ -49,7 +53,7 @@ class TransactionAnalyticsController extends Controller
                 'kpi' => $this->addComparisons($currentKPI, $previousKPI),
                 'top_pdv' => $this->getTopPDV($startDate, $endDate, 10),
                 'top_dealers' => $this->getTopDealers($startDate, $endDate, 10),
-                'evolution' => $this->getEvolution($period, $startDate, $endDate),
+                'evolution' => $this->getEvolution($period, $evoStartDate, $evoEndDate),
                 'distribution' => $this->getDistribution($startDate, $endDate),
             ];
         });
@@ -471,8 +475,8 @@ class TransactionAnalyticsController extends Controller
                 $startDate->copy()->subDay()->endOfDay()
             ],
             'week' => [
-                $startDate->copy()->subWeeks(8)->startOfDay(),
-                $endDate->copy()->subWeeks(8)->endOfDay()
+                $startDate->copy()->subWeek()->startOfDay(),
+                $startDate->copy()->subDay()->endOfDay()
             ],
             'month' => [
                 $startDate->copy()->subMonth()->startOfDay(),
@@ -505,23 +509,30 @@ class TransactionAnalyticsController extends Controller
         };
     }
 
-    /**     * Obtenir les dates de début et fin selon la période
+    /**
+     * Obtenir la fenêtre principale affichée selon la période (widget top)
+     * - day : J-1
+     * - week : semaine en cours (lun -> hier pour éviter les données partielles du jour)
+     * - month/quarter : mois ou trimestre en cours jusqu'à J-1
      */
-    private function getPeriodDates($period, $now, $year = null, $month = null, $week = null)
+    private function getDisplayPeriodDates($period, Carbon $now, $year = null, $month = null, $week = null)
     {
         $yesterday = $now->copy()->subDay();
         $yesterdayEnd = $yesterday->copy()->endOfDay();
 
         return match ($period) {
-            // Jour : tous les jours du mois jusqu'à J-1
-            'day' => [$now->copy()->startOfMonth(), $yesterdayEnd],
-            // Semaine : 8 dernières semaines (8 semaines avant aujourd'hui jusqu'à hier)
-            'week' => [
-                $now->copy()->subWeeks(7)->startOfWeek(),  // Il y a 8 semaines (début lundi)
-                $yesterdayEnd  // Jusqu'à hier
+            'day' => [
+                $yesterday->copy()->startOfDay(),
+                $yesterdayEnd
             ],
-            // Trimestre : trimestre en cours jusqu'à J-1
-            'quarter' => [$now->copy()->startOfQuarter(), $yesterdayEnd],
+            'week' => [
+                $now->copy()->startOfWeek(),
+                $yesterdayEnd->lessThan($now->copy()->startOfWeek()) ? $now->copy()->endOfWeek()->endOfDay() : $yesterdayEnd
+            ],
+            'quarter' => [
+                $now->copy()->startOfQuarter(),
+                $yesterdayEnd
+            ],
             'historical_year' => [
                 Carbon::create($year, 1, 1)->startOfDay(),
                 Carbon::create($year, 12, 31)->endOfDay()
@@ -531,11 +542,28 @@ class TransactionAnalyticsController extends Controller
                 Carbon::create($year, $month, 1)->endOfMonth()->endOfDay()
             ],
             'historical_week' => $this->getHistoricalWeekDates($year, $week),
-            // Mois : mois complet (du 1er au dernier jour)
             default => [
                 $now->copy()->startOfMonth(),
-                $now->copy()->endOfMonth()->endOfDay()
+                $yesterdayEnd
             ],
+        };
+    }
+
+    /**
+     * Fenêtre utilisée pour les graphiques/évolution (on garde l'historique)
+     */
+    private function getEvolutionPeriodDates($period, Carbon $now, Carbon $displayStart, Carbon $displayEnd)
+    {
+        return match ($period) {
+            'day' => [
+                $now->copy()->startOfMonth(),
+                $displayEnd
+            ],
+            'week' => [
+                $displayEnd->copy()->subWeeks(7)->startOfWeek(),
+                $displayEnd
+            ],
+            default => [$displayStart, $displayEnd],
         };
     }
 
@@ -591,7 +619,7 @@ class TransactionAnalyticsController extends Controller
         $cacheKey = "monthly_revenue_{$year}";
         
         // Cache de 1 heure
-        $data = Cache::remember($cacheKey, 3600, function () use ($year) {
+        $data = Cache::tags(['cache_analytics', 'analytics', 'transactions'])->remember($cacheKey, 3600, function () use ($year) {
             $months = [];
             
             for ($month = 1; $month <= 12; $month++) {
