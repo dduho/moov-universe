@@ -38,6 +38,13 @@ app.use(router)
           }, 60000);
           
           // Détecter une nouvelle version en attente
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+
           registration.addEventListener('updatefound', () => {
             const newWorker = registration.installing;
             console.log('[App] Nouvelle version du Service Worker détectée');
@@ -45,19 +52,8 @@ app.use(router)
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // Nouvelle version disponible
-                console.log('[App] Nouvelle version prête - Rechargement automatique dans 2s');
-                
-                // Afficher un message à l'utilisateur (optionnel)
-                const notification = document.createElement('div');
-                notification.style.cssText = 'position:fixed;top:20px;right:20px;background:#FF6600;color:white;padding:15px 20px;border-radius:8px;z-index:99999;box-shadow:0 4px 12px rgba(0,0,0,0.2);font-family:sans-serif;';
-                notification.textContent = '🔄 Mise à jour disponible - Rechargement...';
-                document.body.appendChild(notification);
-                
-                // Attendre 2 secondes puis recharger
-                setTimeout(() => {
-                  newWorker.postMessage({ type: 'SKIP_WAITING' });
-                  window.location.reload();
-                }, 2000);
+                console.log('[App] Nouvelle version prête - activation');
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
               }
             });
           });

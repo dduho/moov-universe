@@ -7,6 +7,17 @@ const pendingActionsCount = ref(0);
 
 export function useOffline() {
   let registration = null;
+  let updatePrompted = false;
+  let refreshing = false;
+
+  // Recharger une seule fois quand le nouveau SW prend le contrôle
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+  }
 
   // Mettre à jour le statut de connexion
   const updateOnlineStatus = () => {
@@ -28,9 +39,9 @@ export function useOffline() {
 
     if ('serviceWorker' in navigator) {
       try {
-        registration = await navigator.serviceWorker.register('/service-worker.js', {
-          scope: '/'
-        });
+        // Réutiliser l'enregistrement existant si présent pour éviter les doubles listeners
+        registration = (await navigator.serviceWorker.getRegistration())
+          || await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
         
         console.log('[Offline] Service Worker enregistré:', registration.scope);
 
@@ -40,11 +51,16 @@ export function useOffline() {
           console.log('[Offline] Nouvelle version détectée');
           
           newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('[Offline] Nouvelle version disponible - Rechargement recommandé');
-              // Notifier l'utilisateur qu'une mise à jour est disponible
-              if (confirm('Une nouvelle version est disponible. Recharger ?')) {
-                window.location.reload();
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller && !updatePrompted) {
+              updatePrompted = true;
+              console.log('[Offline] Nouvelle version disponible - activation en cours');
+              const shouldReload = confirm('Une nouvelle version est disponible. Recharger ?');
+              if (shouldReload) {
+                // Activer immédiatement puis laisser controllerchange recharger
+                newWorker.postMessage({ type: 'SKIP_WAITING' });
+              } else {
+                // Ne pas boucler si l'utilisateur refuse
+                updatePrompted = false;
               }
             }
           });
