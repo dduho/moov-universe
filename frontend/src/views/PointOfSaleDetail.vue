@@ -655,7 +655,7 @@
               <!-- File Content -->
               <div class="p-6 max-h-[70vh] overflow-auto relative">
                 <!-- Loader -->
-                <div v-if="fileLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-xl">
+                <div v-if="fileLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 rounded-xl z-10">
                   <div class="text-center">
                     <div class="inline-block w-12 h-12 border-4 border-moov-orange border-t-transparent rounded-full animate-spin mb-3"></div>
                     <p class="text-gray-600 font-medium">Chargement...</p>
@@ -663,18 +663,18 @@
                 </div>
 
                 <img
-                  v-if="selectedFile.type?.startsWith('image/')"
+                  v-if="selectedFile.type?.includes('image')"
                   :src="selectedFile.url"
                   :alt="selectedFile.name"
                   class="w-full h-auto rounded-xl"
-                  @load="fileLoading = false"
-                  @error="fileLoading = false"
+                  @load="onFileLoad"
+                  @error="onFileError"
                 />
                 <iframe
-                  v-else-if="selectedFile.type === 'application/pdf'"
+                  v-else-if="selectedFile.type?.includes('pdf')"
                   :src="selectedFile.url"
                   class="w-full h-[60vh] rounded-xl border-2 border-gray-200"
-                  @load="fileLoading = false"
+                  @load="onFileLoad"
                 ></iframe>
                 <div v-else class="text-center py-12">
                   <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -751,6 +751,7 @@ const showFileModal = ref(false);
 const showStatsModal = ref(false);
 const selectedFile = ref(null);
 const fileLoading = ref(true);
+const fileLoadingTimeout = ref(null);
 const gpsAccuracyThreshold = ref(30); // Valeur par défaut 30m
 
 // Computed pour vérifier si la précision GPS dépasse le seuil
@@ -1008,23 +1009,69 @@ const initMap = () => {
 };
 
 const viewFile = (file) => {
-  // Ajouter le type mime basé sur l'extension
-  const extension = file.name?.split('.').pop()?.toLowerCase();
-  const mimeTypes = {
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'gif': 'image/gif',
-    'webp': 'image/webp',
-    'pdf': 'application/pdf'
-  };
+  // Si pas d'URL, afficher une erreur
+  if (!file.url) {
+    console.error('File URL is missing', file);
+    toast.error('Impossible de charger le fichier - URL manquante');
+    return;
+  }
+  
+  // Utiliser le mime_type de l'API si disponible, sinon le déduire de l'extension DE L'URL
+  let mimeType = file.mime_type || file.type;
+  
+  if (!mimeType || mimeType === 'application/octet-stream') {
+    // Extraire l'extension depuis l'URL au lieu du nom
+    const extension = file.url.split('.').pop()?.toLowerCase().split('?')[0];
+    const mimeTypes = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'pdf': 'application/pdf'
+    };
+    mimeType = mimeTypes[extension] || 'application/octet-stream';
+  }
   
   selectedFile.value = {
     ...file,
-    type: mimeTypes[extension] || 'application/octet-stream'
+    type: mimeType
   };
+  
+  console.log('viewFile - selectedFile:', selectedFile.value);
+  console.log('viewFile - type:', selectedFile.value.type);
+  console.log('viewFile - url:', selectedFile.value.url);
+  
   fileLoading.value = true;
   showFileModal.value = true;
+  
+  // Timeout de 30 secondes pour le chargement
+  const loadingTimeout = setTimeout(() => {
+    if (fileLoading.value) {
+      console.warn('File loading timeout after 30s', selectedFile.value.url);
+      fileLoading.value = false;
+      toast.error('Le fichier n\'a pas pu être chargé dans le délai imparti. Essayez de télécharger le fichier directement.');
+    }
+  }, 30000);
+  
+  // Stocker le timeout pour pouvoir l'annuler si le fichier se charge
+  fileLoadingTimeout.value = loadingTimeout;
+};
+
+const onFileLoad = () => {
+  if (fileLoadingTimeout.value) {
+    window.clearTimeout(fileLoadingTimeout.value);
+  }
+  fileLoading.value = false;
+};
+
+const onFileError = () => {
+  if (fileLoadingTimeout.value) {
+    window.clearTimeout(fileLoadingTimeout.value);
+  }
+  fileLoading.value = false;
+  console.error('Image load error:', selectedFile.value?.url);
+  toast.error('Erreur lors du chargement de l\'image');
 };
 
 const validatePOS = async () => {

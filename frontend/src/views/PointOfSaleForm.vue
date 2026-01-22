@@ -1784,6 +1784,10 @@ const submitForm = async () => {
     if (isEditMode.value) {
       // Mode édition: mettre à jour
       await PointOfSaleService.update(editId.value, dataToSubmit);
+      
+      // Recharger les données du PDV pour afficher les fichiers fraîchement uploadés
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       toast.success('Le point de vente a été mis à jour avec succès !', 'Succès');
       router.push(`/pdv/${editId.value}`);
     } else {
@@ -2148,7 +2152,7 @@ const loadPdvData = async () => {
     console.log('Regime fiscal from API:', pdv.regime_fiscal);
     
     // Déterminer si le PDV a un NIF (utiliser 'oui'/'non' car les radio buttons utilisent ces valeurs)
-    const hasNifValue = (pdv.nif && pdv.nif.trim() !== '') ? 'oui' : '';
+    const hasNifValue = (pdv.nif && pdv.nif.trim() !== '') ? 'oui' : 'non';
     
     // Mapper les données du PDV vers le formulaire
     formData.value = {

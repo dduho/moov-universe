@@ -12,6 +12,13 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 5173,
     strictPort: true,
+    proxy: {
+      '/storage': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    },
     hmr: {
       protocol: 'ws',
       host: 'localhost',

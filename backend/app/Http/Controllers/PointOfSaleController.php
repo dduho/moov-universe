@@ -712,6 +712,7 @@ class PointOfSaleController extends Controller
             foreach ($request->owner_id_document_ids as $uploadId) {
                 $pdv->uploads()->create([
                     'upload_id' => $uploadId,
+                    'file_path' => 'uploads/id_documents/' . $uploadId,
                     'type' => 'id_document',
                 ]);
             }
@@ -721,6 +722,7 @@ class PointOfSaleController extends Controller
             foreach ($request->photo_ids as $uploadId) {
                 $pdv->uploads()->create([
                     'upload_id' => $uploadId,
+                    'file_path' => 'uploads/photos/' . $uploadId,
                     'type' => 'photo',
                 ]);
             }
@@ -730,6 +732,7 @@ class PointOfSaleController extends Controller
             foreach ($request->fiscal_document_ids as $uploadId) {
                 $pdv->uploads()->create([
                     'upload_id' => $uploadId,
+                    'file_path' => 'uploads/fiscal_documents/' . $uploadId,
                     'type' => 'fiscal_document',
                 ]);
             }
@@ -841,9 +844,49 @@ class PointOfSaleController extends Controller
 
         $pdv->update($validated);
 
+        // Attach uploaded files (update existing associations)
+        if ($request->has('owner_id_document_ids')) {
+            // Remove old associations
+            $pdv->uploads()->where('type', 'id_document')->delete();
+            // Add new associations
+            foreach ($request->owner_id_document_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'file_path' => 'uploads/id_documents/' . $uploadId,
+                    'type' => 'id_document',
+                ]);
+            }
+        }
+
+        if ($request->has('photo_ids')) {
+            // Remove old associations
+            $pdv->uploads()->where('type', 'photo')->delete();
+            // Add new associations
+            foreach ($request->photo_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'file_path' => 'uploads/photos/' . $uploadId,
+                    'type' => 'photo',
+                ]);
+            }
+        }
+
+        if ($request->has('fiscal_document_ids')) {
+            // Remove old associations
+            $pdv->uploads()->where('type', 'fiscal_document')->delete();
+            // Add new associations
+            foreach ($request->fiscal_document_ids as $uploadId) {
+                $pdv->uploads()->create([
+                    'upload_id' => $uploadId,
+                    'file_path' => 'uploads/fiscal_documents/' . $uploadId,
+                    'type' => 'fiscal_document',
+                ]);
+            }
+        }
+
         $this->flushPdvCache();
 
-        return response()->json($pdv->load(['organization', 'creator']));
+        return response()->json($pdv->load(['organization', 'creator', 'idDocuments', 'photos', 'fiscalDocuments']));
     }
 
     public function validatePdv(Request $request, $id)

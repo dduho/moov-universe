@@ -22,8 +22,9 @@ class UploadController extends Controller
             $uploadedFiles = [];
             
             foreach ($files as $file) {
-                // Generate unique filename
-                $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+                // Generate unique filename and use UUID part as ID
+                $uuid = Str::uuid();
+                $filename = $uuid . '.' . $file->getClientOriginalExtension();
                 
                 // Determine storage path based on type
                 $path = match($type) {
@@ -37,7 +38,7 @@ class UploadController extends Controller
                 $filePath = $file->storeAs($path, $filename, 'public');
                 
                 $uploadedFiles[] = [
-                    'id' => Str::uuid(),
+                    'id' => (string)$uuid,
                     'name' => $file->getClientOriginalName(),
                     'path' => $filePath,
                     'url' => Storage::url($filePath),
@@ -72,8 +73,9 @@ class UploadController extends Controller
             $file = $request->file('file');
             $type = $request->input('type');
             
-            // Generate unique filename
-            $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+            // Generate unique filename and use UUID part as ID
+            $uuid = Str::uuid();
+            $filename = $uuid . '.' . $file->getClientOriginalExtension();
             
             // Determine storage path based on type
             $path = match($type) {
@@ -89,7 +91,7 @@ class UploadController extends Controller
             return response()->json([
                 'success' => true,
                 'file' => [
-                    'id' => Str::uuid(),
+                    'id' => (string)$uuid,
                     'name' => $file->getClientOriginalName(),
                     'path' => $filePath,
                     'url' => Storage::url($filePath),
