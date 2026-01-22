@@ -816,17 +816,10 @@ const hasTaskInRevision = computed(() => {
   return pos.value?.has_task_in_revision || false;
 });
 
-// Le PDV peut être modifié si:
-// - Admin: toujours (sauf si aucune raison de modifier)
-// - PDV en status pending
-// - Il y a une tâche avec révision demandée (pour les commerciaux)
+// Le PDV peut être modifié uniquement par les admins.
+// Les admins peuvent modifier un PDV quel que soit son état.
 const canEdit = computed(() => {
-  // Les admins peuvent toujours modifier
-  if (authStore.isAdmin) {
-    return pos.value?.status === 'pending' || pos.value?.has_active_task || hasTaskInRevision.value;
-  }
-  // Les commerciaux peuvent modifier si pending OU si une tâche est en révision demandée
-  return pos.value?.status === 'pending' || hasTaskInRevision.value;
+  return !!authStore.isAdmin;
 });
 
 const getStatusClass = (status) => {
