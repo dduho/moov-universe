@@ -12,7 +12,8 @@
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
           <ExportButton
             @export="handleExport"
-            :disabled="loading || exportLoading"
+            :disabled="loading"
+            :loading="exportLoading"
             label="Exporter"
             class="flex-1 sm:flex-none"
           />

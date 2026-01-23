@@ -81,6 +81,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  loading: {
+    type: Boolean,
+    default: false
+  },
   buttonClass: {
     type: String,
     default: ''
@@ -90,23 +94,16 @@ const props = defineProps({
 const emit = defineEmits(['export']);
 
 const showMenu = ref(false);
-const loading = ref(false);
 
 const toggleMenu = () => {
-  showMenu.value = !showMenu.value;
+  if (!props.loading) {
+    showMenu.value = !showMenu.value;
+  }
 };
 
-const handleExport = async (format) => {
+const handleExport = (format) => {
   showMenu.value = false;
-  loading.value = true;
-  
-  try {
-    emit('export', format);
-  } finally {
-    setTimeout(() => {
-      loading.value = false;
-    }, 1000);
-  }
+  emit('export', format);
 };
 </script>
 
