@@ -549,9 +549,9 @@
                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                 </svg>
-                Photos du point de vente *
+                Photos du point de vente
               </h3>
-              <p class="text-sm text-gray-600 mb-4">Ajoutez au moins 1 photo du PDV (devanture, intérieur, environnement) - Maximum 4 photos</p>
+              <p class="text-sm text-gray-600 mb-4">Ajoutez des photos du PDV (devanture, intérieur, environnement) - Maximum 4 photos</p>
               
               <FileUploader
                 :multiple="true"
@@ -1626,12 +1626,6 @@ const validateStep = async () => {
       errors.value.cagnt_number = 'Le numéro CAGNT est obligatoire';
     } else if (formData.value.cagnt_number.length !== 11) {
       errors.value.cagnt_number = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
-    }
-    
-    // Vérifier qu'il y a au moins une photo
-    if (uploadedPhotos.value.length === 0) {
-      toast.error('Vous devez ajouter au moins une photo du point de vente', 'Photos requises');
-      return false;
     }
     
     if (Object.keys(errors.value).length > 0) {
