@@ -77,6 +77,15 @@ class PointOfSaleController extends Controller
         if ($request->has('prefecture')) {
             $query->where('prefecture', $request->prefecture);
         }
+        if ($request->has('commune')) {
+            $query->where('commune', $request->commune);
+        }
+        if ($request->has('ville')) {
+            $query->where('ville', 'like', '%' . $request->ville . '%');
+        }
+        if ($request->has('quartier')) {
+            $query->where('quartier', 'like', '%' . $request->quartier . '%');
+        }
         if ($request->has('organization_id') && $user->isAdmin()) {
             $query->where('organization_id', $request->organization_id);
         }
@@ -85,8 +94,37 @@ class PointOfSaleController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('nom_point', 'like', "%{$search}%")
                   ->orWhere('numero_flooz', 'like', "%{$search}%")
+                  ->orWhere('shortcode', 'like', "%{$search}%")
                   ->orWhere('numero_proprietaire', 'like', "%{$search}%");
             });
+        }
+
+        // Filtres de qualité des données
+        if ($request->has('incomplete_data') && $request->incomplete_data) {
+            $query->where(function ($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhereNull('region')
+                  ->orWhereNull('prefecture')
+                  ->orWhereNull('commune')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            });
+        }
+        if ($request->has('no_gps') && $request->no_gps) {
+            $query->where(function ($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            });
+        }
+        if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
+            $query->whereNotNull('geo_inconsistency_flag')
+                  ->where('geo_inconsistency_flag', true);
+        }
+        if ($request->has('proximity_alert') && $request->proximity_alert) {
+            $query->whereHas('proximityAlerts');
         }
 
         // Get all PDVs (no pagination, limit to 50k for safety)
@@ -368,6 +406,7 @@ class PointOfSaleController extends Controller
                 $q->where('nom_point', 'like', "%{$search}%")
                   ->orWhere('dealer_name', 'like', "%{$search}%")
                   ->orWhere('numero_flooz', 'like', "%{$search}%")
+                  ->orWhere('shortcode', 'like', "%{$search}%")
                   ->orWhere('numero_proprietaire', 'like', "%{$search}%");
             });
         }

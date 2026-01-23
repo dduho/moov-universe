@@ -553,7 +553,7 @@
               </h3>
               <p class="text-sm text-gray-600 mb-4">Ajoutez des photos du PDV (devanture, intérieur, environnement) - Maximum 4 photos</p>
               
-              <FileUploader
+              <FileUploaderEnhanced
                 :multiple="true"
                 :max-files="4"
                 accepted-types="image/jpeg,image/png"
@@ -747,6 +747,7 @@ import { ref, onMounted, computed, h, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import FileUploader from '../components/FileUploader.vue';
+import FileUploaderEnhanced from '../components/FileUploaderEnhanced.vue';
 import FileGallery from '../components/FileGallery.vue';
 import FormInput from '../components/FormInput.vue';
 import FormSelect from '../components/FormSelect.vue';
@@ -1159,29 +1160,56 @@ const normalizeGeographicString = (str) => {
   if (!str) return '';
   return str
     .replace(/[-\s]/g, '_') // Remplacer tirets et espaces par underscore
-    .replace(/è/g, 'è')     // Normaliser les accents (au cas où)
-    .replace(/é/g, 'é')
-    .replace(/ô/g, 'ô');
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Retirer les accents
 };
 
 // Fonction pour trouver la clé correspondante dans geographicHierarchy
 const findMatchingKey = (value, options) => {
   if (!value) return '';
   
-  const normalizedValue = normalizeGeographicString(value);
+  // Normaliser la valeur recherchée (enlever accents, remplacer espaces/tirets)
+  const normalizedValue = value
+    .replace(/[-\s]/g, '_')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
   
-  // Recherche exacte d'abord
-  if (options.includes(normalizedValue)) {
-    return normalizedValue;
+  console.log('Searching for:', value, '-> normalized:', normalizedValue);
+  console.log('Available options:', options);
+  
+  // Recherche exacte d'abord (sensible à la casse)
+  if (options.includes(value)) {
+    console.log('Exact match found:', value);
+    return value;
   }
   
-  // Recherche insensible à la casse et aux underscores
-  const lowerValue = normalizedValue.toLowerCase().replace(/_/g, '');
-  const match = options.find(opt => 
-    opt.toLowerCase().replace(/_/g, '') === lowerValue
-  );
+  // Recherche en normalisant les deux côtés
+  const match = options.find(opt => {
+    const normalizedOpt = opt
+      .replace(/[-\s]/g, '_')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const isMatch = normalizedOpt === normalizedValue;
+    if (isMatch) console.log('Match found:', opt, 'for', value);
+    return isMatch;
+  });
   
-  return match || '';
+  if (match) {
+    return match;
+  }
+  
+  // Si pas de match exact, chercher sans underscores
+  const valueNoUnderscore = normalizedValue.replace(/_/g, '');
+  const partialMatch = options.find(opt => {
+    const optNoUnderscore = opt
+      .replace(/[-\s]/g, '_')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/_/g, '');
+    return optNoUnderscore === valueNoUnderscore;
+  });
+  
+  console.log('Final result:', partialMatch || '(no match)');
+  return partialMatch || '';
 };
 
 // Computed pour obtenir le placeholder et le masque du type de pièce sélectionné
