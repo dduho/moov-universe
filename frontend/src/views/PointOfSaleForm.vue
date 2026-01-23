@@ -1154,6 +1154,36 @@ const idMasks = {
   }
 };
 
+// Fonction de normalisation pour les données géographiques
+const normalizeGeographicString = (str) => {
+  if (!str) return '';
+  return str
+    .replace(/[-\s]/g, '_') // Remplacer tirets et espaces par underscore
+    .replace(/è/g, 'è')     // Normaliser les accents (au cas où)
+    .replace(/é/g, 'é')
+    .replace(/ô/g, 'ô');
+};
+
+// Fonction pour trouver la clé correspondante dans geographicHierarchy
+const findMatchingKey = (value, options) => {
+  if (!value) return '';
+  
+  const normalizedValue = normalizeGeographicString(value);
+  
+  // Recherche exacte d'abord
+  if (options.includes(normalizedValue)) {
+    return normalizedValue;
+  }
+  
+  // Recherche insensible à la casse et aux underscores
+  const lowerValue = normalizedValue.toLowerCase().replace(/_/g, '');
+  const match = options.find(opt => 
+    opt.toLowerCase().replace(/_/g, '') === lowerValue
+  );
+  
+  return match || '';
+};
+
 // Computed pour obtenir le placeholder et le masque du type de pièce sélectionné
 const currentIdMask = computed(() => {
   const idType = formData.value.owner_id_type;
@@ -1477,13 +1507,16 @@ const validateStep = async () => {
     
     if (!formData.value.owner_phone) {
       errors.value.owner_phone = 'Le numéro propriétaire est obligatoire';
-    } else if (formData.value.owner_phone.length !== 11) {
+    } else if (formData.value.owner_phone.replace(/\s/g, '').length !== 11) {
       errors.value.owner_phone = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
     }
     
-    // Traiter '228' seul comme vide
-    if (formData.value.alternative_contact && formData.value.alternative_contact !== '228' && formData.value.alternative_contact.length !== 11) {
-      errors.value.alternative_contact = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
+    // Traiter '228' seul comme vide - compter uniquement les chiffres sans espaces
+    if (formData.value.alternative_contact && formData.value.alternative_contact !== '228') {
+      const digitsOnly = formData.value.alternative_contact.replace(/\s/g, '');
+      if (digitsOnly.length !== 11) {
+        errors.value.alternative_contact = 'Le numéro doit contenir 11 chiffres (228XXXXXXXX)';
+      }
     }
     
     // Validation de la date de naissance (au moins 18 ans)
@@ -2150,6 +2183,7 @@ const loadPdvData = async () => {
     console.log('Support visibilite from API:', pdv.support_visibilite);
     console.log('Etat support from API:', pdv.etat_support);
     console.log('Regime fiscal from API:', pdv.regime_fiscal);
+    console.log('Localisation from API - Region:', pdv.region, 'Prefecture:', pdv.prefecture, 'Commune:', pdv.commune, 'Canton:', pdv.canton);
     
     // Déterminer si le PDV a un NIF (utiliser 'oui'/'non' car les radio buttons utilisent ces valeurs)
     const hasNifValue = (pdv.nif && pdv.nif.trim() !== '') ? 'oui' : 'non';
@@ -2175,11 +2209,11 @@ const loadPdvData = async () => {
       owner_nationality: pdv.nationality || '',
       owner_profession: pdv.profession || '',
       
-      // Localisation
+      // Localisation - normaliser les valeurs pour correspondre à geographicHierarchy
       region: pdv.region || '',
-      prefecture: pdv.prefecture || '',
-      commune: pdv.commune || '',
-      canton: pdv.canton || '',
+      prefecture: '',
+      commune: '',
+      canton: '',
       city: pdv.ville || '',
       neighborhood: pdv.quartier || '',
       location_description: pdv.localisation || '',
@@ -2200,6 +2234,40 @@ const loadPdvData = async () => {
     };
     
     console.log('FormData après mapping:', formData.value.visibility_support, formData.value.support_state);
+    
+    // Normaliser les données géographiques pour correspondre à geographicHierarchy
+    if (pdv.region && geographicHierarchy[pdv.region]) {
+      // Normaliser préfecture
+      if (pdv.prefecture) {
+        const prefectureKeys = Object.keys(geographicHierarchy[pdv.region].prefectures);
+        const matchedPrefecture = findMatchingKey(pdv.prefecture, prefectureKeys);
+        formData.value.prefecture = matchedPrefecture;
+        
+        console.log('Prefecture normalized:', pdv.prefecture, '->', matchedPrefecture);
+        
+        // Normaliser commune si préfecture trouvée
+        if (matchedPrefecture && pdv.commune) {
+          const communeKeys = Object.keys(
+            geographicHierarchy[pdv.region].prefectures[matchedPrefecture]?.communes || {}
+          );
+          const matchedCommune = findMatchingKey(pdv.commune, communeKeys);
+          formData.value.commune = matchedCommune;
+          
+          console.log('Commune normalized:', pdv.commune, '->', matchedCommune);
+          
+          // Normaliser canton si commune trouvée
+          if (matchedCommune && pdv.canton) {
+            const cantons = geographicHierarchy[pdv.region]
+              .prefectures[matchedPrefecture]
+              ?.communes[matchedCommune]?.cantons || [];
+            const matchedCanton = findMatchingKey(pdv.canton, cantons);
+            formData.value.canton = matchedCanton;
+            
+            console.log('Canton normalized:', pdv.canton, '->', matchedCanton);
+          }
+        }
+      }
+    }
     
     // Charger les fichiers existants
     if (pdv.photos && pdv.photos.length > 0) {
