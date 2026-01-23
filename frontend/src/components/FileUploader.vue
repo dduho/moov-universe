@@ -16,7 +16,6 @@
         type="file"
         :accept="acceptedTypes"
         :multiple="multiple"
-        capture="environment"
         @change="handleFileSelect"
         class="hidden"
       >
