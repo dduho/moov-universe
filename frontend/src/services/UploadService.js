@@ -71,8 +71,10 @@ export default {
   getFileUrl(path) {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    const baseUrl = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:8000';
-    return `${baseUrl}/storage/${path}`;
+    // En production, utiliser une URL relative pour éviter les problèmes de Mixed Content
+    // Le navigateur résoudra /storage/... vers le domaine actuel
+    if (path.startsWith('/storage/')) return path;
+    return `/storage/${path}`;
   },
 
   /**
