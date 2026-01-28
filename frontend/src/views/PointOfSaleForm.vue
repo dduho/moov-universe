@@ -1089,23 +1089,23 @@ const idMasks = {
     clean: value => value.replace(/[^A-Z0-9]/g, '').toUpperCase()
   },
   elector: {
-    pattern: /^[0-9]{2}-[0-9]{2}-[0-9]{3}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{2}-[0-9]{5}$/,
+    pattern: /^[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z0-9]{3}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z0-9]{2}-[A-Z0-9]{5}$/,
     display: 'XX-XX-XXX-XX-XX-XX-XX-XXXXX',
     maxLength: 27,
     format: value => {
-      const digits = value.replace(/\D/g, '').slice(0, 20);
+      const chars = value.replace(/[^A-Z0-9]/gi, '').toUpperCase().slice(0, 20);
       const parts = [];
-      if (digits.length > 0) parts.push(digits.slice(0, 2));
-      if (digits.length > 2) parts.push(digits.slice(2, 4));
-      if (digits.length > 4) parts.push(digits.slice(4, 7));
-      if (digits.length > 7) parts.push(digits.slice(7, 9));
-      if (digits.length > 9) parts.push(digits.slice(9, 11));
-      if (digits.length > 11) parts.push(digits.slice(11, 13));
-      if (digits.length > 13) parts.push(digits.slice(13, 15));
-      if (digits.length > 15) parts.push(digits.slice(15, 20));
+      if (chars.length > 0) parts.push(chars.slice(0, 2));
+      if (chars.length > 2) parts.push(chars.slice(2, 4));
+      if (chars.length > 4) parts.push(chars.slice(4, 7));
+      if (chars.length > 7) parts.push(chars.slice(7, 9));
+      if (chars.length > 9) parts.push(chars.slice(9, 11));
+      if (chars.length > 11) parts.push(chars.slice(11, 13));
+      if (chars.length > 13) parts.push(chars.slice(13, 15));
+      if (chars.length > 15) parts.push(chars.slice(15, 20));
       return parts.join('-');
     },
-    clean: value => value.replace(/\D/g, '')
+    clean: value => value.replace(/[^A-Z0-9]/gi, '').toUpperCase()
   },
   residence: {
     pattern: /^[A-Z0-9]{1,20}$/,
