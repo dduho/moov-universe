@@ -4,10 +4,10 @@ import { StaleWhileRevalidate, NetworkFirst, CacheFirst } from 'workbox-strategi
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
-const APP_SHELL_CACHE = 'moov-app-shell-v4' // Incrémenter à chaque déploiement
-const ASSETS_CACHE = 'moov-assets-v4'
-const IMAGES_CACHE = 'moov-images-v4'
-const API_CACHE = 'moov-api-v4'
+const APP_SHELL_CACHE = 'moov-app-shell-v5' // Incrémenter à chaque déploiement
+const ASSETS_CACHE = 'moov-assets-v5'
+const IMAGES_CACHE = 'moov-images-v5'
+const API_CACHE = 'moov-api-v5'
 
 const PRECACHE_MANIFEST = self.__WB_MANIFEST || []
 
