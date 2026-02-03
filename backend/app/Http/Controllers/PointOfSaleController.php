@@ -21,6 +21,136 @@ class PointOfSaleController extends Controller
         $this->proximityService = $proximityService;
     }
 
+    /**
+     * Applique tous les filtres de recherche à une requête
+     * Réutilisable par index() et exportAll()
+     */
+    private function applyFilters($query, Request $request, $user): void
+    {
+        // Apply basic filters
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->has('region')) {
+            $query->where('region', $request->region);
+        }
+        if ($request->has('prefecture')) {
+            $query->where('prefecture', $request->prefecture);
+        }
+        if ($request->has('commune')) {
+            $query->where('commune', $request->commune);
+        }
+        if ($request->has('ville')) {
+            $query->where('ville', 'like', '%' . $request->ville . '%');
+        }
+        if ($request->has('quartier')) {
+            $query->where('quartier', 'like', '%' . $request->quartier . '%');
+        }
+        if ($request->has('organization_id') && $user->isAdmin()) {
+            $query->where('organization_id', $request->organization_id);
+        }
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('nom_point', 'like', "%{$search}%")
+                  ->orWhere('numero_flooz', 'like', "%{$search}%")
+                  ->orWhere('shortcode', 'like', "%{$search}%")
+                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
+            });
+        }
+
+        // Filtres de qualité des données
+        if ($request->has('incomplete_data') && $request->incomplete_data) {
+            $query->where(function ($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhereNull('region')
+                  ->orWhereNull('prefecture')
+                  ->orWhereNull('commune')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            });
+        }
+        
+        if ($request->has('no_gps') && $request->no_gps) {
+            $query->where(function ($q) {
+                $q->whereNull('latitude')
+                  ->orWhereNull('longitude')
+                  ->orWhere('latitude', 0)
+                  ->orWhere('longitude', 0);
+            });
+        }
+
+        if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
+            // PDV avec incohérences géographiques
+            $geoService = new \App\Services\GeoValidationService();
+            
+            // Récupérer les IDs des PDV avec incohérences
+            $pdvsToCheck = PointOfSale::query()
+                ->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->whereNotNull('region')
+                ->where('latitude', '!=', '')
+                ->where('longitude', '!=', '')
+                ->select('id', 'latitude', 'longitude', 'region')
+                ->get();
+            
+            $pdvIdsWithAlert = [];
+            foreach ($pdvsToCheck as $pdv) {
+                try {
+                    $validation = $geoService->validateRegionCoordinates(
+                        (float) $pdv->latitude,
+                        (float) $pdv->longitude,
+                        $pdv->region
+                    );
+                    
+                    if (isset($validation['has_alert']) && $validation['has_alert']) {
+                        $pdvIdsWithAlert[] = $pdv->id;
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Geo validation error for PDV ' . $pdv->id . ': ' . $e->getMessage());
+                    continue;
+                }
+            }
+            
+            if (!empty($pdvIdsWithAlert)) {
+                $query->whereIn('id', $pdvIdsWithAlert);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
+        if ($request->has('proximity_alert') && $request->proximity_alert) {
+            // PDV trop proches d'autres PDV
+            try {
+                $organizationId = $request->organization_id ?? null;
+                $proximityData = $this->proximityService->getAllProximityAlerts($user, $organizationId);
+                
+                $pdvIdsWithAlert = [];
+                if (!empty($proximityData['clusters'])) {
+                    foreach ($proximityData['clusters'] as $cluster) {
+                        if (isset($cluster['pdvs']) && is_array($cluster['pdvs'])) {
+                            foreach ($cluster['pdvs'] as $pdv) {
+                                if (isset($pdv['id'])) {
+                                    $pdvIdsWithAlert[] = $pdv['id'];
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!empty($pdvIdsWithAlert)) {
+                    $query->whereIn('id', array_unique($pdvIdsWithAlert));
+                } else {
+                    $query->whereRaw('1 = 0');
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error filtering proximity alerts: ' . $e->getMessage());
+                // En cas d'erreur, ne pas filtrer (retourner tous)
+            }
+        }
+    }
+
     private function flushPdvCache(): void
     {
         try {
@@ -68,61 +198,7 @@ class PointOfSaleController extends Controller
         }
 
         // Apply same filters as index
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-        if ($request->has('region')) {
-            $query->where('region', $request->region);
-        }
-        if ($request->has('prefecture')) {
-            $query->where('prefecture', $request->prefecture);
-        }
-        if ($request->has('commune')) {
-            $query->where('commune', $request->commune);
-        }
-        if ($request->has('ville')) {
-            $query->where('ville', 'like', '%' . $request->ville . '%');
-        }
-        if ($request->has('quartier')) {
-            $query->where('quartier', 'like', '%' . $request->quartier . '%');
-        }
-        if ($request->has('organization_id') && $user->isAdmin()) {
-            $query->where('organization_id', $request->organization_id);
-        }
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nom_point', 'like', "%{$search}%")
-                  ->orWhere('numero_flooz', 'like', "%{$search}%")
-                  ->orWhere('shortcode', 'like', "%{$search}%")
-                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
-            });
-        }
-
-        // Filtres de qualité des données
-        if ($request->has('incomplete_data') && $request->incomplete_data) {
-            $query->where(function ($q) {
-                $q->whereNull('latitude')
-                  ->orWhereNull('longitude')
-                  ->orWhereNull('region')
-                  ->orWhereNull('prefecture')
-                  ->orWhereNull('commune')
-                  ->orWhere('latitude', 0)
-                  ->orWhere('longitude', 0);
-            });
-        }
-        if ($request->has('no_gps') && $request->no_gps) {
-            $query->where(function ($q) {
-                $q->whereNull('latitude')
-                  ->orWhereNull('longitude')
-                  ->orWhere('latitude', 0)
-                  ->orWhere('longitude', 0);
-            });
-        }
-        if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
-            $query->whereNotNull('geo_inconsistency_flag')
-                  ->where('geo_inconsistency_flag', true);
-        }
+        $this->applyFilters($query, $request, $user);
         if ($request->has('proximity_alert') && $request->proximity_alert) {
             $query->whereHas('proximityAlerts');
         }
@@ -380,132 +456,8 @@ class PointOfSaleController extends Controller
             $query->whereRaw('1 = 0');
         }
 
-        // Apply filters
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('region')) {
-            $query->where('region', $request->region);
-        }
-
-        if ($request->has('prefecture')) {
-            $query->where('prefecture', $request->prefecture);
-        }
-
-        if ($request->has('organization_id')) {
-            // Admins can filter; dealer owners already scoped above
-            if ($user->isAdmin()) {
-                $query->where('organization_id', $request->organization_id);
-            }
-        }
-
-        if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nom_point', 'like', "%{$search}%")
-                  ->orWhere('dealer_name', 'like', "%{$search}%")
-                  ->orWhere('numero_flooz', 'like', "%{$search}%")
-                  ->orWhere('shortcode', 'like', "%{$search}%")
-                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
-            });
-        }
-
-        // Filtres de qualité des données
-        if ($request->has('incomplete_data') && $request->incomplete_data) {
-            // PDV avec des champs obligatoires manquants
-            $query->whereRaw('(
-                firstname IS NULL OR firstname = "" OR
-                lastname IS NULL OR lastname = "" OR
-                id_description IS NULL OR id_description = "" OR
-                id_number IS NULL OR id_number = "" OR
-                nationality IS NULL OR nationality = "" OR
-                profession IS NULL OR profession = ""
-            )');
-        }
-
-        if ($request->has('no_gps') && $request->no_gps) {
-            // PDV sans coordonnées GPS
-            $query->where(function($q) {
-                $q->whereNull('latitude')
-                  ->orWhereNull('longitude')
-                  ->orWhere('latitude', '')
-                  ->orWhere('longitude', '');
-            });
-        }
-
-        if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
-            // PDV avec incohérences géographiques
-            // On utilise une sous-requête plus efficace
-            $geoService = new \App\Services\GeoValidationService();
-            
-            // Au lieu de cloner, on récupère les IDs séparément
-            $pdvsToCheck = PointOfSale::query()
-                ->whereNotNull('latitude')
-                ->whereNotNull('longitude')
-                ->whereNotNull('region')
-                ->where('latitude', '!=', '')
-                ->where('longitude', '!=', '')
-                ->select('id', 'latitude', 'longitude', 'region')
-                ->get();
-            
-            $pdvIdsWithAlert = [];
-            foreach ($pdvsToCheck as $pdv) {
-                try {
-                    $validation = $geoService->validateRegionCoordinates(
-                        (float) $pdv->latitude,
-                        (float) $pdv->longitude,
-                        $pdv->region
-                    );
-                    
-                    if (isset($validation['has_alert']) && $validation['has_alert']) {
-                        $pdvIdsWithAlert[] = $pdv->id;
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Geo validation error for PDV ' . $pdv->id . ': ' . $e->getMessage());
-                    continue;
-                }
-            }
-            
-            if (!empty($pdvIdsWithAlert)) {
-                $query->whereIn('id', $pdvIdsWithAlert);
-            } else {
-                // Aucun PDV avec alerte, retourner vide
-                $query->whereRaw('1 = 0');
-            }
-        }
-
-        if ($request->has('proximity_alert') && $request->proximity_alert) {
-            // PDV trop proches d'autres PDV
-            try {
-                $organizationId = $request->organization_id ?? null;
-                $proximityData = $this->proximityService->getAllProximityAlerts($user, $organizationId);
-                
-                $pdvIdsWithAlert = [];
-                // L'API retourne ['clusters' => [...], 'count' => ..., etc.]
-                if (!empty($proximityData['clusters'])) {
-                    foreach ($proximityData['clusters'] as $cluster) {
-                        if (isset($cluster['pdvs']) && is_array($cluster['pdvs'])) {
-                            foreach ($cluster['pdvs'] as $pdv) {
-                                if (isset($pdv['id'])) {
-                                    $pdvIdsWithAlert[] = $pdv['id'];
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                if (!empty($pdvIdsWithAlert)) {
-                    $query->whereIn('id', array_unique($pdvIdsWithAlert));
-                } else {
-                    // Aucun PDV avec alerte, retourner vide
-                    $query->whereRaw('1 = 0');
-                }
-            } catch (\Exception $e) {
-                \Log::error('Error filtering proximity alerts: ' . $e->getMessage());
-                // En cas d'erreur, ne pas filtrer (retourner tous)
-            }
-        }
+        // Apply filters (utilise la même logique que exportAll)
+        $this->applyFilters($query, $request, $user);
 
         // Pagination with performance optimization (cacheable)
         $perPage = $request->get('per_page', 50); // Default to 50 for better performance
