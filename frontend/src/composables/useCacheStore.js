@@ -266,11 +266,16 @@ export function useCacheStore() {
     } catch (err) {
       error.value = err;
       loading.value = false;
-      console.error('Erreur lors du fetch avec cache:', err);
+      console.warn('Erreur lors du fetch avec cache:', err.message || err);
       
       // Si on a des données en cache et que le fetch échoue, garder le cache
       if (!data.value) {
-        throw err;
+        // Pas de cache, propager l'erreur mais ne pas crasher
+        console.error('❌ Pas de données disponibles (cache vide et fetch échoué)');
+        data.value = null;
+      } else {
+        // On a du cache, utiliser ça et ne pas propager l'erreur
+        console.log('✅ Utilisation du cache malgré l\'erreur de fetch');
       }
     }
 

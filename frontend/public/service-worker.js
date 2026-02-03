@@ -19,14 +19,14 @@ cleanupOutdatedCaches()
 
 // Forcer la prise de contrôle immédiate lors de l'installation
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installation - nouvelle version détectée')
+  console.log('[SW] ✅ Installation - nouvelle version détectée')
   // Skip waiting pour activer immédiatement le nouveau SW
   self.skipWaiting()
 })
 
 // Prendre le contrôle de tous les clients immédiatement
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activation - prise de contrôle des clients')
+  console.log('[SW] ✅ Activation - prise de contrôle des clients')
   event.waitUntil(
     Promise.all([
       // Supprimer les anciens caches
@@ -35,14 +35,18 @@ self.addEventListener('activate', (event) => {
           cacheNames.map(cacheName => {
             if (cacheName.startsWith('moov-') && 
                 ![APP_SHELL_CACHE, ASSETS_CACHE, IMAGES_CACHE, API_CACHE].includes(cacheName)) {
-              console.log('[SW] Suppression ancien cache:', cacheName)
+              console.log('[SW] 🗑️ Suppression ancien cache:', cacheName)
               return caches.delete(cacheName)
             }
           })
         )
+      }).catch(err => {
+        console.warn('[SW] ⚠️ Erreur nettoyage cache:', err.message)
       }),
       // Prendre le contrôle de tous les clients
-      self.clients.claim()
+      self.clients.claim().catch(err => {
+        console.warn('[SW] ⚠️ Erreur claim:', err.message)
+      })
     ])
   )
 })

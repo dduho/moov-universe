@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnostic IndexedDB - Moov Universe</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #FF6600;
+      margin-top: 0;
+    }
+    h2 {
+      color: #333;
+      border-bottom: 2px solid #FF6600;
+      padding-bottom: 8px;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 4px;
+      margin: 10px 0;
+      font-weight: bold;
+    }
+    .success { background: #d4edda; color: #155724; }
+    .warning { background: #fff3cd; color: #856404; }
+    .error { background: #f8d7da; color: #721c24; }
+    button {
+      background: #FF6600;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #cc5200;
+    }
+    pre {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .info { color: #666; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>🔍 Diagnostic IndexedDB - Moov Universe</h1>
+  
+  <div class="card">
+    <h2>État du système</h2>
+    <div id="status"></div>
+    <button onclick="runDiagnostic()">🔄 Lancer le diagnostic</button>
+  </div>
+
+  <div class="card">
+    <h2>Informations de stockage</h2>
+    <div id="storage"></div>
+    <button onclick="checkStorage()">📊 Vérifier l'espace</button>
+  </div>
+
+  <div class="card">
+    <h2>Test IndexedDB</h2>
+    <div id="indexeddb-test"></div>
+    <button onclick="testIndexedDB()">🧪 Tester IndexedDB</button>
+  </div>
+
+  <div class="card">
+    <h2>Actions de nettoyage</h2>
+    <p class="info">⚠️ Ces actions supprimeront toutes les données locales</p>
+    <button onclick="clearLocalStorage()">🗑️ Vider localStorage</button>
+    <button onclick="clearIndexedDB()">🗑️ Vider IndexedDB</button>
+    <button onclick="clearCaches()">🗑️ Vider Service Worker Cache</button>
+    <button onclick="clearAll()">🗑️ Tout nettoyer</button>
+  </div>
+
+  <div class="card">
+    <h2>Logs</h2>
+    <pre id="logs"></pre>
+  </div>
+
+  <script>
+    let logs = [];
+
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const emoji = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+      logs.push(`[${timestamp}] ${emoji} ${message}`);
+      document.getElementById('logs').textContent = logs.join('\n');
+    }
+
+    async function runDiagnostic() {
+      const statusDiv = document.getElementById('status');
+      statusDiv.innerHTML = '<p>Diagnostic en cours...</p>';
+      log('Démarrage du diagnostic', 'info');
+
+      let html = '';
+
+      // Check IndexedDB
+      if (window.indexedDB) {
+        html += '<div class="status success">✅ IndexedDB est disponible</div>';
+        log('IndexedDB disponible', 'success');
+      } else {
+        html += '<div class="status error">❌ IndexedDB n\'est PAS disponible</div>';
+        log('IndexedDB non disponible', 'error');
+      }
+
+      // Check Service Worker
+      if ('serviceWorker' in navigator) {
+        html += '<div class="status success">✅ Service Worker supporté</div>';
+        log('Service Worker supporté', 'success');
+        
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        if (registrations.length > 0) {
+          html += `<div class="status success">✅ ${registrations.length} Service Worker(s) enregistré(s)</div>`;
+          log(`${registrations.length} SW actif(s)`, 'success');
+        } else {
+          html += '<div class="status warning">⚠️ Aucun Service Worker enregistré</div>';
+          log('Aucun SW actif', 'warning');
+        }
+      } else {
+        html += '<div class="status error">❌ Service Worker non supporté</div>';
+        log('Service Worker non supporté', 'error');
+      }
+
+      // Check localStorage
+      try {
+        localStorage.setItem('test', 'test');
+        localStorage.removeItem('test');
+        html += '<div class="status success">✅ localStorage fonctionne</div>';
+        log('localStorage OK', 'success');
+      } catch (e) {
+        html += '<div class="status error">❌ localStorage ne fonctionne pas: ' + e.message + '</div>';
+        log('localStorage KO: ' + e.message, 'error');
+      }
+
+      // Check HTTPS
+      if (location.protocol === 'https:' || location.hostname === 'localhost') {
+        html += '<div class="status success">✅ Contexte sécurisé (HTTPS)</div>';
+        log('HTTPS OK', 'success');
+      } else {
+        html += '<div class="status warning">⚠️ Contexte non sécurisé (HTTP) - certaines fonctionnalités peuvent être limitées</div>';
+        log('HTTP détecté', 'warning');
+      }
+
+      // Check private mode
+      html += '<div class="status info">ℹ️ Mode navigation privée: ' + (await detectPrivateMode() ? 'OUI' : 'NON') + '</div>';
+
+      statusDiv.innerHTML = html;
+    }
+
+    async function checkStorage() {
+      const storageDiv = document.getElementById('storage');
+      
+      if (!navigator.storage || !navigator.storage.estimate) {
+        storageDiv.innerHTML = '<div class="status warning">⚠️ API Storage non disponible</div>';
+        log('Storage API non dispo', 'warning');
+        return;
+      }
+
+      try {
+        const estimate = await navigator.storage.estimate();
+        const used = (estimate.usage / 1024 / 1024).toFixed(2);
+        const quota = (estimate.quota / 1024 / 1024).toFixed(2);
+        const percent = ((estimate.usage / estimate.quota) * 100).toFixed(1);
+        
+        let html = `
+          <div class="status success">
+            <strong>Stockage utilisé:</strong> ${used} MB / ${quota} MB (${percent}%)
+          </div>
+        `;
+        
+        if (percent > 80) {
+          html += '<div class="status warning">⚠️ Espace de stockage faible!</div>';
+          log(`Stockage critique: ${percent}%`, 'warning');
+        }
+
+        storageDiv.innerHTML = html;
+        log(`Stockage: ${used}/${quota} MB`, 'success');
+      } catch (e) {
+        storageDiv.innerHTML = '<div class="status error">❌ Erreur: ' + e.message + '</div>';
+        log('Erreur storage: ' + e.message, 'error');
+      }
+    }
+
+    async function testIndexedDB() {
+      const testDiv = document.getElementById('indexeddb-test');
+      testDiv.innerHTML = '<p>Test en cours...</p>';
+      log('Test IndexedDB...', 'info');
+
+      if (!window.indexedDB) {
+        testDiv.innerHTML = '<div class="status error">❌ IndexedDB non disponible</div>';
+        log('IndexedDB non dispo', 'error');
+        return;
+      }
+
+      try {
+        const dbName = 'moov-offline-db';
+        const request = indexedDB.open(dbName, 1);
+
+        request.onerror = (e) => {
+          testDiv.innerHTML = `<div class="status error">❌ Erreur d'ouverture: ${e.target.error}</div>`;
+          log('Erreur ouverture DB: ' + e.target.error, 'error');
+        };
+
+        request.onsuccess = (e) => {
+          const db = e.target.result;
+          const stores = Array.from(db.objectStoreNames);
+          testDiv.innerHTML = `
+            <div class="status success">✅ Base de données ouverte avec succès</div>
+            <div class="status info">Stores disponibles: ${stores.join(', ') || 'aucun'}</div>
+          `;
+          log('DB ouverte, stores: ' + stores.join(', '), 'success');
+          db.close();
+        };
+
+        request.onupgradeneeded = (e) => {
+          log('Upgrade DB nécessaire', 'info');
+        };
+      } catch (e) {
+        testDiv.innerHTML = `<div class="status error">❌ Exception: ${e.message}</div>`;
+        log('Exception: ' + e.message, 'error');
+      }
+    }
+
+    async function clearLocalStorage() {
+      if (confirm('Voulez-vous vraiment vider localStorage?')) {
+        localStorage.clear();
+        log('localStorage vidé', 'success');
+        alert('✅ localStorage vidé');
+      }
+    }
+
+    async function clearIndexedDB() {
+      if (confirm('Voulez-vous vraiment supprimer IndexedDB?')) {
+        const dbName = 'moov-offline-db';
+        const request = indexedDB.deleteDatabase(dbName);
+        request.onsuccess = () => {
+          log('IndexedDB supprimée', 'success');
+          alert('✅ IndexedDB supprimée');
+        };
+        request.onerror = (e) => {
+          log('Erreur suppression DB: ' + e.target.error, 'error');
+          alert('❌ Erreur: ' + e.target.error);
+        };
+      }
+    }
+
+    async function clearCaches() {
+      if (confirm('Voulez-vous vraiment vider les caches Service Worker?')) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+        log(`${keys.length} cache(s) supprimé(s)`, 'success');
+        alert(`✅ ${keys.length} cache(s) supprimé(s)`);
+      }
+    }
+
+    async function clearAll() {
+      if (confirm('⚠️ ATTENTION: Ceci va supprimer TOUTES les données locales. Continuer?')) {
+        localStorage.clear();
+        indexedDB.deleteDatabase('moov-offline-db');
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+        log('Tout nettoyé!', 'success');
+        alert('✅ Toutes les données locales ont été supprimées. La page va se recharger.');
+        setTimeout(() => location.reload(), 1000);
+      }
+    }
+
+    async function detectPrivateMode() {
+      try {
+        const db = indexedDB.open('test');
+        return await new Promise((resolve) => {
+          db.onsuccess = () => resolve(false);
+          db.onerror = () => resolve(true);
+        });
+      } catch {
+        return true;
+      }
+    }
+
+    // Auto-run diagnostic on load
+    window.addEventListener('load', () => {
+      runDiagnostic();
+      checkStorage();
+    });
+  </script>
+</body>
+</html>

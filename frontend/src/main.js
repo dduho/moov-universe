@@ -19,10 +19,14 @@ app.use(router)
 ;(async () => {
   try {
     await offlineDB.init();
-    console.log('[App] IndexedDB prête');
+    if (offlineDB.isAvailable) {
+      console.log('[App] ✅ IndexedDB prête');
+    } else {
+      console.warn('[App] ⚠️ IndexedDB indisponible - Mode dégradé activé');
+    }
   } catch (error) {
-    console.error('[App] Erreur d\'initialisation IndexedDB:', error);
-    // Continue anyway - l'app peut fonctionner sans IndexedDB
+    console.warn('[App] ⚠️ IndexedDB non disponible:', error.message);
+    // Continue anyway - l'app fonctionne sans IndexedDB
   }
 
   // Enregistrer le Service Worker uniquement en prod pour éviter d'interférer avec HMR en dev

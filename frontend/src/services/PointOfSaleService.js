@@ -86,27 +86,33 @@ export default {
       const cachedPDV = await offlineDB.getPDVList();
       return { data: cachedPDV };
     } catch (error) {
-      console.error('[PDV Service] Erreur, tentative cache...', error);
+      console.warn('[PDV Service] Erreur, tentative cache...', error.message || error);
       
       // En cas d'erreur, essayer le cache local
       try {
         const cacheKey = buildCacheKey(params);
         const cachedResponse = await offlineDB.getCachedData(cacheKey);
         if (cachedResponse) {
-          console.log('[PDV Service] Données récupérées du cache');
+          console.log('[PDV Service] ✅ Données récupérées du cache');
           return cachedResponse;
         }
       } catch (cacheErr) {
-        console.warn('[PDV Service] Cache fallback failed', cacheErr);
+        console.warn('[PDV Service] Cache fallback échoué:', cacheErr.message);
       }
 
-      const cachedList = await offlineDB.getPDVList();
-      if (cachedList && cachedList.length > 0) {
-        console.log('[PDV Service] Données récupérées du cache (liste brute)');
-        return { data: cachedList };
+      try {
+        const cachedList = await offlineDB.getPDVList();
+        if (cachedList && cachedList.length > 0) {
+          console.log('[PDV Service] ✅ Données récupérées du cache (liste brute)');
+          return { data: cachedList };
+        }
+      } catch (listErr) {
+        console.warn('[PDV Service] Liste cache échouée:', listErr.message);
       }
       
-      throw error;
+      // Si tout échoue, retourner un tableau vide au lieu de throw
+      console.error('[PDV Service] ❌ Aucune donnée disponible');
+      return { data: [], total: 0, message: 'Données non disponibles' };
     }
   },
 

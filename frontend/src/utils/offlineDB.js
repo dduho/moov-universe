@@ -13,16 +13,39 @@ const STORES = {
 class OfflineDB {
   constructor() {
     this.db = null;
+    this.isAvailable = false;
+    this.fallbackStorage = new Map();
+  }
+
+  // Vérifier si IndexedDB est disponible
+  checkAvailability() {
+    if (!window.indexedDB) {
+      console.warn('[offlineDB] IndexedDB non disponible dans ce navigateur');
+      return false;
+    }
+    return true;
   }
 
   // Initialiser la base de données
   async init() {
+    if (!this.checkAvailability()) {
+      console.warn('[offlineDB] Fonctionnement en mode dégradé (pas d\'IndexedDB)');
+      this.isAvailable = false;
+      return Promise.resolve(null);
+    }
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-      request.onerror = () => reject(request.error);
+      request.onerror = () => {
+        console.error('[offlineDB] Erreur d\'ouverture IndexedDB:', request.error);
+        this.isAvailable = false;
+        reject(request.error);
+      };
       request.onsuccess = () => {
         this.db = request.result;
+        this.isAvailable = true;
+        console.log('[offlineDB] IndexedDB initialisée avec succès');
         resolve(this.db);
       };
 
@@ -66,14 +89,27 @@ class OfflineDB {
 
   // Ensure database is initialized
   async ensureReady() {
-    if (!this.db) {
-      await this.init();
+    if (!this.db && !this.isAvailable) {
+      try {
+        await this.init();
+      } catch (error) {
+        console.warn('[offlineDB] IndexedDB non disponible, utilisation du fallback');
+        this.isAvailable = false;
+      }
     }
   }
 
   // Méthodes génériques pour toutes les stores
   async add(storeName, data) {
     await this.ensureReady();
+    
+    if (!this.isAvailable) {
+      // Fallback: utiliser Map en mémoire
+      const key = `${storeName}:${data.id || Date.now()}`;
+      this.fallbackStorage.set(key, data);
+      return Promise.resolve(key);
+    }
+    
     const tx = this.db.transaction(storeName, 'readwrite');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -96,6 +132,12 @@ class OfflineDB {
 
   async get(storeName, key) {
     await this.ensureReady();
+    
+    if (!this.isAvailable) {
+      const fullKey = `${storeName}:${key}`;
+      return Promise.resolve(this.fallbackStorage.get(fullKey));
+    }
+    
     const tx = this.db.transaction(storeName, 'readonly');
     const store = tx.objectStore(storeName);
     return new Promise((resolve, reject) => {
@@ -194,6 +236,22 @@ class OfflineDB {
   // Méthodes pour le cache de données
   async cacheData(key, data, expiryMinutes = 60) {
     const expiry = Date.now() + (expiryMinutes * 60 * 1000);
+    
+    if (!this.isAvailable) {
+      // Fallback localStorage
+      try {
+        localStorage.setItem(`cache:${key}`, JSON.stringify({
+          data,
+          expiry,
+          timestamp: Date.now()
+        }));
+        return Promise.resolve();
+      } catch (e) {
+        console.warn('[offlineDB] Erreur localStorage fallback:', e);
+        return Promise.resolve();
+      }
+    }
+    
     return this.put(STORES.CACHED_DATA, {
       key,
       data,
@@ -203,6 +261,22 @@ class OfflineDB {
   }
 
   async getCachedData(key) {
+    if (!this.isAvailable) {
+      // Fallback localStorage
+      try {
+        const cached = localStorage.getItem(`cache:${key}`);
+        if (!cached) return null;
+        const data = JSON.parse(cached);
+        if (data.expiry < Date.now()) {
+          localStorage.removeItem(`cache:${key}`);
+          return null;
+        }
+        return data.data;
+      } catch (e) {
+        return null;
+      }
+    }
+    
     const cached = await this.get(STORES.CACHED_DATA, key);
     
     if (!cached) return null;
