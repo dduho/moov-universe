@@ -436,28 +436,34 @@ class PointOfSaleController extends Controller
 
         if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
             // PDV avec incohérences géographiques
-            // On doit vérifier chaque PDV individuellement avec validateRegionCoordinates
-            // car cela utilise des polygones précis, pas juste des bounds rectangulaires
+            // On utilise une sous-requête plus efficace
             $geoService = new \App\Services\GeoValidationService();
             
-            // Récupérer tous les PDV avec GPS et région
-            $tempQuery = clone $query;
-            $pdvsToCheck = $tempQuery
+            // Au lieu de cloner, on récupère les IDs séparément
+            $pdvsToCheck = PointOfSale::query()
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->whereNotNull('region')
-                ->get(['id', 'latitude', 'longitude', 'region']);
+                ->where('latitude', '!=', '')
+                ->where('longitude', '!=', '')
+                ->select('id', 'latitude', 'longitude', 'region')
+                ->get();
             
             $pdvIdsWithAlert = [];
             foreach ($pdvsToCheck as $pdv) {
-                $validation = $geoService->validateRegionCoordinates(
-                    (float) $pdv->latitude,
-                    (float) $pdv->longitude,
-                    $pdv->region
-                );
-                
-                if ($validation['has_alert']) {
-                    $pdvIdsWithAlert[] = $pdv->id;
+                try {
+                    $validation = $geoService->validateRegionCoordinates(
+                        (float) $pdv->latitude,
+                        (float) $pdv->longitude,
+                        $pdv->region
+                    );
+                    
+                    if (isset($validation['has_alert']) && $validation['has_alert']) {
+                        $pdvIdsWithAlert[] = $pdv->id;
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Geo validation error for PDV ' . $pdv->id . ': ' . $e->getMessage());
+                    continue;
                 }
             }
             
