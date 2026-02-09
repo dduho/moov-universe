@@ -325,6 +325,85 @@ class AnalyticsInsightsController extends Controller
     }
     
     /**
+     * Exporter les PDV liés à un insight (inactivity ou anomaly)
+     * Retourne les données complètes des PDV au format identique à l'export classique
+     */
+    public function exportInsightPdv(Request $request)
+    {
+        $type = $request->input('type'); // 'inactivity' ou 'anomaly'
+        $now = Carbon::now();
+
+        if (!in_array($type, ['inactivity', 'anomaly'])) {
+            return response()->json(['message' => 'Type invalide. Utilisez "inactivity" ou "anomaly".'], 422);
+        }
+
+        $pdvNumeros = collect();
+
+        if ($type === 'inactivity') {
+            // Reproduire la logique de detectInactivePdv pour récupérer TOUS les numéros
+            $lastWeekStart = $now->copy()->subDays(7);
+            $lastWeekEnd = $now->copy();
+            $previousWeekStart = $now->copy()->subDays(14);
+            $previousWeekEnd = $now->copy()->subDays(7);
+
+            $lastWeekActivePdv = DB::table('pdv_transactions')
+                ->whereBetween('transaction_date', [$lastWeekStart, $lastWeekEnd])
+                ->where(function ($q) {
+                    $q->where('count_depot', '>', 0)->orWhere('count_retrait', '>', 0);
+                })
+                ->distinct()->pluck('pdv_numero');
+
+            $previousWeekActivePdv = DB::table('pdv_transactions')
+                ->whereBetween('transaction_date', [$previousWeekStart, $previousWeekEnd])
+                ->where(function ($q) {
+                    $q->where('count_depot', '>', 0)->orWhere('count_retrait', '>', 0);
+                })
+                ->distinct()->pluck('pdv_numero');
+
+            $pdvNumeros = $previousWeekActivePdv->diff($lastWeekActivePdv);
+
+        } elseif ($type === 'anomaly') {
+            // Reproduire la logique de detectPerformanceAnomalies pour récupérer TOUS les numéros
+            $last7Days = $now->copy()->subDays(7);
+            $previous7Days = $now->copy()->subDays(14);
+
+            $pdvPerformance = DB::table('pdv_transactions as t1')
+                ->select('t1.pdv_numero')
+                ->selectRaw('
+                    SUM(CASE WHEN t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
+                    SUM(CASE WHEN t1.transaction_date < ? AND t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_previous
+                ', [$last7Days, $last7Days, $previous7Days])
+                ->where('transaction_date', '>=', $previous7Days)
+                ->groupBy('t1.pdv_numero')
+                ->havingRaw('ca_previous > 0 AND ca_recent > 0')
+                ->get();
+
+            $anomalyNumeros = [];
+            foreach ($pdvPerformance as $perf) {
+                $drop = (($perf->ca_recent - $perf->ca_previous) / $perf->ca_previous) * 100;
+                if ($drop < -50) {
+                    $anomalyNumeros[] = $perf->pdv_numero;
+                }
+            }
+            $pdvNumeros = collect($anomalyNumeros);
+        }
+
+        if ($pdvNumeros->isEmpty()) {
+            return response()->json(['data' => [], 'total' => 0]);
+        }
+
+        // Charger les PDV complets avec la relation organization (comme l'export classique)
+        $pdvs = PointOfSale::whereIn('numero_flooz', $pdvNumeros)
+            ->with(['organization:id,name'])
+            ->get();
+
+        return response()->json([
+            'data' => $pdvs,
+            'total' => $pdvs->count(),
+        ]);
+    }
+
+    /**
      * Analyser les top performers pour identifier les best practices
      */
     private function analyzeTopPerformers($now)

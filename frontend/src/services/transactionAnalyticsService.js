@@ -14,4 +14,11 @@ export default {
   async getInsights(params = {}) {
     return api.get('/analytics/insights', { params });
   },
+
+  /**
+   * Export PDV list for a specific insight type (inactivity or anomaly)
+   */
+  async exportInsightPdv(type) {
+    return api.get('/analytics/insights/export', { params: { type } });
+  },
 };

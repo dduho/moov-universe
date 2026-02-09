@@ -214,6 +214,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/transactions', [TransactionAnalyticsController::class, 'getAnalytics']);
         Route::get('/monthly-revenue', [TransactionAnalyticsController::class, 'getMonthlyRevenue']);
         Route::get('/insights', [AnalyticsInsightsController::class, 'getInsights']);
+        Route::get('/insights/export', [AnalyticsInsightsController::class, 'exportInsightPdv']);
     });
 
     // Dealer Analytics routes (Dealer-owner only)

@@ -589,6 +589,20 @@
                       <p class="text-gray-700 text-sm mt-1">{{ insight.recommendation }}</p>
                     </div>
                   </div>
+
+                  <!-- Export button for inactivity & anomaly insights -->
+                  <button
+                    v-if="insight.category === 'inactivity' || insight.category === 'anomaly'"
+                    @click.stop="exportInsightPdv(insight.category === 'inactivity' ? 'inactivity' : 'anomaly')"
+                    :disabled="exportingInsight === (insight.category === 'inactivity' ? 'inactivity' : 'anomaly')"
+                    class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow border border-gray-200 hover:shadow-md hover:bg-gray-50 transition-all text-sm font-semibold text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <svg v-if="exportingInsight !== (insight.category === 'inactivity' ? 'inactivity' : 'anomaly')" class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></span>
+                    {{ exportingInsight === (insight.category === 'inactivity' ? 'inactivity' : 'anomaly') ? 'Export en cours...' : 'Exporter la liste complète (Excel)' }}
+                  </button>
                 </div>
 
                 <!-- Badge -->
@@ -672,6 +686,7 @@ import RentabilityWidget from '../components/RentabilityWidget.vue';
 import TrendAnalytics from '../components/TrendAnalytics.vue';
 import TransactionAnalyticsService from '../services/transactionAnalyticsService';
 import TransactionService from '../services/transactionService';
+import ExportService from '../services/ExportService';
 import { useToast } from '../composables/useToast';
 import { useAnalyticsCacheStore } from '../stores/analyticsCache';
 import { useCacheStore } from '../composables/useCacheStore';
@@ -983,6 +998,29 @@ const loadInsights = async () => {
 // Refresh insights manually
 const refreshInsights = () => {
   loadInsights();
+};
+
+// Export insight PDV list
+const exportingInsight = ref(null);
+const exportInsightPdv = async (type) => {
+  exportingInsight.value = type;
+  try {
+    const response = await TransactionAnalyticsService.exportInsightPdv(type);
+    const pdvList = response.data?.data || [];
+    if (pdvList.length === 0) {
+      toast.warning('Aucun PDV à exporter pour cet insight.');
+      return;
+    }
+    const label = type === 'inactivity' ? 'pdv_inactifs' : 'pdv_anomalies_performance';
+    const filename = `${label}_${new Date().toISOString().split('T')[0]}`;
+    ExportService.exportPDV(pdvList, 'excel');
+    toast.success(`${pdvList.length} PDV exportés avec succès !`);
+  } catch (error) {
+    console.error('Export insight error:', error);
+    toast.error("Erreur lors de l'export des PDV");
+  } finally {
+    exportingInsight.value = null;
+  }
 };
 
 // Watch period changes
