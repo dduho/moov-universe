@@ -756,6 +756,14 @@ class TransactionAnalyticsController extends Controller
                 $displayEnd->copy()->subWeeks(7)->startOfWeek(),
                 $displayEnd
             ],
+            'month' => [
+                $displayEnd->copy()->subMonths(11)->startOfMonth(),
+                $displayEnd
+            ],
+            'quarter' => [
+                $displayEnd->copy()->subMonths(11)->startOfMonth(),
+                $displayEnd
+            ],
             default => [$displayStart, $displayEnd],
         };
     }
