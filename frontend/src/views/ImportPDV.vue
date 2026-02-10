@@ -197,6 +197,45 @@
             </div>
           </div>
 
+          <!-- Toggle Autoriser les mises à jour -->
+          <div v-if="previewData.summary?.to_update > 0" class="mb-8 p-4 rounded-xl border transition-colors"
+            :class="allowUpdates 
+              ? 'bg-orange-50 border-orange-200' 
+              : 'bg-gray-50 border-gray-200'"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <svg class="w-6 h-6" :class="allowUpdates ? 'text-orange-600' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <div>
+                  <p class="font-semibold" :class="allowUpdates ? 'text-orange-900' : 'text-gray-700'">
+                    Autoriser les mises à jour
+                  </p>
+                  <p class="text-sm" :class="allowUpdates ? 'text-orange-700' : 'text-gray-500'">
+                    {{ allowUpdates 
+                      ? `${previewData.summary.to_update} PDV existants seront mis à jour avec les nouvelles données` 
+                      : `${previewData.summary.to_update} PDV existants seront ignorés (aucune mise à jour)` 
+                    }}
+                  </p>
+                </div>
+              </div>
+              <button
+                @click="allowUpdates = !allowUpdates"
+                type="button"
+                class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
+                :class="allowUpdates ? 'bg-moov-orange focus:ring-moov-orange' : 'bg-gray-300 focus:ring-gray-400'"
+                role="switch"
+                :aria-checked="allowUpdates"
+              >
+                <span
+                  class="pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                  :class="allowUpdates ? 'translate-x-5' : 'translate-x-0'"
+                ></span>
+              </button>
+            </div>
+          </div>
+
           <!-- Tabs -->
           <div class="mb-6">
             <div class="flex gap-2 border-b border-gray-200">
@@ -235,13 +274,15 @@
                 Exporter l'analyse
               </button>
               <button
-                v-if="(previewData.summary?.valid > 0 || previewData.summary?.to_update > 0) && previewData.summary?.invalid === 0"
+                v-if="(previewData.summary?.valid > 0 || (previewData.summary?.to_update > 0 && allowUpdates)) && previewData.summary?.invalid === 0"
                 @click="proceedToImport"
                 :disabled="loading"
                 class="px-6 py-3 bg-moov-orange text-white rounded-xl font-bold hover:bg-moov-orange-dark transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 <span v-if="loading" class="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
-                Importer {{ (previewData.summary?.valid || 0) + (previewData.summary?.to_update || 0) }} PDV
+                Importer {{ allowUpdates 
+                  ? (previewData.summary?.valid || 0) + (previewData.summary?.to_update || 0) 
+                  : (previewData.summary?.valid || 0) }} PDV
               </button>
             </div>
           </div>
@@ -423,6 +464,7 @@ const errors = ref({});
 
 const previewData = ref({});
 const importResult = ref({});
+const allowUpdates = ref(true);
 
 const activeTab = ref('valid');
 const tabs = computed(() => [
@@ -526,7 +568,7 @@ const previewImport = async () => {
 const proceedToImport = async () => {
   loading.value = true;
   try {
-    importResult.value = await ImportService.importPDV(selectedFile.value, selectedDealerId.value, true);
+    importResult.value = await ImportService.importPDV(selectedFile.value, selectedDealerId.value, true, allowUpdates.value);
     currentStep.value = 3;
     toast.success('Import réussi !');
   } catch (error) {
@@ -577,6 +619,7 @@ const reset = () => {
   selectedDealerId.value = '';
   previewData.value = {};
   importResult.value = {};
+  allowUpdates.value = true;
   errors.value = {};
   if (fileInput.value) {
     fileInput.value.value = '';

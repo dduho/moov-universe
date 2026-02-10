@@ -188,7 +188,8 @@ class PointOfSaleImportController extends Controller
         $validator = Validator::make($request->all(), [
             'file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
             'organization_id' => 'required|exists:organizations,id',
-            'skip_duplicates' => 'boolean'
+            'skip_duplicates' => 'boolean',
+            'allow_updates' => 'boolean'
         ]);
 
         if ($validator->fails()) {
@@ -201,6 +202,7 @@ class PointOfSaleImportController extends Controller
         $file = $request->file('file');
         $organizationId = $request->organization_id;
         $skipDuplicates = $request->boolean('skip_duplicates', true);
+        $allowUpdates = $request->boolean('allow_updates', true);
 
         // Augmenter le temps d'exécution pour les gros imports
         set_time_limit(300); // 5 minutes
@@ -251,14 +253,25 @@ class PointOfSaleImportController extends Controller
                 }
                 
                 if ($existing) {
-                    // Mettre à jour le PDV existant
-                    $existing->update($data);
-                    $updated[] = [
-                        'line' => $i + 1,
-                        'id' => $existing->id,
-                        'nom_point' => $existing->nom_point,
-                        'shortcode' => $existing->shortcode
-                    ];
+                    if ($allowUpdates) {
+                        // Mettre à jour le PDV existant
+                        $existing->update($data);
+                        $updated[] = [
+                            'line' => $i + 1,
+                            'id' => $existing->id,
+                            'nom_point' => $existing->nom_point,
+                            'shortcode' => $existing->shortcode
+                        ];
+                    } else {
+                        // Ignorer la mise à jour
+                        $skipped[] = [
+                            'line' => $i + 1,
+                            'id' => $existing->id,
+                            'nom_point' => $existing->nom_point,
+                            'shortcode' => $existing->shortcode,
+                            'reason' => 'Mise à jour non autorisée'
+                        ];
+                    }
                 } else {
                     // Créer un nouveau PDV
                     $pdv = PointOfSale::create($data);

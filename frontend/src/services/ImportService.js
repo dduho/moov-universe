@@ -20,11 +20,12 @@ export default {
   /**
    * Importer les PDV
    */
-  async importPDV(file, organizationId, skipDuplicates = true) {
+  async importPDV(file, organizationId, skipDuplicates = true, allowUpdates = true) {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('organization_id', organizationId);
     formData.append('skip_duplicates', skipDuplicates ? '1' : '0');
+    formData.append('allow_updates', allowUpdates ? '1' : '0');
 
     const response = await api.post('/point-of-sales/import', formData, {
       headers: {
