@@ -118,6 +118,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::post('/{id}/validate', [PointOfSaleController::class, 'validatePdv']);
             Route::post('/{id}/reject', [PointOfSaleController::class, 'reject']);
+            Route::post('/{id}/lock', [PointOfSaleController::class, 'lock']);
+            Route::post('/{id}/unlock', [PointOfSaleController::class, 'unlock']);
         });
 
         // Notes routes (accessible à tous les utilisateurs authentifiés)
