@@ -266,6 +266,15 @@
               >
                 {{ getStatusLabel(pos.status) }}
               </span>
+              <span
+                v-if="pos.is_locked"
+                class="px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 border border-blue-300 text-blue-800 flex items-center gap-1 shadow-lg"
+                title="PDV verrouillé"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+              </span>
             </div>
           </div>
 
@@ -404,12 +413,23 @@
                 <span class="text-sm text-gray-700 font-medium">{{ pos.profil || 'N/A' }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                  class="px-3 py-1 rounded-xl text-xs font-bold"
-                  :class="getStatusClass(pos.status)"
-                >
-                  {{ getStatusLabel(pos.status) }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="px-3 py-1 rounded-xl text-xs font-bold"
+                    :class="getStatusClass(pos.status)"
+                  >
+                    {{ getStatusLabel(pos.status) }}
+                  </span>
+                  <span
+                    v-if="pos.is_locked"
+                    class="px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 border border-blue-300 text-blue-800 flex items-center gap-1"
+                    title="PDV verrouillé - ne sera pas modifié lors des imports"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </span>
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ formatDate(pos.created_at) }}

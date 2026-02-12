@@ -14,6 +14,7 @@ class PointOfSale extends Model
         'created_by',
         'validated_by',
         'status',
+        'is_locked',
         'numero',
         'dealer_name',
         'numero_flooz',
@@ -61,6 +62,7 @@ class PointOfSale extends Model
         'gps_accuracy' => 'decimal:2',
         'validated_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'is_locked' => 'boolean',
     ];
 
     protected $appends = ['has_active_task', 'has_task_in_revision', 'geo_validation', 'missing_required_fields'];
@@ -153,6 +155,16 @@ class PointOfSale extends Model
     public function scopeRejected($query)
     {
         return $query->where('status', 'rejected');
+    }
+
+    public function scopeLocked($query)
+    {
+        return $query->where('is_locked', true);
+    }
+
+    public function scopeUnlocked($query)
+    {
+        return $query->where('is_locked', false);
     }
 
     public function scopeForOrganization($query, $organizationId)

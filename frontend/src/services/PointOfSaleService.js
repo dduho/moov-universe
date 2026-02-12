@@ -238,4 +238,14 @@ export default {
     const response = await api.get('/point-of-sales/without-coordinates-stats');
     return response.data;
   },
+
+  async lock(id) {
+    const response = await api.post(`/point-of-sales/${id}/lock`);
+    return response.data;
+  },
+
+  async unlock(id) {
+    const response = await api.post(`/point-of-sales/${id}/unlock`);
+    return response.data;
+  },
 };
