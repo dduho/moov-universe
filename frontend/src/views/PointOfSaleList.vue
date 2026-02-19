@@ -203,6 +203,7 @@
               label="Trier par"
               :options="[
                 { label: 'Date de création', value: 'created_at' },
+                { label: 'Dernière modification', value: 'updated_at' },
                 { label: 'Nom', value: 'point_name' },
                 { label: 'Statut', value: 'status' },
                 { label: 'Région', value: 'region' }
@@ -211,6 +212,19 @@
               option-value="value"
               class="w-32 sm:w-auto"
             />
+            <button
+              @click="toggleSortOrder"
+              class="px-4 py-2 rounded-xl bg-white/90 border border-gray-200 hover:bg-white hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              title="Inverser l'ordre de tri"
+            >
+              <svg v-if="filters.sortOrder === 'desc'" class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path>
+              </svg>
+              <svg v-else class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+              </svg>
+              <span class="text-sm font-medium text-gray-700">{{ filters.sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien' }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -519,6 +533,7 @@ const filters = ref({
   quartier: '',
   dealer: '',
   sortBy: 'created_at',
+  sortOrder: 'desc',
   // Filtres de qualité des données
   incompleteData: false,
   noGPS: false,
@@ -615,6 +630,12 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+const toggleSortOrder = () => {
+  filters.value.sortOrder = filters.value.sortOrder === 'desc' ? 'asc' : 'desc';
+  currentPage.value = 1;
+  fetchPointsOfSale();
+};
+
 const clearFilters = () => {
   filters.value = {
     search: '',
@@ -626,6 +647,7 @@ const clearFilters = () => {
     quartier: '',
     dealer: '',
     sortBy: 'created_at',
+    sortOrder: 'desc',
     incompleteData: false,
     noGPS: false,
     geoInconsistency: false,
@@ -643,7 +665,7 @@ const handleExport = async (format) => {
     const params = new URLSearchParams();
     
     params.append('sort_by', filters.value.sortBy);
-    params.append('sort_order', 'desc');
+    params.append('sort_order', filters.value.sortOrder);
 
     // Forcer la scope organisation pour les dealer owners
     if (authStore.isDealerOwner && authStore.organizationId) {
@@ -723,7 +745,7 @@ const fetchPointsOfSale = async (append = false) => {
       page: currentPage.value,
       per_page: perPage.value,
       sort_by: filters.value.sortBy,
-      sort_order: 'desc'
+      sort_order: filters.value.sortOrder
     };
 
     // Forcer la scope organisation pour les dealer owners
@@ -803,6 +825,7 @@ watch([
   () => filters.value.prefecture, 
   () => filters.value.dealer, 
   () => filters.value.sortBy,
+  () => filters.value.sortOrder,
   () => filters.value.incompleteData,
   () => filters.value.noGPS,
   () => filters.value.geoInconsistency,
