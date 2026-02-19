@@ -223,7 +223,7 @@
               <svg v-else class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
               </svg>
-              <span class="text-sm font-medium text-gray-700">{{ filters.sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien' }}</span>
+              <span class="text-sm font-medium text-gray-700">{{ sortOrderLabel }}</span>
             </button>
           </div>
         </div>
@@ -571,6 +571,15 @@ const communes = computed(() => {
     }
   });
   return Array.from(uniqueCommunes).sort();
+});
+
+// Label adaptatif pour le bouton de tri
+const sortOrderLabel = computed(() => {
+  const isDateField = ['created_at', 'updated_at'].includes(filters.value.sortBy);
+  if (isDateField) {
+    return filters.value.sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien';
+  }
+  return filters.value.sortOrder === 'desc' ? 'Z → A' : 'A → Z';
 });
 
 // Les PDV sont déjà filtrés côté serveur
