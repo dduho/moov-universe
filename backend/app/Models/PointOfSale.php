@@ -12,6 +12,7 @@ class PointOfSale extends Model
     protected $fillable = [
         'organization_id',
         'created_by',
+        'updated_by',
         'validated_by',
         'status',
         'is_locked',
@@ -115,6 +116,11 @@ class PointOfSale extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updater()
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function validator()

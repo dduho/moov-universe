@@ -248,4 +248,9 @@ export default {
     const response = await api.post(`/point-of-sales/${id}/unlock`);
     return response.data;
   },
+
+  async clearCache() {
+    const response = await api.post('/point-of-sales/clear-cache');
+    return response.data;
+  },
 };

@@ -441,6 +441,19 @@
                     <p class="text-sm font-bold text-gray-900">{{ formatDate(pos.created_at) }}</p>
                   </div>
                 </div>
+                <div v-if="wasModified(pos)" class="flex items-center gap-3 pb-4 border-b border-gray-200">
+                  <svg class="w-5 h-5 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                  </svg>
+                  <div class="flex-1">
+                    <p class="text-xs font-semibold text-gray-500">Dernière modification</p>
+                    <p class="text-sm font-bold text-gray-900">{{ formatDate(pos.updated_at) }}</p>
+                    <p class="text-xs text-sky-700 mt-0.5">
+                      <span v-if="pos.updater">par {{ pos.updater.name }}</span>
+                      <span v-else-if="pos.updated_by === null" class="italic">via importation</span>
+                    </p>
+                  </div>
+                </div>
                 <div v-if="pos.validated_at" class="flex items-center gap-3">
                   <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
@@ -880,6 +893,8 @@ const formatVisibilitySupport = (value) => {
         .filter(Boolean);
   return items.join(', ');
 };
+
+const wasModified = (p) => !!p && !!p.updated_at && p.updated_at !== p.created_at;
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';

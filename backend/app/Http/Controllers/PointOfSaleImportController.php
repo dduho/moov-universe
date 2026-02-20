@@ -272,7 +272,8 @@ class PointOfSaleImportController extends Controller
                             'reason' => 'PDV verrouillé par un administrateur'
                         ];
                     } elseif ($allowUpdates) {
-                        // Mettre à jour le PDV existant
+                        // Mettre à jour le PDV existant (updated_by = null = import)
+                        $data['updated_by'] = null;
                         $existing->update($data);
                         $updated[] = [
                             'line' => $i + 1,

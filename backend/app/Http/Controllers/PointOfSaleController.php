@@ -49,6 +49,13 @@ class PointOfSaleController extends Controller
         if ($request->has('organization_id') && $user->isAdmin()) {
             $query->where('organization_id', $request->organization_id);
         }
+        if ($request->has('updated_by') && $request->updated_by && $user->isAdmin()) {
+            if ($request->updated_by === 'import') {
+                $query->whereNull('updated_by')->whereColumn('updated_at', '!=', 'created_at');
+            } else {
+                $query->where('updated_by', $request->updated_by);
+            }
+        }
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -154,13 +161,16 @@ class PointOfSaleController extends Controller
     private function flushPdvCache(): void
     {
         try {
-            // Predis/Redis supporte les tags, on utilise uniquement cette méthode
             Cache::tags(['pdv-index'])->flush();
         } catch (\Throwable $e) {
-            // Si les tags ne sont pas supportés, on ne fait rien
-            // plutôt que d'appeler Cache::flush() qui est désactivé en production
             \Log::warning('PDV cache flush failed (tags not supported or Redis command disabled): ' . $e->getMessage());
         }
+    }
+
+    public function clearCache(Request $request)
+    {
+        $this->flushPdvCache();
+        return response()->json(['message' => 'Cache PDV vidé avec succès']);
     }
 
     /**
@@ -177,7 +187,7 @@ class PointOfSaleController extends Controller
         }
         
         // Charger toutes les colonnes nécessaires pour l'export
-        $query = PointOfSale::with(['organization:id,name', 'creator:id,name']);
+        $query = PointOfSale::with(['organization:id,name', 'creator:id,name', 'updater:id,name']);
         
         // Filter based on user role (same as index)
         if ($user->isAdmin()) {
@@ -418,7 +428,7 @@ class PointOfSaleController extends Controller
         $query = PointOfSale::select([
             'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
             'profil', 'region', 'prefecture', 'commune', 'ville', 'quartier',
-            'status', 'created_by', 'validated_by', 'created_at', 'updated_at',
+            'status', 'created_by', 'updated_by', 'validated_by', 'created_at', 'updated_at',
             'latitude', 'longitude', 'canton',
             // Informations gérant
             'firstname', 'lastname', 'gender', 'sexe_gerant', 'date_of_birth',
@@ -430,7 +440,7 @@ class PointOfSaleController extends Controller
             'numero_proprietaire', 'autre_contact',
             // Visibilité et autres
             'support_visibilite', 'etat_support', 'numero_cagnt', 'type_activite', 'localisation'
-        ])->with(['organization:id,name', 'creator:id,name']);
+        ])->with(['organization:id,name', 'creator:id,name', 'updater:id,name']);
         
         // Ne pas charger validator et uploads dans la liste (trop lourd)
 
@@ -744,7 +754,7 @@ class PointOfSaleController extends Controller
     public function show($id, Request $request)
     {
         $user = $request->user();
-        $query = PointOfSale::with(['organization', 'creator', 'validator', 'idDocuments', 'photos', 'fiscalDocuments', 'tasks']);
+        $query = PointOfSale::with(['organization', 'creator', 'updater', 'validator', 'idDocuments', 'photos', 'fiscalDocuments', 'tasks']);
 
         $pdv = $query->findOrFail($id);
 
@@ -847,6 +857,8 @@ class PointOfSaleController extends Controller
             'nif' => 'nullable|string',
             'autre_contact' => 'nullable|string',
         ]);
+
+        $validated['updated_by'] = $user->id;
 
         $pdv->update($validated);
 

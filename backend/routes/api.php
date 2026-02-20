@@ -120,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{id}/reject', [PointOfSaleController::class, 'reject']);
             Route::post('/{id}/lock', [PointOfSaleController::class, 'lock']);
             Route::post('/{id}/unlock', [PointOfSaleController::class, 'unlock']);
+            Route::post('/clear-cache', [PointOfSaleController::class, 'clearCache']);
         });
 
         // Notes routes (accessible à tous les utilisateurs authentifiés)

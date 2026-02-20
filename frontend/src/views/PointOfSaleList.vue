@@ -10,6 +10,17 @@
           <p class="text-sm sm:text-base text-gray-600">{{ total }} PDV au total - {{ filteredPOS.length }} affichés</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            v-if="authStore.isAdmin"
+            @click="handleClearCache"
+            :disabled="clearingCache"
+            title="Vider le cache backend et frontend de la liste"
+            class="p-2 sm:p-2.5 rounded-xl bg-white/80 border border-gray-200 text-gray-500 hover:text-moov-orange hover:border-moov-orange hover:bg-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg :class="['w-4 h-4 sm:w-5 sm:h-5', clearingCache ? 'animate-spin' : '']" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+          </button>
           <ExportButton
             @export="handleExport"
             :disabled="loading"
@@ -40,9 +51,38 @@
       </div>
 
       <!-- Filters -->
-      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6 mb-6 sm:mb-8">
-        <!-- Ligne 1: Recherche, Statut, Région, Dealer -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-3 sm:mb-4">
+      <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl mb-6 sm:mb-8 overflow-hidden">
+        <!-- Header toggle -->
+        <button
+          @click="filtersOpen = !filtersOpen"
+          class="w-full flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 hover:bg-gray-50/50 transition-colors duration-200"
+        >
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"></path>
+            </svg>
+            <span class="text-sm font-bold text-gray-700">Filtres &amp; Tri</span>
+            <span v-if="activeFiltersCount > 0" class="ml-1 inline-flex items-center justify-center w-5 h-5 rounded-full bg-moov-orange text-white text-xs font-bold">{{ activeFiltersCount }}</span>
+          </div>
+          <svg
+            class="w-4 h-4 text-gray-400 transition-transform duration-200"
+            :class="filtersOpen ? 'rotate-180' : ''"
+            fill="none" stroke="currentColor" viewBox="0 0 24 24"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+
+        <!-- Collapsible content -->
+        <Transition
+          @enter="slideEnter"
+          @after-enter="slideAfterEnter"
+          @leave="slideLeave"
+          @after-leave="slideAfterLeave"
+        >
+        <div v-if="filtersOpen" class="px-4 sm:px-6 pt-4 pb-4 sm:pb-6 border-t border-gray-100">
+          <!-- Ligne 1: Recherche, Statut, Région -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <div class="sm:col-span-2 md:col-span-2">
             <FormInput
               v-model="filters.search"
@@ -75,14 +115,28 @@
             option-label="label"
             option-value="value"
           />
-          
+        </div>
+
+        <!-- Ligne 1b: Dealer & Modifié par (admin uniquement) -->
+        <div v-if="authStore.isAdmin" class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-3 sm:mb-4">
           <FormSelect
-            v-if="authStore.isAdmin"
             v-model="filters.dealer"
             label="Dealer"
             :options="[
               { label: 'Tous', value: '' },
               ...dealers.map(d => ({ label: d.name, value: d.id }))
+            ]"
+            option-label="label"
+            option-value="value"
+          />
+
+          <FormSelect
+            v-model="filters.updatedBy"
+            label="Modifié par"
+            :options="[
+              { label: 'Tous', value: '' },
+              { label: '📥 Via importation', value: 'import' },
+              ...updaters.map(u => ({ label: u.name, value: String(u.id) }))
             ]"
             option-label="label"
             option-value="value"
@@ -227,6 +281,8 @@
             </button>
           </div>
         </div>
+        </div>
+        </Transition>
       </div>
 
       <!-- Loading State -->
@@ -359,6 +415,17 @@
               </div>
             </div>
 
+            <!-- Dernière modification -->
+            <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-sky-50">
+              <svg class="w-4 h-4 text-sky-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+              </svg>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs text-gray-600">Modifié le</p>
+                <p class="text-xs font-bold text-sky-900 truncate">{{ formatDate(pos.updated_at) }}</p>                  <p v-if="pos.updater" class="text-xs text-sky-700 truncate">par {{ pos.updater.name }}</p>
+                  <p v-else-if="pos.updated_by === null && pos.updated_at !== pos.created_at" class="text-xs text-sky-700 truncate italic">via importation</p>              </div>
+            </div>
+
             <!-- Alerte proximité -->
             <div v-if="pos.proximity_alert" class="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 border-2 border-red-200 mt-3">
               <svg class="w-5 h-5 text-red-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,11 +436,29 @@
           </div>
 
           <!-- Footer hover effect -->
-          <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-            <span class="text-xs font-semibold text-gray-500">Cliquez pour voir les détails</span>
-            <svg class="w-5 h-5 text-moov-orange transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-            </svg>
+          <div class="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+            <button
+              v-if="authStore.isAdmin"
+              @click.stop="toggleLock(pos, $event)"
+              :title="pos.is_locked ? 'Déverrouiller ce PDV' : 'Verrouiller ce PDV'"
+              class="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-all duration-200"
+              :class="pos.is_locked
+                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700'"
+            >
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path v-if="pos.is_locked" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              {{ pos.is_locked ? 'Déverrouiller' : 'Verrouiller' }}
+            </button>
+            <span v-else></span>
+            <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span class="text-xs font-semibold text-gray-500">Voir les détails</span>
+              <svg class="w-5 h-5 text-moov-orange transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
           </div>
         </div>
       </TransitionGroup>
@@ -389,7 +474,7 @@
               <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Localisation</th>
               <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Profil</th>
               <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Statut</th>
-              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Date</th>
+              <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Dates</th>
               <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
@@ -445,19 +530,40 @@
                   </span>
                 </div>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                {{ formatDate(pos.created_at) }}
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-xs text-gray-500">Créé le</div>
+                <div class="text-sm font-semibold text-gray-800">{{ formatDate(pos.created_at) }}</div>
+                <div class="text-xs text-gray-500 mt-1">Modifié le</div>
+                <div class="text-sm font-semibold text-sky-700">{{ formatDate(pos.updated_at) }}</div>
+                <div v-if="pos.updater" class="text-xs text-sky-600">par {{ pos.updater.name }}</div>
+                <div v-else-if="pos.updated_by === null && pos.updated_at !== pos.created_at" class="text-xs text-sky-600 italic">via importation</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <button
-                  @click.stop="$router.push(`/pdv/${pos.id}`)"
-                  class="text-moov-orange hover:text-moov-orange-dark font-bold flex items-center gap-1 ml-auto"
-                >
-                  Voir
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                  </svg>
-                </button>
+                <div class="flex items-center justify-end gap-2">
+                  <button
+                    v-if="authStore.isAdmin"
+                    @click.stop="toggleLock(pos, $event)"
+                    :title="pos.is_locked ? 'Déverrouiller' : 'Verrouiller'"
+                    class="flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-200"
+                    :class="pos.is_locked
+                      ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-gray-600'"
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path v-if="pos.is_locked" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                      <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </button>
+                  <button
+                    @click.stop="$router.push(`/pdv/${pos.id}`)"
+                    class="text-moov-orange hover:text-moov-orange-dark font-bold flex items-center gap-1"
+                  >
+                    Voir
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                  </button>
+                </div>
               </td>
             </tr>
           </TransitionGroup>
@@ -506,14 +612,16 @@ import { useOrganizationStore } from '../stores/organization';
 import { formatPhone, formatShortcode } from '../utils/formatters';
 import { useToast } from '../composables/useToast';
 import { useCacheStore } from '../composables/useCacheStore';
+import api from '../services/api';
 
 const router = useRouter();
 const authStore = useAuthStore();
 const organizationStore = useOrganizationStore();
 const { toast } = useToast();
-const { fetchWithCache } = useCacheStore();
+const { fetchWithCache, clearCacheForEndpoint } = useCacheStore();
 
 const loading = ref(true);
+const filtersOpen = ref(false);
 const loadingMore = ref(false);
 const exportLoading = ref(false);
 const pointsOfSale = ref([]);
@@ -538,7 +646,8 @@ const filters = ref({
   incompleteData: false,
   noGPS: false,
   geoInconsistency: false,
-  proximityAlert: false
+  proximityAlert: false,
+  updatedBy: ''
 });
 
 const regions = ref([
@@ -550,6 +659,8 @@ const regions = ref([
 ]);
 
 const dealers = computed(() => organizationStore.organizations);
+
+const updaters = ref([]);
 
 const prefectures = computed(() => {
   const uniquePrefectures = new Set();
@@ -580,6 +691,24 @@ const sortOrderLabel = computed(() => {
     return filters.value.sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien';
   }
   return filters.value.sortOrder === 'desc' ? 'Z → A' : 'A → Z';
+});
+
+const activeFiltersCount = computed(() => {
+  let count = 0;
+  if (filters.value.search) count++;
+  if (filters.value.status) count++;
+  if (filters.value.region) count++;
+  if (filters.value.prefecture) count++;
+  if (filters.value.commune) count++;
+  if (filters.value.ville) count++;
+  if (filters.value.quartier) count++;
+  if (filters.value.dealer) count++;
+  if (filters.value.incompleteData) count++;
+  if (filters.value.noGPS) count++;
+  if (filters.value.geoInconsistency) count++;
+  if (filters.value.proximityAlert) count++;
+  if (filters.value.updatedBy) count++;
+  return count;
 });
 
 // Les PDV sont déjà filtrés côté serveur
@@ -660,7 +789,8 @@ const clearFilters = () => {
     incompleteData: false,
     noGPS: false,
     geoInconsistency: false,
-    proximityAlert: false
+    proximityAlert: false,
+    updatedBy: ''
   };
   currentPage.value = 1;
 };
@@ -771,6 +901,9 @@ const fetchPointsOfSale = async (append = false) => {
     if (filters.value.search) params.search = filters.value.search;
     // (déjà ajouté plus haut)
     
+    // Filtre modifié par
+    if (filters.value.updatedBy) params.updated_by = filters.value.updatedBy;
+    
     // Filtres de qualité des données
     if (filters.value.incompleteData) params.incomplete_data = true;
     if (filters.value.noGPS) params.no_gps = true;
@@ -826,6 +959,68 @@ const refreshList = async () => {
   await fetchPointsOfSale(false);
 };
 
+const clearingCache = ref(false);
+
+const slideEnter = (el) => {
+  el.style.height = '0';
+  el.style.overflow = 'hidden';
+  el.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+  requestAnimationFrame(() => {
+    el.style.height = el.scrollHeight + 'px';
+  });
+};
+const slideAfterEnter = (el) => {
+  el.style.height = '';
+  el.style.overflow = '';
+  el.style.transition = '';
+};
+const slideLeave = (el) => {
+  el.style.height = el.scrollHeight + 'px';
+  el.style.overflow = 'hidden';
+  el.style.transition = 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+  requestAnimationFrame(() => {
+    el.style.height = '0';
+  });
+};
+const slideAfterLeave = (el) => {
+  el.style.height = '';
+  el.style.overflow = '';
+  el.style.transition = '';
+};
+const handleClearCache = async () => {
+  clearingCache.value = true;
+  try {
+    await PointOfSaleService.clearCache();
+    clearCacheForEndpoint('point-of-sales/list');
+    await refreshList();
+    toast.success('Cache vidé et liste actualisée');
+  } catch (err) {
+    console.error('Erreur clear cache:', err);
+    toast.error('Erreur lors du vidage du cache');
+  } finally {
+    clearingCache.value = false;
+  }
+};
+
+const toggleLock = async (pos, event) => {
+  event.stopPropagation();
+  const wasLocked = pos.is_locked;
+  try {
+    if (wasLocked) {
+      await PointOfSaleService.unlock(pos.id);
+      pos.is_locked = false;
+      toast.success(`"${pos.nom_point}" déverrouillé avec succès`);
+    } else {
+      await PointOfSaleService.lock(pos.id);
+      pos.is_locked = true;
+      toast.success(`"${pos.nom_point}" verrouillé avec succès`);
+    }
+  } catch (err) {
+    console.error('Erreur toggle lock:', err);
+    toast.error(`Erreur lors du ${wasLocked ? 'déverrouillage' : 'verrouillage'} du PDV`);
+  }
+};
+
 // Reset to page 1 when changing filters
 watch([
   () => filters.value.search, 
@@ -838,14 +1033,25 @@ watch([
   () => filters.value.incompleteData,
   () => filters.value.noGPS,
   () => filters.value.geoInconsistency,
-  () => filters.value.proximityAlert
+  () => filters.value.proximityAlert,
+  () => filters.value.updatedBy
 ], () => {
   refreshList();
 }, { deep: true });
 
 onMounted(async () => {
+  // Invalider le cache à chaque visite pour avoir des données fraîches
+  // (évite d'afficher un updater obsolète après une modif sur la fiche)
+  clearCacheForEndpoint('point-of-sales/list');
   await fetchPointsOfSale();
   await organizationStore.fetchOrganizations();
+  // Charger la liste des utilisateurs ayant modifié des PDVs
+  try {
+    const response = await api.get('/users');
+    updaters.value = (response.data || []).filter(u => u.id);
+  } catch {
+    updaters.value = [];
+  }
 });
 </script>
 
