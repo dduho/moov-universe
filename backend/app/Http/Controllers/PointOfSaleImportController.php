@@ -141,13 +141,21 @@ class PointOfSaleImportController extends Controller
                         }
                         
                         if ($existing) {
-                            $toUpdate[] = [
+                            $updateInfo = [
                                 'line' => $i + 1,
                                 'data' => $data,
                                 'existing_id' => $existing->id,
                                 'existing_shortcode' => $existing->shortcode,
-                                'message' => "PDV existant (ID: {$existing->id}" . ($existing->shortcode ? ", Shortcode: {$existing->shortcode}" : ", Numéro: {$existing->numero_flooz}") . ") - Sera mis à jour"
+                                'is_locked' => $existing->is_locked ?? false,
                             ];
+                            
+                            if ($existing->is_locked) {
+                                $updateInfo['message'] = "PDV existant (ID: {$existing->id}" . ($existing->shortcode ? ", Shortcode: {$existing->shortcode}" : ", Numéro: {$existing->numero_flooz}") . ") - VERROUILLÉ, ne sera pas mis à jour";
+                            } else {
+                                $updateInfo['message'] = "PDV existant (ID: {$existing->id}" . ($existing->shortcode ? ", Shortcode: {$existing->shortcode}" : ", Numéro: {$existing->numero_flooz}") . ") - Sera mis à jour";
+                            }
+                            
+                            $toUpdate[] = $updateInfo;
                         } else {
                             $validRows[] = [
                                 'line' => $i + 1,
@@ -253,7 +261,17 @@ class PointOfSaleImportController extends Controller
                 }
                 
                 if ($existing) {
-                    if ($allowUpdates) {
+                    // Check if PDV is locked
+                    if ($existing->is_locked) {
+                        // Skip locked PDVs regardless of allowUpdates setting
+                        $skipped[] = [
+                            'line' => $i + 1,
+                            'id' => $existing->id,
+                            'nom_point' => $existing->nom_point,
+                            'shortcode' => $existing->shortcode,
+                            'reason' => 'PDV verrouillé par un administrateur'
+                        ];
+                    } elseif ($allowUpdates) {
                         // Mettre à jour le PDV existant
                         $existing->update($data);
                         $updated[] = [

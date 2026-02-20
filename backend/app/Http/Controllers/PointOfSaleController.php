@@ -1243,4 +1243,48 @@ class PointOfSaleController extends Controller
 
         return implode(', ', $normalized);
     }
+
+    /**
+     * Lock a PDV to prevent updates during import
+     */
+    public function lock($id)
+    {
+        $pdv = PointOfSale::findOrFail($id);
+        
+        // Check if user has permission (admin only)
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            return response()->json(['message' => 'Non autorisé'], 403);
+        }
+        
+        $pdv->is_locked = true;
+        $pdv->save();
+        
+        return response()->json([
+            'message' => 'PDV verrouillé avec succès',
+            'data' => $pdv
+        ]);
+    }
+
+    /**
+     * Unlock a PDV to allow updates during import
+     */
+    public function unlock($id)
+    {
+        $pdv = PointOfSale::findOrFail($id);
+        
+        // Check if user has permission (admin only)
+        $user = auth()->user();
+        if (!$user->isAdmin()) {
+            return response()->json(['message' => 'Non autorisé'], 403);
+        }
+        
+        $pdv->is_locked = false;
+        $pdv->save();
+        
+        return response()->json([
+            'message' => 'PDV déverrouillé avec succès',
+            'data' => $pdv
+        ]);
+    }
 }
