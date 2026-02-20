@@ -203,6 +203,7 @@
               label="Trier par"
               :options="[
                 { label: 'Date de création', value: 'created_at' },
+                { label: 'Dernière modification', value: 'updated_at' },
                 { label: 'Nom', value: 'point_name' },
                 { label: 'Statut', value: 'status' },
                 { label: 'Région', value: 'region' }
@@ -211,6 +212,19 @@
               option-value="value"
               class="w-32 sm:w-auto"
             />
+            <button
+              @click="toggleSortOrder"
+              class="px-4 py-2 rounded-xl bg-white/90 border border-gray-200 hover:bg-white hover:shadow-lg transition-all duration-200 flex items-center gap-2"
+              title="Inverser l'ordre de tri"
+            >
+              <svg v-if="filters.sortOrder === 'desc'" class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4"></path>
+              </svg>
+              <svg v-else class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"></path>
+              </svg>
+              <span class="text-sm font-medium text-gray-700">{{ sortOrderLabel }}</span>
+            </button>
           </div>
         </div>
       </div>
@@ -265,6 +279,15 @@
                 :class="getStatusClass(pos.status)"
               >
                 {{ getStatusLabel(pos.status) }}
+              </span>
+              <span
+                v-if="pos.is_locked"
+                class="px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 border border-blue-300 text-blue-800 flex items-center gap-1 shadow-lg"
+                title="PDV verrouillé"
+              >
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
               </span>
             </div>
           </div>
@@ -404,12 +427,23 @@
                 <span class="text-sm text-gray-700 font-medium">{{ pos.profil || 'N/A' }}</span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <span
-                  class="px-3 py-1 rounded-xl text-xs font-bold"
-                  :class="getStatusClass(pos.status)"
-                >
-                  {{ getStatusLabel(pos.status) }}
-                </span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="px-3 py-1 rounded-xl text-xs font-bold"
+                    :class="getStatusClass(pos.status)"
+                  >
+                    {{ getStatusLabel(pos.status) }}
+                  </span>
+                  <span
+                    v-if="pos.is_locked"
+                    class="px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 border border-blue-300 text-blue-800 flex items-center gap-1"
+                    title="PDV verrouillé - ne sera pas modifié lors des imports"
+                  >
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </span>
+                </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                 {{ formatDate(pos.created_at) }}
@@ -499,6 +533,7 @@ const filters = ref({
   quartier: '',
   dealer: '',
   sortBy: 'created_at',
+  sortOrder: 'desc',
   // Filtres de qualité des données
   incompleteData: false,
   noGPS: false,
@@ -536,6 +571,15 @@ const communes = computed(() => {
     }
   });
   return Array.from(uniqueCommunes).sort();
+});
+
+// Label adaptatif pour le bouton de tri
+const sortOrderLabel = computed(() => {
+  const isDateField = ['created_at', 'updated_at'].includes(filters.value.sortBy);
+  if (isDateField) {
+    return filters.value.sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien';
+  }
+  return filters.value.sortOrder === 'desc' ? 'Z → A' : 'A → Z';
 });
 
 // Les PDV sont déjà filtrés côté serveur
@@ -595,6 +639,12 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+const toggleSortOrder = () => {
+  filters.value.sortOrder = filters.value.sortOrder === 'desc' ? 'asc' : 'desc';
+  currentPage.value = 1;
+  fetchPointsOfSale();
+};
+
 const clearFilters = () => {
   filters.value = {
     search: '',
@@ -606,6 +656,7 @@ const clearFilters = () => {
     quartier: '',
     dealer: '',
     sortBy: 'created_at',
+    sortOrder: 'desc',
     incompleteData: false,
     noGPS: false,
     geoInconsistency: false,
@@ -623,7 +674,7 @@ const handleExport = async (format) => {
     const params = new URLSearchParams();
     
     params.append('sort_by', filters.value.sortBy);
-    params.append('sort_order', 'desc');
+    params.append('sort_order', filters.value.sortOrder);
 
     // Forcer la scope organisation pour les dealer owners
     if (authStore.isDealerOwner && authStore.organizationId) {
@@ -703,7 +754,7 @@ const fetchPointsOfSale = async (append = false) => {
       page: currentPage.value,
       per_page: perPage.value,
       sort_by: filters.value.sortBy,
-      sort_order: 'desc'
+      sort_order: filters.value.sortOrder
     };
 
     // Forcer la scope organisation pour les dealer owners
@@ -783,6 +834,7 @@ watch([
   () => filters.value.prefecture, 
   () => filters.value.dealer, 
   () => filters.value.sortBy,
+  () => filters.value.sortOrder,
   () => filters.value.incompleteData,
   () => filters.value.noGPS,
   () => filters.value.geoInconsistency,

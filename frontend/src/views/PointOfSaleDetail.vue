@@ -63,6 +63,19 @@
               </svg>
               Modifier
             </router-link>
+            
+            <!-- Lock Badge -->
+            <span
+              v-if="pos.is_locked"
+              class="self-start sm:self-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-blue-100 border-2 border-blue-300 text-blue-800 flex items-center gap-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+              </svg>
+              Verrouillé
+            </span>
+            
+            <!-- Status Badge -->
             <span
               class="self-start sm:self-auto px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-bold"
               :class="getStatusClass(pos.status)"
@@ -461,27 +474,43 @@
             </div>
 
             <!-- Actions (Admin Only) -->
-            <div v-if="authStore.isAdmin && pos.status === 'pending'" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
+            <div v-if="authStore.isAdmin" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Actions</h3>
               <div class="space-y-3">
+                <!-- Lock/Unlock Button -->
                 <button
-                  @click="validatePOS"
-                  class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                  @click="toggleLock"
+                  :class="pos.is_locked ? 'from-blue-500 to-blue-600' : 'from-gray-500 to-gray-600'"
+                  class="w-full px-4 py-3 rounded-xl bg-gradient-to-r text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    <path v-if="pos.is_locked" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
                   </svg>
-                  Valider
+                  {{ pos.is_locked ? 'Déverrouiller' : 'Verrouiller' }}
                 </button>
-                <button
-                  @click="showRejectModal = true"
-                  class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  Rejeter
-                </button>
+                
+                <!-- Validate/Reject Buttons (only for pending) -->
+                <template v-if="pos.status === 'pending'">
+                  <button
+                    @click="validatePOS"
+                    class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Valider
+                  </button>
+                  <button
+                    @click="showRejectModal = true"
+                    class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-bold hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center gap-2"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Rejeter
+                  </button>
+                </template>
               </div>
             </div>
 
@@ -1102,6 +1131,36 @@ const handleReject = async ({ id, reason }) => {
     toast.error('Erreur lors du rejet du PDV');
   }
 };
+
+const toggleLock = async () => {
+  const action = pos.value.is_locked ? 'déverrouiller' : 'verrouiller';
+  const confirmed = await confirm({
+    title: pos.value.is_locked ? 'Déverrouiller le PDV' : 'Verrouiller le PDV',
+    message: pos.value.is_locked 
+      ? `Êtes-vous sûr de vouloir déverrouiller "${pos.value.nom_point}" ? Ce PDV pourra être mis à jour lors des imports.`
+      : `Êtes-vous sûr de vouloir verrouiller "${pos.value.nom_point}" ? Ce PDV ne sera plus modifié lors des imports.`,
+    confirmText: pos.value.is_locked ? 'Déverrouiller' : 'Verrouiller',
+    type: 'warning'
+  });
+  
+  if (!confirmed) return;
+  
+  try {
+    if (pos.value.is_locked) {
+      await PointOfSaleService.unlock(pos.value.id);
+      toast.success('PDV déverrouillé avec succès');
+    } else {
+      await PointOfSaleService.lock(pos.value.id);
+      toast.success('PDV verrouillé avec succès');
+    }
+    // Refresh data to get updated lock status
+    await fetchPOSData();
+  } catch (err) {
+    console.error(`Error ${action} POS:`, err);
+    toast.error(`Erreur lors du ${action} du PDV`);
+  }
+};
+
 
 const fetchPOSData = async () => {
   try {
