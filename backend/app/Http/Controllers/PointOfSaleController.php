@@ -860,6 +860,11 @@ class PointOfSaleController extends Controller
 
         $validated['updated_by'] = $user->id;
 
+        // Auto-lock when an admin modifies a PDV
+        if ($user->isAdmin()) {
+            $validated['is_locked'] = true;
+        }
+
         $pdv->update($validated);
 
         // Attach uploaded files (update existing associations)
