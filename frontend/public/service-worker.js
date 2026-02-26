@@ -64,8 +64,8 @@ const navigationHandler = createHandlerBoundToURL('/index.html')
 registerRoute(
   new NavigationRoute(async (context) => {
     try {
-      // Essayer de récupérer la page depuis le réseau
-      return await navigationHandler.handle(context)
+      // Appel direct : createHandlerBoundToURL retourne une fonction, pas un objet
+      return await navigationHandler(context)
     } catch (error) {
       console.log('[SW] Navigation failed, trying offline page:', error)
       // Si le réseau échoue, essayer la page offline
@@ -96,9 +96,9 @@ registerRoute(
   })
 )
 
-// Images : cache-first avec expiration
+// Images : cache-first avec expiration (favicon exclu car destination vide dans Chrome)
 registerRoute(
-  ({ request }) => request.destination === 'image',
+  ({ request }) => request.destination === 'image' && !request.url.endsWith('favicon.ico'),
   new CacheFirst({
     cacheName: IMAGES_CACHE,
     plugins: [
