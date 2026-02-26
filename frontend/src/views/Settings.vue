@@ -592,8 +592,9 @@ import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 import SettingService from '../services/SettingService';
 import { useAnalyticsCacheStore } from '../stores/analyticsCache';
-import { offlineDB } from '../utils/offlineDB';
+import { offlineDB, STORES } from '../utils/offlineDB';
 import { useCacheStore } from '../composables/useCacheStore';
+import cacheService from '../services/cacheService';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -966,8 +967,21 @@ function getEndpointFromWidgetKey(key) {
 async function clearAllCaches() {
   try {
     clearingAllCaches.value = true;
+
+    // 1. Vider le cache Redis backend
     await SettingService.clearAllCaches();
-    toast.success('Tous les caches ont été vidés');
+
+    // 2. Vider le localStorage (préfixe 'cache_' via useCacheStore + préfixe 'moov_cache_' via cacheService)
+    clearAllCache();
+    cacheService.clear();
+
+    // 3. Vider les caches du Service Worker (PWA) sans le désinscrire
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    toast.success('Tous les caches ont été vidés (backend + frontend)');
   } catch (error) {
     console.error('Error clearing all caches:', error);
     toast.error('Erreur lors du vidage de tous les caches');
@@ -983,11 +997,13 @@ async function clearFrontendCaches() {
     // 1. Vider les stores Pinia
     analyticsCacheStore.clearAll();
     
-    // 2. Vider IndexedDB
-    await offlineDB.clearAll();
+    // 2. Vider IndexedDB - uniquement les stores de données (PAS les actions offline en attente)
+    await offlineDB.clear(STORES.PDV);
+    await offlineDB.clear(STORES.CACHED_DATA);
     
-    // 3. Vider le localStorage (cache hybride)
-    const clearedLocalStorage = clearAllCache();
+    // 3. Vider le localStorage (tous les préfixes de cache)
+    const clearedLocalStorage = clearAllCache(); // préfixe 'cache_'
+    cacheService.clear();                        // préfixe 'moov_cache_' (carte)
     console.log(`localStorage vidé: ${clearedLocalStorage} entrées`);
     
     // 4. Vider tous les caches du Service Worker (PWA)
@@ -999,15 +1015,12 @@ async function clearFrontendCaches() {
       console.log('Service Worker caches vidés:', cacheNames);
     }
     
-    // 5. Désinscrire et réinscrire le Service Worker pour forcer la mise à jour
+    // 5. Désinscrire le Service Worker (il sera automatiquement réinscrit au rechargement)
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration();
       if (registration) {
         await registration.unregister();
-        console.log('Service Worker désinscrit');
-        // Réinscrire immédiatement
-        await navigator.serviceWorker.register('/service-worker.js');
-        console.log('Service Worker réinscrit');
+        console.log('[SW] Désinscrit - sera réinscrit au rechargement');
       }
     }
     
