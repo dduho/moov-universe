@@ -259,6 +259,8 @@ async function initMap() {
     center: [8.6195, 0.8248],
     zoom: 12,
     zoomControl: true,
+    tap: false,           // évite le double-event touch→click qui ferme le popup sur mobile
+    closePopupOnClick: false, // empêche la carte de fermer le popup au clic
   });
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -353,6 +355,8 @@ function refreshPdvMarkers() {
     marker.bindPopup(buildPopupHtml(pdv), {
       maxWidth: 320,
       className: 'pdv-popup',
+      autoClose: false,   // ne pas fermer quand un autre marker est ouvert
+      closeOnClick: false, // ne pas fermer au clic sur la carte
     });
     pdvCluster.addLayer(marker);
   });
