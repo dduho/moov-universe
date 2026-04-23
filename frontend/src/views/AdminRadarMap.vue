@@ -434,15 +434,29 @@ function startGPS() {
 
   const options = { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 };
 
+  // Dernière position ayant déclenché un refreshPdvMarkers
+  let lastRefreshPos = null;
+
   watchId = navigator.geolocation.watchPosition(
     (position) => {
       const { latitude: lat, longitude: lng, accuracy } = position.coords;
+      const isFirstFix = !userPosition.value;
       userPosition.value = { lat, lng, accuracy };
       gpsStatus.value = 'active';
       gpsError.value = null;
 
       updateUserOnMap(lat, lng);
-      refreshPdvMarkers();
+
+      // Ne rafraîchir les markers PDV que si c'est le premier fix
+      // ou si l'utilisateur s'est déplacé de plus de 100 m
+      // (évite de détruire/recréer les markers à chaque tick GPS et donc de fermer les popups)
+      const movedEnough = !lastRefreshPos ||
+        haversineKm(lastRefreshPos.lat, lastRefreshPos.lng, lat, lng) * 1000 > 100;
+
+      if (isFirstFix || movedEnough) {
+        lastRefreshPos = { lat, lng };
+        refreshPdvMarkers();
+      }
 
       if (loading.value) {
         // First fix — center map
