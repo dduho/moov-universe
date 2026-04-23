@@ -150,6 +150,12 @@ const routes = [
     component: () => import('../views/Comparator.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
   },
+  {
+    path: '/admin/radar-map',
+    name: 'AdminRadarMap',
+    component: () => import('../views/AdminRadarMap.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
 ];
 
 const router = createRouter({
