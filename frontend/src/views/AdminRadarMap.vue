@@ -225,6 +225,16 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 
 function deg2rad(deg) { return deg * (Math.PI / 180); }
 
+function formatFlooz(num) {
+  if (!num) return null;
+  const s = String(num).replace(/\D/g, '');
+  // Format: 228 XX XX XX XX
+  if (s.length === 11) return `${s.slice(0,3)} ${s.slice(3,5)} ${s.slice(5,7)} ${s.slice(7,9)} ${s.slice(9,11)}`;
+  // Format: XX XX XX XX (8 chiffres locaux)
+  if (s.length === 8) return `${s.slice(0,2)} ${s.slice(2,4)} ${s.slice(4,6)} ${s.slice(6,8)}`;
+  return s;
+}
+
 function formatDistance(km) {
   if (km == null) return '';
   if (km < 1) return `${Math.round(km * 1000)} m`;
@@ -380,7 +390,7 @@ function buildPopupHtml(pdv) {
         ${statusBadge}
       </div>
       <table style="width:100%;border-collapse:collapse;">
-        ${row('N° Flooz', pdv.numero_flooz)}
+        ${row('N° Flooz', formatFlooz(pdv.numero_flooz))}
         ${row('Shortcode', pdv.shortcode)}
         ${row('Quartier', pdv.quartier)}
         ${row('Ville', pdv.ville)}
