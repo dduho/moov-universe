@@ -380,15 +380,12 @@ function buildPopupHtml(pdv) {
         ${statusBadge}
       </div>
       <table style="width:100%;border-collapse:collapse;">
-        ${row('N° PDV', pdv.numero_flooz || pdv.numero)}
+        ${row('N° Flooz', pdv.numero_flooz)}
         ${row('Shortcode', pdv.shortcode)}
         ${row('Quartier', pdv.quartier)}
         ${row('Ville', pdv.ville)}
         ${row('Région', pdv.region)}
-        ${row('Type', pdv.type_de_point)}
         ${row('Dealer', pdv.organization?.name || pdv.dealer_name)}
-        ${row('Téléphone', pdv.telephone)}
-        ${row('Responsable', pdv.responsable || pdv.nom_responsable)}
         ${row('Distance', formatDistance(pdv._distance))}
       </table>
       <div style="margin-top:10px;text-align:right;">
