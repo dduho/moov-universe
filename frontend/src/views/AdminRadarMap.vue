@@ -193,16 +193,18 @@ let watchId = null;
 // --- Computed ---
 const nearbyPdvs = computed(() => {
   if (!userPosition.value) return [];
-  return allPdvs.value
-    .filter(pdv => {
-      if (!pdv.latitude || !pdv.longitude) return false;
-      const dist = haversineKm(
-        userPosition.value.lat, userPosition.value.lng,
-        parseFloat(pdv.latitude), parseFloat(pdv.longitude)
-      );
-      pdv._distance = dist;
-      return dist <= radiusKm.value;
-    });
+  const result = [];
+  for (const pdv of allPdvs.value) {
+    if (!pdv.latitude || !pdv.longitude) continue;
+    const dist = haversineKm(
+      userPosition.value.lat, userPosition.value.lng,
+      parseFloat(pdv.latitude), parseFloat(pdv.longitude)
+    );
+    if (dist <= radiusKm.value) {
+      result.push({ ...pdv, _distance: dist });
+    }
+  }
+  return result;
 });
 
 const nearbyPdvsSortedByDistance = computed(() =>
@@ -462,7 +464,7 @@ function startGPS() {
 async function loadPdvs() {
   try {
     loadingMessage.value = 'Chargement des points de vente...';
-    const data = await PointOfSaleService.getAllForExport();
+    const data = await PointOfSaleService.getForMap();
     allPdvs.value = Array.isArray(data) ? data : (data?.data ?? []);
   } catch (err) {
     console.error('[AdminRadarMap] Failed to load PDVs:', err);
