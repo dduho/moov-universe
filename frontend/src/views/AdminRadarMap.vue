@@ -180,7 +180,7 @@ const loadingMessage = ref('Chargement des PDV...');
 const gpsStatus = ref('loading'); // 'loading' | 'active' | 'error'
 const gpsError = ref(null);
 const userPosition = ref(null); // { lat, lng, accuracy }
-const radiusKm = ref(5);
+const radiusKm = ref(1);
 const allPdvs = ref([]);
 
 // Leaflet instances (not reactive)
