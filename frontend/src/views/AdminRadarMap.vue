@@ -24,6 +24,7 @@
               @change="refreshRadius"
               class="text-sm font-bold text-moov-orange bg-transparent border-none outline-none cursor-pointer"
             >
+              <option :value="0.5">500 m</option>
               <option :value="1">1 km</option>
               <option :value="2">2 km</option>
               <option :value="5">5 km</option>
