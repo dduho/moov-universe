@@ -2,6 +2,10 @@
 
 #=============================================================================
 # Script de déploiement - Moov Universe
+# 
+# COMMANDE D'EXÉCUTION:
+#   sudo bash /data/www/moov-universe/deploy.sh [options]
+#
 # Usage: ./deploy.sh [options]
 # Options:
 #   --backend-only    Déploie uniquement le backend

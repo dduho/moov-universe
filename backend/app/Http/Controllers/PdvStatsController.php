@@ -76,9 +76,9 @@ class PdvStatsController extends Controller
             ],
             'period' => $period,
             'summary' => $this->calculateSummary($summaryTransactions),
-            'trends' => $this->calculateTrends($summaryTransactions),
+            'trends' => $this->calculateTrendsWithContext($summaryTransactions, $groupedTransactions),
             'commissions' => $this->calculateCommissions($summaryTransactions),
-            'transfers' => $this->calculateTransfers($summaryTransactions),
+            'transfers' => $this->calculateTransfersFromGrouped($groupedTransactions),
             'performance' => $this->calculatePerformance($groupedTransactions),
             'charts' => $this->prepareChartData($groupedTransactions, $period),
             'timeline' => $this->getTimelinePaginated($groupedTransactions, $page, $perPage),
@@ -135,6 +135,62 @@ class PdvStatsController extends Controller
     }
 
     /**
+     * Calculer les tendances avec contexte (moyenne sur toutes les périodes)
+     */
+    private function calculateTrendsWithContext($transactions, $groupedTransactions)
+    {
+        if ($transactions->isEmpty()) {
+            return [
+                'latest_period' => null,
+                'latest_data' => [
+                    'date' => null,
+                    'depot_count' => 0,
+                    'retrait_count' => 0,
+                    'depot_amount' => 0,
+                    'retrait_amount' => 0,
+                ],
+                'average' => [
+                    'depot_count' => 0,
+                    'retrait_count' => 0,
+                    'depot_amount' => 0,
+                    'retrait_amount' => 0,
+                ],
+                'depot_vs_average' => 0,
+                'retrait_vs_average' => 0,
+            ];
+        }
+
+        $latest = $transactions->first();
+        
+        // Calculer la moyenne sur TOUTES les périodes groupées (contexte de la plage longue)
+        $groupedItems = $groupedTransactions->values();
+        $average = [
+            'depot_count' => $groupedItems->avg('depot_count'),
+            'retrait_count' => $groupedItems->avg('retrait_count'),
+            'depot_amount' => $groupedItems->avg('depot_amount'),
+            'retrait_amount' => $groupedItems->avg('retrait_amount'),
+        ];
+
+        return [
+            'latest_period' => $latest->transaction_date->format('d M Y'),
+            'latest_data' => [
+                'date' => $latest->transaction_date->format('Y-m-d'),
+                'depot_count' => $latest->count_depot,
+                'retrait_count' => $latest->count_retrait,
+                'depot_amount' => $latest->sum_depot,
+                'retrait_amount' => $latest->sum_retrait,
+            ],
+            'average' => $average,
+            'depot_vs_average' => $average['depot_amount'] > 0 
+                ? (($latest->sum_depot - $average['depot_amount']) / $average['depot_amount'] * 100) 
+                : 0,
+            'retrait_vs_average' => $average['retrait_amount'] > 0 
+                ? (($latest->sum_retrait - $average['retrait_amount']) / $average['retrait_amount'] * 100) 
+                : 0,
+        ];
+    }
+
+    /**
      * Calculer les tendances (dernière période vs moyenne)
      */
     private function calculateTrends($transactions)
@@ -184,6 +240,44 @@ class PdvStatsController extends Controller
             'retrait_vs_average' => $average['retrait_amount'] > 0 
                 ? (($latest->sum_retrait - $average['retrait_amount']) / $average['retrait_amount'] * 100) 
                 : 0,
+        ];
+    }
+
+    /**
+     * Calculer les transferts à partir des données groupées
+     */
+    private function calculateTransfersFromGrouped($groupedTransactions)
+    {
+        // Agréger tous les transferts de toutes les périodes
+        $totalSent = 0;
+        $totalReceived = 0;
+        $totalSentAmount = 0;
+        $totalReceivedAmount = 0;
+        
+        foreach ($groupedTransactions as $period) {
+            $totalSent += $period['transfers_sent'] ?? 0;
+            $totalReceived += $period['transfers_received'] ?? 0;
+            $totalSentAmount += $period['transfers_sent_amount'] ?? 0;
+            $totalReceivedAmount += $period['transfers_received_amount'] ?? 0;
+        }
+        
+        return [
+            'sent' => [
+                'total_count' => $totalSent,
+                'total_amount' => $totalSentAmount,
+                'in_network_count' => 0,
+                'in_network_amount' => 0,
+                'out_network_count' => 0,
+                'out_network_amount' => 0,
+            ],
+            'received' => [
+                'total_count' => $totalReceived,
+                'total_amount' => $totalReceivedAmount,
+                'in_network_count' => 0,
+                'in_network_amount' => 0,
+                'out_network_count' => 0,
+                'out_network_amount' => 0,
+            ],
         ];
     }
 
@@ -288,7 +382,9 @@ class PdvStatsController extends Controller
                 'pdv_commission' => $group->sum('pdv_depot_commission') + $group->sum('pdv_retrait_commission'),
                 'dealer_commission' => $group->sum('dealer_depot_commission') + $group->sum('dealer_retrait_commission'),
                 'transfers_sent' => $group->sum('count_give_send'),
+                'transfers_sent_amount' => $group->sum('sum_give_send'),
                 'transfers_received' => $group->sum('count_give_receive'),
+                'transfers_received_amount' => $group->sum('sum_give_receive'),
                 'total_volume' => $group->sum('sum_depot') + $group->sum('sum_retrait'),
             ];
         });
