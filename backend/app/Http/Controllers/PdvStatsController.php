@@ -25,14 +25,14 @@ class PdvStatsController extends Controller
         // Définir la fenêtre temporelle selon la période sélectionnée
         $now = Carbon::now();
         
-        // Pour les stats globales : utiliser seulement la dernière période
+        // PLAGE COURTE pour les chiffres de résumé (J-1, semaine actuelle, mois actuel)
         [$statStartDate, $statEndDate] = match ($period) {
             'day' => [$now->copy()->subDay()->startOfDay(), $now->copy()->subDay()->endOfDay()], // J-1
             'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()], // Semaine actuelle
             default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()], // Mois actuel
         };
         
-        // Pour l'évolution temporelle : utiliser une plage plus large
+        // PLAGE LONGUE pour les graphiques et contexte (30 jours, 8 semaines, 6 mois)
         [$timelineStartDate, $timelineEndDate] = match ($period) {
             'day' => [$now->copy()->subDays(30)->startOfDay(), $now->endOfDay()], // 30 derniers jours
             'week' => [$now->copy()->subWeeks(8)->startOfWeek(), $now->copy()->endOfWeek()], // 8 dernières semaines
@@ -51,11 +51,22 @@ class PdvStatsController extends Controller
             ->orderBy('transaction_date', 'desc')
             ->get();
 
-        // Toujours retourner des données pour un PDV existant, même sans transactions
         // Grouper par période selon le filtre (pour l'évolution temporelle)
         $groupedTransactions = $this->groupByPeriod($timelineTransactions, $period);
         
-        // Calculer les statistiques globales (sur la période courte: J-1, semaine actuelle, ou mois actuel)
+        // Si pas de données pour la période actuelle, utiliser la dernière période avec données disponibles
+        $summaryTransactions = $statsTransactions;
+        if ($statsTransactions->isEmpty() && $groupedTransactions->isNotEmpty()) {
+            $lastPeriod = $groupedTransactions->sortKeysDesc()->first();
+            // Récupérer les transactions pour cette dernière période
+            $summaryTransactions = $this->getTransactionsForPeriodKey(
+                $timelineTransactions, 
+                $lastPeriod['period'],
+                $period
+            );
+        }
+        
+        // Calculer les statistiques globales
         $stats = [
             'hasData' => true,
             'pdv' => [
@@ -64,16 +75,34 @@ class PdvStatsController extends Controller
                 'numero_flooz' => $pdv->numero_flooz,
             ],
             'period' => $period,
-            'summary' => $this->calculateSummary($statsTransactions),
-            'trends' => $this->calculateTrends($statsTransactions),
-            'commissions' => $this->calculateCommissions($statsTransactions),
-            'transfers' => $this->calculateTransfers($statsTransactions),
+            'summary' => $this->calculateSummary($summaryTransactions),
+            'trends' => $this->calculateTrends($summaryTransactions),
+            'commissions' => $this->calculateCommissions($summaryTransactions),
+            'transfers' => $this->calculateTransfers($summaryTransactions),
             'performance' => $this->calculatePerformance($groupedTransactions),
             'charts' => $this->prepareChartData($groupedTransactions, $period),
             'timeline' => $this->getTimelinePaginated($groupedTransactions, $page, $perPage),
         ];
 
         return response()->json($stats);
+    }
+
+    /**
+     * Récupérer les transactions pour une clé de période donnée
+     */
+    private function getTransactionsForPeriodKey($transactions, $periodKey, $period)
+    {
+        return $transactions->filter(function($transaction) use ($periodKey, $period) {
+            $date = $transaction->transaction_date;
+            switch ($period) {
+                case 'week':
+                    return ($date->format('Y') . '-W' . $date->format('W')) === $periodKey;
+                case 'month':
+                    return $date->format('Y-m') === $periodKey;
+                default:
+                    return $date->format('Y-m-d') === $periodKey;
+            }
+        });
     }
 
     /**
