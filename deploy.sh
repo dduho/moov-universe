@@ -131,10 +131,10 @@ pull_latest_code() {
         sudo chmod -R u+w .git
     fi
     
-    # Sauvegarder les modifications locales si nécessaire
+    # Annuler les modifications locales (fichiers de cache/config générés automatiquement)
     if [[ -n $(git status -s) ]]; then
-        log_warning "Modifications locales détectées, création d'un stash..."
-        git stash
+        log_warning "Modifications locales détectées, annulation..."
+        sudo git checkout -- .
     fi
     
     git fetch origin
