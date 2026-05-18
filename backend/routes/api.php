@@ -123,7 +123,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}', [PointOfSaleController::class, 'destroy']);
         Route::post('/check-proximity', [PointOfSaleController::class, 'checkProximity']);
         Route::post('/check-uniqueness', [PointOfSaleController::class, 'checkUniqueness']);
-        
+
         // Import routes (Admin only)
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::post('/import/preview', [PointOfSaleImportController::class, 'preview']);
@@ -132,7 +132,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/import/template', [PointOfSaleImportController::class, 'downloadTemplate']);
             Route::post('/clear-duplicate-coordinates', [PointOfSaleController::class, 'clearDuplicateCoordinates']);
         });
-        
+
         // Admin only routes
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::post('/{id}/validate', [PointOfSaleController::class, 'validatePdv']);
@@ -173,7 +173,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/timeline', [StatisticsController::class, 'timeline']);
         Route::get('/validation', [StatisticsController::class, 'validation']);
         Route::get('/geo-alerts', [StatisticsController::class, 'geoAlerts']);
-        
+
         // Admin only
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::get('/by-organization', [StatisticsController::class, 'byOrganization']);
@@ -196,7 +196,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{id}/read', [NotificationController::class, 'markAsRead']);
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{id}', [NotificationController::class, 'destroy']);
-        
+
         // Admin only - create notifications
         Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
             Route::post('/', [NotificationController::class, 'store']);
@@ -212,10 +212,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('tasks')->group(function () {
         Route::get('/', [TaskController::class, 'index']);
         Route::get('/{id}', [TaskController::class, 'show']);
-        
+
         // Commercial can complete their tasks
         Route::post('/{id}/complete', [TaskController::class, 'complete']);
-        
+
         // Admin only routes
         Route::middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
             Route::post('/', [TaskController::class, 'store']);
