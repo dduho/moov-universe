@@ -205,7 +205,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import http from '@/services/http'
+import api from '@/services/api'
 
 const authStore = useAuthStore()
 const isLoading = ref(false)
@@ -216,22 +216,18 @@ const importHistory = ref([])
 
 const isEnabled = ref(false)
 const mailbox = ref('')
-const mailFolder = ref('')
-const subjectFilter = ref('')
-const filenamePattern = ref('')
+const mailFolder = ref('Inbox')
+const subjectFilter = ref('N/A')
+const filenamePattern = ref('*.xlsx')
 const lastImport = ref(null)
+const nextScheduledTime = ref('08:30')
 
 const nextScheduled = computed(() => {
   const now = new Date()
   const nextTime = new Date(now)
-  const hours = parseInt(import.meta.env.VITE_OUTLOOK_IMPORT_TIME?.split(':')[0] || '08')
-  const minutes = parseInt(import.meta.env.VITE_OUTLOOK_IMPORT_TIME?.split(':')[1] || '30')
-  
+  const [hours, minutes] = nextScheduledTime.value.split(':').map(Number)
   nextTime.setHours(hours, minutes, 0, 0)
-  if (nextTime <= now) {
-    nextTime.setDate(nextTime.getDate() + 1)
-  }
-  
+  if (nextTime <= now) nextTime.setDate(nextTime.getDate() + 1)
   return nextTime.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
 })
 
@@ -242,21 +238,22 @@ onMounted(async () => {
 
 const loadConfig = async () => {
   try {
-    // Get from environment/config
-    isEnabled.value = import.meta.env.VITE_OUTLOOK_IMPORT_ENABLED !== 'false'
-    mailbox.value = import.meta.env.VITE_OUTLOOK_MAILBOX_EMAIL || 'Non configuré'
-    mailFolder.value = import.meta.env.VITE_OUTLOOK_MAIL_FOLDER || 'Inbox'
-    subjectFilter.value = import.meta.env.VITE_OUTLOOK_SUBJECT_FILTER || 'N/A'
-    filenamePattern.value = import.meta.env.VITE_OUTLOOK_FILENAME_PATTERN || '*.xlsx'
+    const response = await api.get('/import/outlook/status')
+    const config = response.data.data
+    isEnabled.value = config.enabled || false
+    mailbox.value = config.mailbox || 'Non configuré'
+    nextScheduledTime.value = config.scheduled_time || '08:30'
   } catch (err) {
     console.error('Error loading config:', err)
+    isEnabled.value = false
+    mailbox.value = 'Non configuré'
   }
 }
 
 const loadHistory = async () => {
   loadingHistory.value = true
   try {
-    const response = await http.get('/api/import/outlook/history?limit=10')
+    const response = await api.get('/import/outlook/history?limit=10')
     importHistory.value = response.data.data || []
     if (importHistory.value.length > 0) {
       const successful = importHistory.value.find(r => r.status === 'success')
@@ -274,7 +271,7 @@ const loadHistory = async () => {
 const runImportManually = async () => {
   isLoading.value = true
   try {
-    const response = await http.post('/api/import/outlook/run')
+    const response = await api.post('/import/outlook/run')
     
     successMessage.value = `Import lancé! ${response.data.message || ''}`
     showSuccess.value = true
