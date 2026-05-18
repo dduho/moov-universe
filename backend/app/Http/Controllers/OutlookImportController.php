@@ -16,7 +16,7 @@ class OutlookImportController extends Controller
     public function runManual(Request $request)
     {
         // Check admin role
-        if (!auth('sanctum')->user() || auth('sanctum')->user()->role !== 'admin') {
+        if (!auth('sanctum')->user() || auth('sanctum')->user()->role?->name !== 'admin') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - Admin access required'
@@ -58,7 +58,7 @@ class OutlookImportController extends Controller
     public function getHistory(Request $request)
     {
         // Check admin role
-        if (!auth('sanctum')->user() || auth('sanctum')->user()->role !== 'admin') {
+        if (!auth('sanctum')->user() || auth('sanctum')->user()->role?->name !== 'admin') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - Admin access required'
@@ -119,7 +119,7 @@ class OutlookImportController extends Controller
     public function getStatus(Request $request)
     {
         // Check admin role
-        if (!auth('sanctum')->user() || auth('sanctum')->user()->role !== 'admin') {
+        if (!auth('sanctum')->user() || auth('sanctum')->user()->role?->name !== 'admin') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized - Admin access required'
