@@ -43,6 +43,9 @@ WEB_GROUP="www-data"
 # URL de l'API pour le frontend
 API_URL="/api"
 
+# URL de l'application (pour callbacks OAuth, etc.)
+APP_URL=$(grep '^APP_URL=' "$BACKEND_DIR/.env" 2>/dev/null | cut -d'=' -f2- || echo "https://localhost")
+
 # Désactiver PWA (true si certificat SSL auto-signé)
 DISABLE_PWA="true"
 
@@ -121,6 +124,22 @@ check_php_config() {
     fi
 }
 
+ensure_env_variable() {
+    local VAR_NAME=$1
+    local DEFAULT_VALUE=$2
+    local ENV_FILE="${BACKEND_DIR}/.env"
+    
+    # Vérifier si la variable existe déjà dans .env
+    if grep -q "^${VAR_NAME}=" "$ENV_FILE" 2>/dev/null; then
+        # Variable existe déjà, la garder
+        return 0
+    else
+        # Variable n'existe pas, l'ajouter avec la valeur par défaut
+        echo "${VAR_NAME}=${DEFAULT_VALUE}" >> "$ENV_FILE"
+        log_info "  ✓ Variable ajoutée: $VAR_NAME"
+    fi
+}
+
 pull_latest_code() {
     log_info "Récupération du code depuis Git..."
     
@@ -158,6 +177,25 @@ deploy_backend() {
     log_info "Déploiement du backend Laravel..."
     
     cd "$BACKEND_DIR"
+    
+    # Vérifier et créer les variables Outlook OAuth
+    log_info "Vérification des variables Outlook OAuth..."
+    ensure_env_variable "AZURE_TENANT_ID" "your_tenant_id_here"
+    ensure_env_variable "AZURE_CLIENT_ID" "your_client_id_here"
+    ensure_env_variable "AZURE_CLIENT_SECRET" "your_client_secret_here"
+    ensure_env_variable "OUTLOOK_MAILBOX_EMAIL" "imports@example.com"
+    ensure_env_variable "OUTLOOK_MAIL_FOLDER" "Inbox"
+    ensure_env_variable "OUTLOOK_SUBJECT_FILTER" "Rapport Transactions"
+    ensure_env_variable "OUTLOOK_FILENAME_PATTERN" "transactions_*.xlsx"
+    ensure_env_variable "OUTLOOK_ALLOWED_EXTENSIONS" "xlsx,xls"
+    ensure_env_variable "OUTLOOK_MAX_FILE_MB" "500"
+    ensure_env_variable "OUTLOOK_MARK_AS_READ" "true"
+    ensure_env_variable "OUTLOOK_MOVE_PROCESSED_TO" "Processed"
+    ensure_env_variable "OUTLOOK_MOVE_FAILED_TO" "Failed"
+    ensure_env_variable "OUTLOOK_IMPORT_ENABLED" "false"
+    ensure_env_variable "OUTLOOK_IMPORT_TIME" "08:30"
+    ensure_env_variable "OUTLOOK_IMPORT_TIMEZONE" "Africa/Douala"
+        
         # Vérifier que predis est installé
     if ! grep -q '"predis/predis"' composer.json; then
         log_info "Installation de Predis pour Redis..."
@@ -397,8 +435,16 @@ show_summary() {
     echo ""
     echo -e "${YELLOW}📊 Scheduler Laravel:${NC}"
     echo -e "  ⏰ Import SFTP: Tous les jours à 08:30"
+    echo -e "  ⏰ Import Outlook: Quotidien (si OUTLOOK_IMPORT_ENABLED=true)"
     echo -e "  ⏰ Cache Analytics: Tous les jours à 09:00"
-    echo -e "  📝 Logs: ${BLUE}$BACKEND_DIR/storage/logs/analytics-cache.log${NC}"
+    echo -e "  📝 Logs SFTP: ${BLUE}$BACKEND_DIR/storage/logs/transactions-import.log${NC}"
+    echo -e "  📝 Logs Outlook: ${BLUE}$BACKEND_DIR/storage/logs/outlook-import.log${NC}"
+    echo ""
+    echo -e "${YELLOW}🔐 Configuration Outlook:${NC}"
+    echo -e "  • Boîte mail: $(grep '^OUTLOOK_MAILBOX_EMAIL=' "$BACKEND_DIR/.env" | cut -d'=' -f2- || echo 'Non configurée')"
+    echo -e "  • Import activé: $(grep '^OUTLOOK_IMPORT_ENABLED=' "$BACKEND_DIR/.env" | cut -d'=' -f2- || echo 'false')"
+    echo -e "  • Configuration: ${BLUE}$BACKEND_DIR/.env (OUTLOOK_*)${NC}"
+    echo -e "  • Autorisation: ${BLUE}$APP_URL/api/oauth/authorize${NC}"
     echo ""
     echo -e "${YELLOW}🔍 Vérifications:${NC}"
     echo -e "  Cron: ${BLUE}crontab -l | grep schedule:run${NC}"

@@ -12,11 +12,21 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // Import des transactions chaque jour à 08:30
+        // Import des transactions depuis SFTP chaque jour à 08:30
         $schedule->command('transactions:import-sftp')
                  ->dailyAt('08:30')
                  ->withoutOverlapping()
                  ->onOneServer();
+
+        // Import des transactions depuis Outlook (si configuré)
+        if (config('services.outlook.import_enabled')) {
+            $schedule->command('transactions:import-outlook')
+                     ->dailyAt(config('services.outlook.import_time', '08:30'))
+                     ->timezone(config('services.outlook.import_timezone', 'UTC'))
+                     ->withoutOverlapping()
+                     ->onOneServer()
+                     ->appendOutputTo(storage_path('logs/outlook-import.log'));
+        }
 
         // Calculer les analytics de J-1 après l'import (à 09:00)
         $schedule->command('analytics:cache-daily')

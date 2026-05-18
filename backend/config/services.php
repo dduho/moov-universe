@@ -37,4 +37,28 @@ return [
         'sftp_path' => env('SFTP_TRANSACTIONS_PATH', 'transactions'),
     ],
 
+    'outlook' => [
+        // Microsoft Entra ID / OAuth2 Configuration
+        'tenant_id' => env('AZURE_TENANT_ID'),
+        'client_id' => env('AZURE_CLIENT_ID'),
+        'client_secret' => env('AZURE_CLIENT_SECRET'),
+        'redirect_uri' => env('APP_URL') . '/oauth/callback',
+
+        // Mailbox Configuration
+        'mailbox' => env('OUTLOOK_MAILBOX_EMAIL'),
+        'mail_folder' => env('OUTLOOK_MAIL_FOLDER', 'Inbox'),
+        'subject_filter' => env('OUTLOOK_SUBJECT_FILTER'),
+        'filename_pattern' => env('OUTLOOK_FILENAME_PATTERN'),
+        'allowed_extensions' => env('OUTLOOK_ALLOWED_EXTENSIONS', 'xlsx,xls'),
+        'max_file_mb' => (int) env('OUTLOOK_MAX_FILE_MB', 500),
+        'mark_as_read' => (bool) env('OUTLOOK_MARK_AS_READ', true),
+        'move_processed_to' => env('OUTLOOK_MOVE_PROCESSED_TO'),
+        'move_failed_to' => env('OUTLOOK_MOVE_FAILED_TO'),
+
+        // Scheduling
+        'import_enabled' => (bool) env('OUTLOOK_IMPORT_ENABLED', false),
+        'import_time' => env('OUTLOOK_IMPORT_TIME', '08:30'),
+        'import_timezone' => env('OUTLOOK_IMPORT_TIMEZONE', 'UTC'),
+    ],
+
 ];

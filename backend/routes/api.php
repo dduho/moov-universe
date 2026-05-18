@@ -31,6 +31,8 @@ use App\Http\Controllers\CacheSettingController;
 use App\Http\Controllers\PredictionController;
 use App\Http\Controllers\RentabilityController;
 use App\Http\Controllers\DealerAnalyticsController;
+use App\Http\Controllers\OutlookOAuthController;
+use App\Http\Controllers\OutlookImportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -38,6 +40,10 @@ use Illuminate\Support\Facades\Route;
 | API Routes
 |--------------------------------------------------------------------------
 */
+
+// Public routes - OAuth callbacks
+Route::get('/oauth/authorize', [OutlookOAuthController::class, 'authorize']);
+Route::get('/oauth/callback', [OutlookOAuthController::class, 'callback']);
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -89,6 +95,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('App\Http\Middleware\CheckRole:admin')->group(function () {
         Route::put('/settings/{key}', [SystemSettingController::class, 'update']);
         Route::get('/mail/test-smtp', [MailTestController::class, 'testSmtpConnection']);
+
+        // OAuth Management (Admin only)
+        Route::prefix('oauth')->group(function () {
+            Route::get('/status', [OutlookOAuthController::class, 'status']);
+            Route::delete('/token', [OutlookOAuthController::class, 'revoke']);
+        });
+
+        // Outlook Import Management (Admin only)
+        Route::prefix('import/outlook')->group(function () {
+            Route::post('/run', [OutlookImportController::class, 'runManual']);
+            Route::get('/history', [OutlookImportController::class, 'getHistory']);
+            Route::get('/status', [OutlookImportController::class, 'getStatus']);
+        });
     });
 
     // Point of Sale routes

@@ -555,6 +555,11 @@
           <span>{{ cacheSettingsError }}</span>
         </div>
 
+        <!-- Outlook Import Management -->
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-4 sm:p-6">
+          <OutlookImportPanel />
+        </div>
+
         <!-- Future settings placeholder -->
         <!-- <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-dashed border-gray-300">
           <div class="text-center py-8">
@@ -586,6 +591,7 @@
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
+import OutlookImportPanel from '../components/OutlookImportPanel.vue';
 import SystemSettingService from '../services/systemSettingService';
 import TransactionService from '../services/transactionService';
 import { useAuthStore } from '../stores/auth';
