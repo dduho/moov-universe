@@ -22,7 +22,7 @@ class OutlookOAuthController extends Controller
      * Uses cache (not session) so it works in API routes.
      * GET /api/oauth/authorize
      */
-    public function authorize()
+    public function redirectToProvider()
     {
         $state = bin2hex(random_bytes(16));
         // Store state in cache for 10 minutes (survives the browser redirect round-trip)
