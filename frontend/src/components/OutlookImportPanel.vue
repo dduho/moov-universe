@@ -242,6 +242,9 @@ const loadConfig = async () => {
     const config = response.data.data
     isEnabled.value = config.enabled || false
     mailbox.value = config.mailbox || 'Non configuré'
+    mailFolder.value = config.mail_folder || 'Inbox'
+    subjectFilter.value = config.subject_filter || 'N/A'
+    filenamePattern.value = config.filename_pattern || '*.xlsx'
     nextScheduledTime.value = config.scheduled_time || '08:30'
   } catch (err) {
     console.error('Error loading config:', err)

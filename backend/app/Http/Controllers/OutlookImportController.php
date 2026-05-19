@@ -149,7 +149,10 @@ class OutlookImportController extends Controller
                     'today_failed' => $todayFailureCount,
                     'scheduled_time' => config('services.outlook.import_time', '08:30'),
                     'timezone' => config('services.outlook.import_timezone', 'UTC'),
-                    'mailbox' => config('services.outlook.mailbox', 'Not configured')
+                    'mailbox' => config('services.outlook.mailbox', 'Not configured'),
+                    'mail_folder' => config('services.outlook.mail_folder', 'Inbox'),
+                    'subject_filter' => config('services.outlook.subject_filter', 'N/A'),
+                    'filename_pattern' => config('services.outlook.filename_pattern', '*.xlsx'),
                 ]
             ], 200);
 
