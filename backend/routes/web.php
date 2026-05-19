@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\OutlookOAuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,3 +17,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
+
+// OAuth routes (need session middleware for CSRF state)
+Route::get('/oauth/authorize', [OutlookOAuthController::class, 'authorize']);
+Route::get('/oauth/callback', [OutlookOAuthController::class, 'callback']);

@@ -86,7 +86,7 @@
       </button>
 
       <a
-        href="/api/oauth/authorize"
+        href="/oauth/authorize"
         class="px-6 py-3 rounded-lg font-bold transition-all bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
       >
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

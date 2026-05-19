@@ -42,7 +42,7 @@ return [
         'tenant_id' => env('AZURE_TENANT_ID'),
         'client_id' => env('AZURE_CLIENT_ID'),
         'client_secret' => env('AZURE_CLIENT_SECRET'),
-        'redirect_uri' => env('APP_URL') . '/oauth/callback',
+        'redirect_uri' => env('APP_URL') . '/oauth/callback', // Route web.php (has session)
 
         // Mailbox Configuration
         'mailbox' => env('OUTLOOK_MAILBOX_EMAIL'),

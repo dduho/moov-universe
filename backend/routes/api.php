@@ -41,9 +41,6 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Public routes - OAuth callbacks
-Route::get('/oauth/authorize', [OutlookOAuthController::class, 'authorize']);
-Route::get('/oauth/callback', [OutlookOAuthController::class, 'callback']);
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
