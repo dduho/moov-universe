@@ -191,7 +191,8 @@
     <Transition>
       <div
         v-if="showSuccess"
-        class="fixed bottom-6 right-6 bg-green-600 text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3"
+        class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 text-white"
+        :class="toastType === 'success' ? 'bg-green-600' : 'bg-red-600'"
       >
         <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
@@ -212,6 +213,7 @@ const isLoading = ref(false)
 const loadingHistory = ref(false)
 const showSuccess = ref(false)
 const successMessage = ref('')
+const toastType = ref('success') // 'success' | 'error'
 const importHistory = ref([])
 
 const isEnabled = ref(false)
@@ -232,6 +234,17 @@ const nextScheduled = computed(() => {
 })
 
 onMounted(async () => {
+  // Handle OAuth callback result (Microsoft redirects back with ?oauth=success or ?oauth=error)
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('oauth') === 'success') {
+    const mailboxParam = params.get('mailbox')
+    showToast(`Outlook autorisé avec succès${mailboxParam ? ' pour ' + mailboxParam : ''} !`, 'success')
+    // Clean the URL
+    window.history.replaceState({}, '', window.location.pathname)
+  } else if (params.get('oauth') === 'error') {
+    showToast('Autorisation Outlook refusée ou échouée: ' + (params.get('reason') || 'erreur inconnue'), 'error')
+    window.history.replaceState({}, '', window.location.pathname)
+  }
   await loadConfig()
   await loadHistory()
 })
@@ -271,25 +284,33 @@ const loadHistory = async () => {
   }
 }
 
-const authorizeOutlook = () => {
-  // Force full page navigation to bypass Vue Router interception
-  window.location.href = '/oauth/authorize'
+const showToast = (message, type = 'success') => {
+  successMessage.value = message
+  toastType.value = type
+  showSuccess.value = true
+  setTimeout(() => { showSuccess.value = false }, 4000)
+}
+
+const authorizeOutlook = async () => {
+  try {
+    // Get the Microsoft OAuth URL from the backend (avoids session/routing issues)
+    const response = await api.get('/oauth/authorize')
+    // Redirect the browser to Microsoft login
+    window.location.href = response.data.url
+  } catch (err) {
+    showToast('Impossible de démarrer l\'autorisation OAuth: ' + (err.response?.data?.message || err.message), 'error')
+  }
 }
 
 const runImportManually = async () => {
   isLoading.value = true
   try {
     const response = await api.post('/import/outlook/run')
-    
-    successMessage.value = `Import lancé! ${response.data.message || ''}`
-    showSuccess.value = true
-    
-    setTimeout(() => {
-      showSuccess.value = false
-      loadHistory()
-    }, 3000)
+    showToast(response.data.message || 'Import terminé avec succès.', 'success')
+    await loadHistory()
   } catch (err) {
-    successMessage.value = `Erreur: ${err.response?.data?.message || 'Impossible de lancer l\'import'}`
+    const msg = err.response?.data?.message || 'Erreur lors du lancement de l\'import'
+    showToast(msg, 'error')
   } finally {
     isLoading.value = false
   }

@@ -17,36 +17,41 @@ class OutlookOAuthController extends Controller
     }
 
     /**
-     * Redirect user to Microsoft for authorization
-     * GET /oauth/authorize
+     * Return Microsoft OAuth authorization URL as JSON.
+     * The frontend will redirect the browser to this URL.
+     * Uses cache (not session) so it works in API routes.
+     * GET /api/oauth/authorize
      */
     public function authorize()
     {
         $state = bin2hex(random_bytes(16));
-        session(['oauth_state' => $state]);
+        // Store state in cache for 10 minutes (survives the browser redirect round-trip)
+        cache()->put('oauth_state_' . $state, true, now()->addMinutes(10));
 
         $url = $this->outlookService->getAuthorizationUrl($state);
 
-        return redirect($url);
+        return response()->json(['url' => $url]);
     }
 
     /**
-     * Handle redirect from Microsoft after user authorization
-     * GET /oauth/callback?code=...&state=...
+     * Handle redirect from Microsoft after user authorization.
+     * Microsoft redirects the browser here with ?code=...&state=...
+     * GET /api/oauth/callback
      */
     public function callback(Request $request)
     {
-        try {
-            // Verify state to prevent CSRF
-            $state = $request->query('state');
-            $sessionState = session('oauth_state');
+        $frontendBase = rtrim(config('app.url'), '/');
 
-            if (!$state || $state !== $sessionState) {
+        try {
+            // Verify state to prevent CSRF (using cache, not session)
+            $state = $request->query('state');
+
+            if (!$state || !cache()->has('oauth_state_' . $state)) {
                 Log::warning('OAuth state mismatch during callback');
-                return response()->json([
-                    'error' => 'Invalid state parameter (CSRF protection)',
-                ], 400);
+                return redirect($frontendBase . '/settings?oauth=error&reason=invalid_state');
             }
+
+            cache()->forget('oauth_state_' . $state);
 
             // Check for error from Microsoft
             if ($request->has('error')) {
@@ -54,44 +59,30 @@ class OutlookOAuthController extends Controller
                     'error' => $request->query('error'),
                     'error_description' => $request->query('error_description'),
                 ]);
-
-                return response()->json([
-                    'error' => 'Authorization denied',
-                    'error_description' => $request->query('error_description'),
-                ], 400);
+                return redirect($frontendBase . '/settings?oauth=error&reason=' . urlencode($request->query('error')));
             }
 
             // Get authorization code
             $code = $request->query('code');
             if (!$code) {
-                return response()->json([
-                    'error' => 'Missing authorization code',
-                ], 400);
+                return redirect($frontendBase . '/settings?oauth=error&reason=missing_code');
             }
 
-            // Exchange code for token
+            // Exchange code for token and store it
             $token = $this->outlookService->handleAuthorizationCallback($code);
 
-            // Clear state from session
-            session()->forget('oauth_state');
+            Log::info('OAuth token obtained successfully', ['mailbox' => $token->mailbox]);
 
-            // Return success (can redirect to admin panel or show confirmation)
-            return response()->json([
-                'success' => true,
-                'message' => 'OAuth token obtained successfully',
-                'mailbox' => $token->mailbox,
-                'token_expires_at' => $token->access_token_expires_at,
-            ]);
+            // Redirect back to the Vue SPA settings page with success flag
+            return redirect($frontendBase . '/settings?oauth=success&mailbox=' . urlencode($token->mailbox));
         } catch (Exception $e) {
             Log::error('OAuth callback failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
-            return response()->json([
-                'error' => 'Failed to obtain OAuth token',
-                'message' => $e->getMessage(),
-            ], 500);
+            $frontendBase = rtrim(config('app.url'), '/');
+            return redirect($frontendBase . '/settings?oauth=error&reason=' . urlencode($e->getMessage()));
         }
     }
 

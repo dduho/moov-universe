@@ -45,6 +45,10 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+
+// Public OAuth routes (must be under /api/ for Nginx to route to Laravel)
+Route::get('/oauth/authorize', [OutlookOAuthController::class, 'authorize']);
+Route::get('/oauth/callback', [OutlookOAuthController::class, 'callback']);
 Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
 
 

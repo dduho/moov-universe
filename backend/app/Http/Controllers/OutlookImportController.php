@@ -24,19 +24,42 @@ class OutlookImportController extends Controller
         }
 
         try {
-            // Execute the command in background
-            Artisan::queue('transactions:import-outlook');
+            // Check that an OAuth token exists before running
+            $token = \App\Models\OAuthToken::where('provider', 'outlook')
+                ->where('mailbox', config('services.outlook.mailbox'))
+                ->first();
+
+            if (!$token) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Aucun token OAuth configuré. Cliquez sur "Autoriser Outlook" d\'abord.'
+                ], 422);
+            }
+
+            // Run synchronously so we get real feedback
+            $exitCode = Artisan::call('transactions:import-outlook');
+            $output = Artisan::output();
 
             Log::info('[OutlookImport] Manual import triggered by admin', [
                 'user_id' => auth('sanctum')->user()->id,
+                'exit_code' => $exitCode,
                 'timestamp' => now()
             ]);
 
+            if ($exitCode !== 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'L\'import a échoué. Consultez les logs.',
+                    'output' => $output,
+                ], 500);
+            }
+
             return response()->json([
                 'status' => 'success',
-                'message' => 'Import Outlook lancé en arrière-plan. Vous recevrez une notification à la fin.',
+                'message' => 'Import terminé avec succès.',
+                'output' => $output,
                 'timestamp' => now()
-            ], 202);
+            ], 200);
 
         } catch (\Exception $e) {
             Log::error('[OutlookImport] Manual import failed', [
