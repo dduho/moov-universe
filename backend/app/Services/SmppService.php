@@ -42,27 +42,36 @@ class SmppService
     }
 
     /**
-     * Send an SMS. Returns true on success, false on any error.
+     * Send an SMS. Retries up to 3 times on transient SMSC errors.
+     * Returns true on success, false if all attempts fail.
      */
     public function sendSms(string $phone, string $message): bool
     {
         $destination = $this->normalizePhone($phone);
+        $maxAttempts = 3;
 
-        try {
-            $this->connect();
-            $this->bind();
-            $this->submitSm($destination, $message);
-            $this->unbind();
-            return true;
-        } catch (\Throwable $e) {
-            Log::error('SMPP sendSms failed', [
-                'error' => $e->getMessage(),
-                'phone' => $destination,
-            ]);
-            return false;
-        } finally {
-            $this->disconnect();
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            try {
+                $this->connect();
+                $this->bind();
+                $this->submitSm($destination, $message);
+                $this->unbind();
+                return true;
+            } catch (\Throwable $e) {
+                Log::warning("SMPP sendSms attempt {$attempt}/{$maxAttempts} failed", [
+                    'error' => $e->getMessage(),
+                    'phone' => $destination,
+                ]);
+                if ($attempt < $maxAttempts) {
+                    usleep(800_000); // 0.8s before next attempt
+                }
+            } finally {
+                $this->disconnect();
+            }
         }
+
+        Log::error('SMPP sendSms failed after all attempts', ['phone' => $destination]);
+        return false;
     }
 
     // -------------------------------------------------------------------------
