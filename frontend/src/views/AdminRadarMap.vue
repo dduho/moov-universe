@@ -9,7 +9,7 @@
           <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Radar PDV — Ma Position</h1>
           <p class="text-sm sm:text-base text-gray-600">
             Visualisez les points de vente dans un rayon de
-            <span class="font-semibold text-moov-orange">{{ radiusKm }} km</span> autour de vous
+            <span class="font-semibold text-moov-orange">{{ radiusKm < 1 ? `${radiusKm * 1000} m` : `${radiusKm} km` }}</span> autour de vous
           </p>
         </div>
         <div class="flex items-center gap-3 flex-wrap">
@@ -181,7 +181,7 @@ const loadingMessage = ref('Chargement des PDV...');
 const gpsStatus = ref('loading'); // 'loading' | 'active' | 'error'
 const gpsError = ref(null);
 const userPosition = ref(null); // { lat, lng, accuracy }
-const radiusKm = ref(1);
+const radiusKm = ref(0.5);
 const allPdvs = ref([]);
 
 // Leaflet instances (not reactive)
