@@ -21,27 +21,43 @@ class ProfileController extends Controller
 
     /**
      * Update the authenticated user's profile.
+     * Requires current password verification when the email address is changed.
      */
     public function update(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $request->user()->id],
-        ]);
+        $user = $request->user();
+        $emailChanging = $request->email && $request->email !== $user->email;
+
+        $rules = [
+            'name'  => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
+        ];
+
+        if ($emailChanging) {
+            $rules['current_password'] = ['required', 'string'];
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
                 'message' => 'Erreur de validation',
-                'errors' => $validator->errors()
+                'errors'  => $validator->errors()
             ], 422);
         }
 
-        $user = $request->user();
-        $user->update($validator->validated());
+        if ($emailChanging && !Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'message' => 'Erreur de validation',
+                'errors'  => ['current_password' => ['Le mot de passe actuel est incorrect']]
+            ], 422);
+        }
+
+        $user->update($validator->safe()->only(['name', 'email']));
 
         return response()->json([
             'message' => 'Profil mis à jour avec succès',
-            'user' => $user->fresh()->load('role')
+            'user'    => $user->fresh()->load('role')
         ]);
     }
 

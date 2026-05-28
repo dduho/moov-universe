@@ -46,7 +46,8 @@ export default {
    */
   async resetPassword(id, newPassword) {
     const response = await api.post(`/users/${id}/reset-password`, {
-      password: newPassword
+      password: newPassword,
+      password_confirmation: newPassword
     });
     return response.data;
   },

@@ -6,6 +6,19 @@ export default {
     return response.data;
   },
 
+  async verifyOtp({ otpToken, code }) {
+    const response = await api.post('/verify-otp', {
+      otp_token: otpToken,
+      code,
+    });
+    return response.data;
+  },
+
+  async resendOtp(otpToken) {
+    const response = await api.post('/resend-otp', { otp_token: otpToken });
+    return response.data;
+  },
+
   async logout() {
     const response = await api.post('/logout');
     return response.data;
@@ -13,11 +26,6 @@ export default {
 
   async getMe() {
     const response = await api.get('/me');
-    return response.data;
-  },
-
-  async register(data) {
-    const response = await api.post('/register', data);
     return response.data;
   },
 

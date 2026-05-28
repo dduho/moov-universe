@@ -8,6 +8,7 @@ use App\Mail\UserCreatedMail;
 use App\Mail\UserUpdatedMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 
@@ -53,12 +54,13 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:6|confirmed',
-            'role' => 'required|string|in:admin,dealer_owner,dealer_agent',
+            'name'            => 'required|string|max:255',
+            'email'           => 'required|email|unique:users',
+            'phone'           => 'nullable|string|max:20',
+            'password'        => 'required|string|min:6|confirmed',
+            'role'            => 'required|string|in:admin,dealer_owner,dealer_agent',
             'organization_id' => 'nullable|exists:organizations,id',
-            'is_active' => 'boolean',
+            'is_active'       => 'boolean',
         ]);
 
         // Convert role name to role_id
@@ -92,18 +94,40 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $user = User::findOrFail($id);
+        $admin = $request->user();
+
+        // Prevent an admin from escalating their own role
+        if ((int)$id === $admin->id && $request->has('role_id') && (int)$request->role_id !== $admin->role_id) {
+            return response()->json(['message' => 'Vous ne pouvez pas modifier votre propre rôle.'], 403);
+        }
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
-            'role_id' => 'sometimes|exists:roles,id',
+            'name'            => 'sometimes|string|max:255',
+            'email'           => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
+            'phone'           => 'nullable|string|max:20',
+            'role_id'         => 'sometimes|exists:roles,id',
             'organization_id' => 'nullable|exists:organizations,id',
-            'is_active' => 'boolean',
+            'is_active'       => 'boolean',
         ]);
 
         // Don't update password here - use separate resetPassword method
         if (isset($validated['password'])) {
             unset($validated['password']);
+        }
+
+        // Audit log for sensitive field changes
+        foreach (['email', 'role_id'] as $sensitiveField) {
+            if (isset($validated[$sensitiveField]) && $validated[$sensitiveField] != $user->$sensitiveField) {
+                Log::warning('SECURITY: User sensitive field changed', [
+                    'changed_by'       => $admin->id,
+                    'changed_by_email' => $admin->email,
+                    'target_user'      => $user->id,
+                    'field'            => $sensitiveField,
+                    'old_value'        => $user->$sensitiveField,
+                    'new_value'        => $validated[$sensitiveField],
+                    'ip'               => $request->ip(),
+                ]);
+            }
         }
 
         // Capturer les champs modifiés

@@ -49,8 +49,8 @@
           </div>
         </div>
 
-        <!-- Form -->
-        <form class="space-y-5" @submit.prevent="handleLogin">
+        <!-- ── STEP 1 : Credentials ── -->
+        <form v-if="step === 'credentials'" class="space-y-5" @submit.prevent="handleLogin">
           <div class="space-y-4">
             <!-- Email Field -->
             <FormInput
@@ -90,9 +90,7 @@
               :disabled="loading"
               class="group relative w-full flex justify-center items-center gap-3 py-4 px-6 border-0 text-base font-bold rounded-xl text-white bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange hover:shadow-2xl hover:shadow-moov-orange/50 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-moov-orange/30 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed transition-all duration-300 overflow-hidden"
             >
-              <!-- Shimmer effect -->
               <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-              
               <span v-if="!loading" class="flex items-center gap-2 relative z-10">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
@@ -106,6 +104,86 @@
                 </svg>
                 Connexion en cours...
               </span>
+            </button>
+          </div>
+        </form>
+
+        <!-- ── STEP 2 : OTP verification ── -->
+        <form v-else-if="step === 'otp'" class="space-y-5" @submit.prevent="handleVerifyOtp">
+          <!-- Info banner -->
+          <div class="rounded-xl bg-orange-50 border border-orange-200 p-4 text-center">
+            <div class="flex justify-center mb-2">
+              <svg class="w-8 h-8 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+              </svg>
+            </div>
+            <p class="text-sm font-semibold text-gray-800">Code envoyé par SMS</p>
+            <p class="text-xs text-gray-500 mt-1">
+              Numéro se terminant par <span class="font-bold text-moov-orange">{{ phoneHint }}</span>
+            </p>
+            <p class="text-xs text-gray-400 mt-1">Valable 5 minutes</p>
+          </div>
+
+          <!-- 6-digit OTP input -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-3 text-center">
+              Entrez votre code à 6 chiffres
+            </label>
+            <div class="flex justify-center gap-2">
+              <input
+                v-for="(_, i) in otpDigits"
+                :key="i"
+                :ref="el => { if (el) otpRefs[i] = el }"
+                v-model="otpDigits[i]"
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                class="w-11 h-14 text-center text-xl font-bold border-2 rounded-xl focus:outline-none focus:border-moov-orange transition-colors"
+                :class="otpDigits[i] ? 'border-moov-orange bg-orange-50' : 'border-gray-300'"
+                @input="onOtpInput(i, $event)"
+                @keydown="onOtpKeydown(i, $event)"
+                @paste.prevent="onOtpPaste($event)"
+              />
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div v-if="error" class="rounded-xl bg-red-50 border-2 border-red-200 p-3 animate-shake">
+            <p class="text-sm text-red-800 font-semibold text-center">{{ error }}</p>
+          </div>
+
+          <!-- Verify button -->
+          <button
+            type="submit"
+            :disabled="loading || otpCode.length < 6"
+            class="group relative w-full flex justify-center items-center gap-3 py-4 px-6 border-0 text-base font-bold rounded-xl text-white bg-gradient-to-r from-moov-orange via-moov-orange-dark to-moov-orange hover:shadow-2xl hover:shadow-moov-orange/50 hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-moov-orange/30 disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed transition-all duration-300"
+          >
+            <span v-if="!loading">Vérifier le code</span>
+            <span v-else class="flex items-center gap-2">
+              <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Vérification...
+            </span>
+          </button>
+
+          <!-- Resend + back -->
+          <div class="flex items-center justify-between text-sm pt-1">
+            <button
+              type="button"
+              class="text-gray-500 hover:text-gray-700 underline"
+              @click="backToCredentials"
+            >
+              ← Retour
+            </button>
+            <button
+              type="button"
+              :disabled="resendCooldown > 0"
+              class="text-moov-orange font-semibold disabled:opacity-40 disabled:cursor-not-allowed"
+              @click="handleResend"
+            >
+              {{ resendCooldown > 0 ? `Renvoyer (${resendCooldown}s)` : 'Renvoyer le code' }}
             </button>
           </div>
         </form>
@@ -125,71 +203,156 @@
 </template>
 
 <script setup>
-import { ref, h } from 'vue';
+import { ref, computed, nextTick, h } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
+import AuthService from '../services/AuthService';
 import FormInput from '../components/FormInput.vue';
 
 const router = useRouter();
 const authStore = useAuthStore();
 
-const form = ref({
-  email: '',
-  password: '',
-});
+// ── Credentials step ──────────────────────────────────────────────
+const form = ref({ email: '', password: '' });
 
+// ── OTP step ──────────────────────────────────────────────────────
+const step        = ref('credentials'); // 'credentials' | 'otp'
+const otpToken    = ref('');
+const phoneHint   = ref('');
+const otpDigits   = ref(['', '', '', '', '', '']);
+const otpRefs     = ref([]);
+const resendCooldown = ref(0);
+let   cooldownTimer  = null;
+
+const otpCode = computed(() => otpDigits.value.join(''));
+
+// ── Shared ────────────────────────────────────────────────────────
 const loading = ref(false);
-const error = ref('');
-const currentYear = new Date().getFullYear()
+const error   = ref('');
+const currentYear = new Date().getFullYear();
 
-// Icon components
+// ── Credentials handler ───────────────────────────────────────────
+const handleLogin = async () => {
+  loading.value = true;
+  error.value   = '';
+
+  try {
+    const data = await authStore.login(form.value);
+
+    if (data.otp_required) {
+      otpToken.value  = data.otp_token;
+      phoneHint.value = data.phone_hint;
+      step.value      = 'otp';
+      startResendCooldown();
+      await nextTick();
+      otpRefs.value[0]?.focus();
+      return;
+    }
+
+    router.push({ name: 'Dashboard' });
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Erreur de connexion';
+  } finally {
+    loading.value = false;
+  }
+};
+
+// ── OTP handler ───────────────────────────────────────────────────
+const handleVerifyOtp = async () => {
+  if (otpCode.value.length < 6) return;
+
+  loading.value = true;
+  error.value   = '';
+
+  try {
+    await authStore.verifyOtp({ otpToken: otpToken.value, code: otpCode.value });
+    router.push({ name: 'Dashboard' });
+  } catch (err) {
+    error.value = err.response?.data?.errors?.code?.[0]
+      || err.response?.data?.message
+      || 'Code incorrect';
+    // Clear digits on error
+    otpDigits.value = ['', '', '', '', '', ''];
+    await nextTick();
+    otpRefs.value[0]?.focus();
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleResend = async () => {
+  if (resendCooldown.value > 0) return;
+  try {
+    const data = await AuthService.resendOtp(otpToken.value);
+    otpToken.value = data.otp_token;
+    otpDigits.value = ['', '', '', '', '', ''];
+    error.value = '';
+    startResendCooldown();
+    await nextTick();
+    otpRefs.value[0]?.focus();
+  } catch (err) {
+    error.value = err.response?.data?.message || 'Impossible de renvoyer le code';
+  }
+};
+
+const backToCredentials = () => {
+  step.value      = 'credentials';
+  otpToken.value  = '';
+  otpDigits.value = ['', '', '', '', '', ''];
+  error.value     = '';
+  clearInterval(cooldownTimer);
+  resendCooldown.value = 0;
+};
+
+// ── OTP input helpers ─────────────────────────────────────────────
+const onOtpInput = (index, event) => {
+  const val = event.target.value.replace(/\D/g, '');
+  otpDigits.value[index] = val.slice(-1);
+  if (val && index < 5) {
+    otpRefs.value[index + 1]?.focus();
+  }
+};
+
+const onOtpKeydown = (index, event) => {
+  if (event.key === 'Backspace' && !otpDigits.value[index] && index > 0) {
+    otpRefs.value[index - 1]?.focus();
+  }
+};
+
+const onOtpPaste = async (event) => {
+  const text = (event.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+  if (!text) return;
+  const chars = text.slice(0, 6).split('');
+  chars.forEach((c, i) => { otpDigits.value[i] = c; });
+  await nextTick();
+  const nextEmpty = chars.length < 6 ? chars.length : 5;
+  otpRefs.value[nextEmpty]?.focus();
+};
+
+// ── Cooldown timer ────────────────────────────────────────────────
+const startResendCooldown = () => {
+  resendCooldown.value = 30;
+  clearInterval(cooldownTimer);
+  cooldownTimer = setInterval(() => {
+    resendCooldown.value--;
+    if (resendCooldown.value <= 0) clearInterval(cooldownTimer);
+  }, 1000);
+};
+
+// ── Icon components ───────────────────────────────────────────────
 const EmailIcon = {
   render() {
-    return h('svg', {
-      class: 'h-5 w-5',
-      fill: 'none',
-      stroke: 'currentColor',
-      viewBox: '0 0 24 24'
-    }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207'
-      })
+    return h('svg', { class: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207' })
     ]);
   }
 };
 
 const LockIcon = {
   render() {
-    return h('svg', {
-      class: 'h-5 w-5',
-      fill: 'none',
-      stroke: 'currentColor',
-      viewBox: '0 0 24 24'
-    }, [
-      h('path', {
-        'stroke-linecap': 'round',
-        'stroke-linejoin': 'round',
-        'stroke-width': '2',
-        d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'
-      })
+    return h('svg', { class: 'h-5 w-5', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+      h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' })
     ]);
-  }
-};
-
-const handleLogin = async () => {
-  loading.value = true;
-  error.value = '';
-
-  try {
-    await authStore.login(form.value);
-    router.push({ name: 'Dashboard' });
-  } catch (err) {
-    error.value = err.response?.data?.message || 'Erreur de connexion';
-  } finally {
-    loading.value = false;
   }
 };
 </script>

@@ -197,6 +197,16 @@
               </button>
               <div class="flex items-center gap-2">
                 <button
+                  @click="openViewModal(user)"
+                  class="p-2.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all"
+                  title="Voir les détails"
+                >
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                </button>
+                <button
                   @click="editUser(user)"
                   class="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
                   title="Modifier"
@@ -212,6 +222,19 @@
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                  </svg>
+                </button>
+                <button
+                  @click="toggleUserStatus(user)"
+                  class="p-2.5 rounded-lg transition-all"
+                  :class="user.is_active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'"
+                  :title="user.is_active ? 'Verrouiller' : 'Déverrouiller'"
+                >
+                  <svg v-if="user.is_active" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                  </svg>
+                  <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
                   </svg>
                 </button>
                 <button
@@ -270,7 +293,7 @@
                 </td>
                 <td class="px-6 py-4">
                   <span
-                    class="px-3 py-1 rounded-lg text-xs font-bold"
+                    class="px-3 py-1 rounded-lg text-xs font-bold whitespace-nowrap"
                     :class="getRoleBadgeClass(user.role?.name || user.role)"
                   >
                     {{ getRoleLabel(user.role?.name || user.role) }}
@@ -301,6 +324,18 @@
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center justify-center gap-2">
+                    <!-- Voir les détails -->
+                    <button
+                      @click="openViewModal(user)"
+                      class="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all"
+                      title="Voir les détails"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                      </svg>
+                    </button>
+                    <!-- Modifier -->
                     <button
                       @click="editUser(user)"
                       class="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
@@ -310,6 +345,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
                       </svg>
                     </button>
+                    <!-- Reset mot de passe -->
                     <button
                       @click="showResetPasswordModal(user)"
                       class="p-2 rounded-lg bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all"
@@ -319,6 +355,23 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
                       </svg>
                     </button>
+                    <!-- Lock / Unlock -->
+                    <button
+                      @click="toggleUserStatus(user)"
+                      class="p-2 rounded-lg transition-all"
+                      :class="user.is_active ? 'bg-orange-50 text-orange-600 hover:bg-orange-100' : 'bg-green-50 text-green-600 hover:bg-green-100'"
+                      :title="user.is_active ? 'Verrouiller le compte' : 'Déverrouiller le compte'"
+                    >
+                      <!-- Locked icon -->
+                      <svg v-if="user.is_active" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                      </svg>
+                      <!-- Unlocked icon -->
+                      <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 018 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"></path>
+                      </svg>
+                    </button>
+                    <!-- Supprimer -->
                     <button
                       @click="confirmDeleteUser(user)"
                       class="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
@@ -362,6 +415,141 @@
       @close="showPasswordModal = false"
       @reset="handleResetPassword"
     />
+
+    <!-- User Detail Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showViewModal && viewedUser"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4"
+        @click.self="showViewModal = false"
+      >
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+          <!-- Header -->
+          <div class="bg-gradient-to-r from-moov-orange to-moov-orange-dark p-6">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-xl">
+                  {{ getUserInitials(viewedUser) }}
+                </div>
+                <div>
+                  <h2 class="text-xl font-bold text-white">{{ viewedUser.name }}</h2>
+                  <span
+                    class="inline-block mt-1 px-2 py-0.5 rounded-md text-xs font-bold bg-white/20 text-white whitespace-nowrap"
+                  >
+                    {{ getRoleLabel(viewedUser.role?.name || viewedUser.role) }}
+                  </span>
+                </div>
+              </div>
+              <button @click="showViewModal = false" class="text-white/70 hover:text-white transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Body -->
+          <div class="p-6 space-y-4">
+            <!-- Statut -->
+            <div class="flex items-center justify-between py-3 border-b border-gray-100">
+              <span class="text-sm font-semibold text-gray-500">Statut</span>
+              <span
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold"
+                :class="viewedUser.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'"
+              >
+                <span class="w-2 h-2 rounded-full" :class="viewedUser.is_active ? 'bg-green-500' : 'bg-gray-400'"></span>
+                {{ viewedUser.is_active ? 'Actif' : 'Inactif' }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-1 gap-3">
+              <!-- Email -->
+              <div class="flex items-start gap-3 py-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 font-medium">Email</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ viewedUser.email }}</p>
+                </div>
+              </div>
+
+              <!-- Téléphone -->
+              <div class="flex items-start gap-3 py-2">
+                <div class="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 font-medium">Téléphone</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ viewedUser.phone || 'Non renseigné' }}</p>
+                </div>
+              </div>
+
+              <!-- Organisation -->
+              <div class="flex items-start gap-3 py-2">
+                <div class="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 font-medium">Organisation</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ viewedUser.organization?.name || 'N/A' }}</p>
+                </div>
+              </div>
+
+              <!-- Date de création -->
+              <div class="flex items-start gap-3 py-2">
+                <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4 text-moov-orange" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 font-medium">Créé le</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ formatDate(viewedUser.created_at) }}</p>
+                </div>
+              </div>
+
+              <!-- Dernière mise à jour -->
+              <div v-if="viewedUser.updated_at" class="flex items-start gap-3 py-2">
+                <div class="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center shrink-0">
+                  <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-400 font-medium">Dernière mise à jour</p>
+                  <p class="text-sm font-semibold text-gray-800">{{ formatDate(viewedUser.updated_at) }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="px-6 pb-6 flex gap-3">
+            <button
+              @click="editUser(viewedUser); showViewModal = false"
+              class="flex-1 py-2.5 rounded-xl bg-blue-50 text-blue-700 font-semibold text-sm hover:bg-blue-100 transition-all"
+            >
+              Modifier
+            </button>
+            <button
+              @click="toggleUserStatus(viewedUser)"
+              class="flex-1 py-2.5 rounded-xl font-semibold text-sm transition-all"
+              :class="viewedUser.is_active ? 'bg-orange-50 text-orange-700 hover:bg-orange-100' : 'bg-green-50 text-green-700 hover:bg-green-100'"
+            >
+              {{ viewedUser.is_active ? 'Verrouiller' : 'Déverrouiller' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -389,7 +577,9 @@ const { confirm } = useConfirm();
 const showCreateModal = ref(false);
 const showEditModal = ref(false);
 const showPasswordModal = ref(false);
+const showViewModal = ref(false);
 const selectedUser = ref(null);
+const viewedUser = ref(null);
 const organizations = ref([]);
 
 const filters = ref({
@@ -473,6 +663,11 @@ const formatDate = (dateString) => {
     month: 'short', 
     year: 'numeric'
   });
+};
+
+const openViewModal = (user) => {
+  viewedUser.value = user;
+  showViewModal.value = true;
 };
 
 const editUser = (user) => {

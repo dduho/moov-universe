@@ -43,8 +43,12 @@ use Illuminate\Support\Facades\Route;
 
 
 // Public routes
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+// Route::post('/register', ...) supprimée — création d'utilisateurs réservée aux admins (POST /api/users)
+
+// OTP verification (called right after login when otp_required=true)
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+Route::post('/resend-otp',  [AuthController::class, 'resendOtp'])->middleware('throttle:3,1');
 
 // Public OAuth routes (must be under /api/ for Nginx to route to Laravel)
 Route::get('/oauth/authorize', [OutlookOAuthController::class, 'redirectToProvider']);
@@ -295,8 +299,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/clear-cache', [RentabilityController::class, 'clearCache']);
     });
 
-    // Predictive Analytics (Temporaire - sans auth pour test)
-    Route::prefix('predictive-analytics')->group(function () {
+    // Predictive Analytics (Admin only)
+    Route::prefix('predictive-analytics')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::post('/predictions', [PredictionController::class, 'generatePredictions']);
         Route::post('/trends', [PredictionController::class, 'analyzeTrends']);
         Route::post('/alerts', [PredictionController::class, 'generatePredictiveAlerts']);

@@ -26,19 +26,38 @@ export const useAuthStore = defineStore('auth', {
     async login(credentials) {
       try {
         const data = await AuthService.login(credentials);
-        this.token = data.token;
-        this.user = data.user;
-        this.isAuthenticated = true;
-        this.mustChangePassword = data.must_change_password || false;
-        
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        localStorage.setItem('mustChangePassword', JSON.stringify(this.mustChangePassword));
-        
+
+        // OTP required — do NOT store token yet, return data for Login.vue to handle
+        if (data.otp_required) {
+          return data;
+        }
+
+        this._applyAuthData(data);
         return data;
       } catch (error) {
         throw error;
       }
+    },
+
+    async verifyOtp({ otpToken, code }) {
+      try {
+        const data = await AuthService.verifyOtp({ otpToken, code });
+        this._applyAuthData(data);
+        return data;
+      } catch (error) {
+        throw error;
+      }
+    },
+
+    _applyAuthData(data) {
+      this.token = data.token;
+      this.user = data.user;
+      this.isAuthenticated = true;
+      this.mustChangePassword = data.must_change_password || false;
+
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('mustChangePassword', JSON.stringify(this.mustChangePassword));
     },
 
     async logout() {
