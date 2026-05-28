@@ -43,6 +43,7 @@
           label="Téléphone"
           type="tel"
           placeholder="+228 90 00 00 00"
+          required
         />
 
         <!-- Role -->
@@ -175,8 +176,8 @@ if (props.user) {
     name: props.user.name,
     email: props.user.email,
     phone: props.user.phone || '',
-    role: props.user.role,
-    organization_id: props.user.organization_id || '',
+    role: props.user.role?.name || '',
+    organization_id: props.user.organization_id || props.user.organization?.id || '',
     is_active: props.user.is_active ?? true
   };
 }

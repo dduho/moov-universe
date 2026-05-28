@@ -56,7 +56,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name'            => 'required|string|max:255',
             'email'           => 'required|email|unique:users',
-            'phone'           => 'nullable|string|max:20',
+            'phone'           => 'required|string|max:20',
             'password'        => 'required|string|min:6|confirmed',
             'role'            => 'required|string|in:admin,dealer_owner,dealer_agent',
             'organization_id' => 'nullable|exists:organizations,id',
@@ -104,7 +104,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name'            => 'sometimes|string|max:255',
             'email'           => ['sometimes', 'email', Rule::unique('users')->ignore($id)],
-            'phone'           => 'nullable|string|max:20',
+            'phone'           => 'sometimes|required|string|max:20',
             'role_id'         => 'sometimes|exists:roles,id',
             'organization_id' => 'nullable|exists:organizations,id',
             'is_active'       => 'boolean',
