@@ -308,7 +308,7 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         $user = $request->user()->load(['role', 'organization']);
-        
+
         return response()->json([
             'user' => $user,
             'must_change_password' => (bool) $user->must_change_password,
@@ -321,7 +321,7 @@ class AuthController extends Controller
     public function changePassword(Request $request)
     {
         $user = $request->user();
-        
+
         // Règles de validation du mot de passe sécurisé
         $request->validate([
             'current_password' => 'required',

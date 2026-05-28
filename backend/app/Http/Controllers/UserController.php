@@ -146,7 +146,7 @@ class UserController extends Controller
     public function destroy($id)
     {
         $user = User::findOrFail($id);
-        
+
         // Prevent deleting yourself
         if ($user->id === request()->user()->id) {
             return response()->json(['message' => 'You cannot delete your own account'], 403);
@@ -175,7 +175,7 @@ class UserController extends Controller
     public function toggleStatus($id)
     {
         $user = User::findOrFail($id);
-        
+
         // Prevent deactivating yourself
         if ($user->id === request()->user()->id) {
             return response()->json(['message' => 'You cannot deactivate your own account'], 403);

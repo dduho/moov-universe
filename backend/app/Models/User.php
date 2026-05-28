@@ -155,7 +155,7 @@ class User extends Authenticatable
 
         // Commercials can access PDV they created OR PDV with tasks assigned to them
         if ($this->isCommercial()) {
-            return $pointOfSale->created_by == $this->id || 
+            return $pointOfSale->created_by == $this->id ||
                    $pointOfSale->tasks()->where('assigned_to', $this->id)->exists();
         }
 
