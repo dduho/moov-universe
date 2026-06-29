@@ -8,11 +8,14 @@ return [
     |--------------------------------------------------------------------------
     */
     'smpp' => [
-        'host'        => env('SMPP_HOST', '10.82.11.30'),
-        'port'        => (int) env('SMPP_PORT', 2775),
-        'system_id'   => env('SMPP_SYSTEM_ID'),
-        'password'    => env('SMPP_PASSWORD'),
-        'source_addr' => env('SMPP_SOURCE_ADDR', 'INAM'),
+        'host'                 => env('SMPP_HOST', '10.82.11.30'),
+        'port'                 => (int) env('SMPP_PORT', 2775),
+        'system_id'            => env('SMPP_SYSTEM_ID'),
+        'password'             => env('SMPP_PASSWORD'),
+        // Primary sender. If sending under this sender fails, SmppService
+        // automatically falls back to 'fallback_source_addr'.
+        'source_addr'          => env('SMPP_SOURCE_ADDR', 'MoovApps'),
+        'fallback_source_addr' => env('SMPP_FALLBACK_SOURCE_ADDR', '999901'),
     ],
 
     /*

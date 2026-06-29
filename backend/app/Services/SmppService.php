@@ -38,29 +38,33 @@ class SmppService
         $this->port       = (int) config('services.smpp.port',  2775);
         $this->systemId   = config('services.smpp.system_id',   '');
         $this->password   = config('services.smpp.password',    '');
-        $this->sourceAddr = config('services.smpp.source_addr', 'INAM');
+        $this->sourceAddr = config('services.smpp.source_addr', 'MoovApps');
     }
 
     /**
      * Send an SMS. Retries up to 3 times on transient SMSC errors.
      * Returns true on success, false if all attempts fail.
+     *
+     * @param string|null $sourceAddr Override the configured sender for this send.
      */
-    public function sendSms(string $phone, string $message): bool
+    public function sendSms(string $phone, string $message, ?string $sourceAddr = null): bool
     {
         $destination = $this->normalizePhone($phone);
+        $sender      = $sourceAddr ?? $this->sourceAddr;
         $maxAttempts = 3;
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
                 $this->connect();
                 $this->bind();
-                $this->submitSm($destination, $message);
+                $this->submitSm($destination, $message, $sender);
                 $this->unbind();
                 return true;
             } catch (\Throwable $e) {
                 Log::warning("SMPP sendSms attempt {$attempt}/{$maxAttempts} failed", [
-                    'error' => $e->getMessage(),
-                    'phone' => $destination,
+                    'error'  => $e->getMessage(),
+                    'phone'  => $destination,
+                    'sender' => $sender,
                 ]);
                 if ($attempt < $maxAttempts) {
                     usleep(800_000); // 0.8s before next attempt
@@ -70,8 +74,30 @@ class SmppService
             }
         }
 
-        Log::error('SMPP sendSms failed after all attempts', ['phone' => $destination]);
+        Log::error('SMPP sendSms failed after all attempts', ['phone' => $destination, 'sender' => $sender]);
         return false;
+    }
+
+    /**
+     * Send an SMS using the primary sender (MoovApps). If that sender fails
+     * after all its retries, automatically falls back to the secondary
+     * short code (999901) before giving up.
+     */
+    public function sendSmsWithFallback(string $phone, string $message): bool
+    {
+        $primary  = config('services.smpp.source_addr', 'MoovApps');
+        $fallback = config('services.smpp.fallback_source_addr', '999901');
+
+        if ($this->sendSms($phone, $message, $primary)) {
+            return true;
+        }
+
+        Log::warning('SMPP sendSms failed with primary sender, falling back', [
+            'primary'  => $primary,
+            'fallback' => $fallback,
+        ]);
+
+        return $this->sendSms($phone, $message, $fallback);
     }
 
     // -------------------------------------------------------------------------
@@ -149,7 +175,7 @@ class SmppService
         }
     }
 
-    private function submitSm(string $destination, string $message): void
+    private function submitSm(string $destination, string $message, string $sourceAddr): void
     {
         // Truncate to 160 GSM 7-bit characters
         $msgBytes = mb_substr($message, 0, 160);
@@ -157,7 +183,7 @@ class SmppService
         $body = $this->cStr('')                      // service_type
               . chr(5)                                // source_addr_ton: Alphanumeric
               . chr(0)                                // source_addr_npi: Unknown
-              . $this->cStr($this->sourceAddr)        // source_addr
+              . $this->cStr($sourceAddr)              // source_addr
               . chr(1)                                // dest_addr_ton: International
               . chr(1)                                // dest_addr_npi: ISDN (E.164)
               . $this->cStr($destination)             // destination_addr

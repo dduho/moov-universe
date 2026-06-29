@@ -40,7 +40,7 @@ Combinaison **validée par tests exhaustifs** - toute autre combinaison est reje
 
 | Champ PDU             | Valeur | Signification         | Exemple                   |
 |------------------------|--------|-----------------------|---------------------------|
-| `source_addr_ton`      | **5**  | Alphanumeric          | Nom de l'expéditeur : `INAM`, `SUNU`, `MonApp` |
+| `source_addr_ton`      | **5**  | Alphanumeric          | Nom de l'expéditeur : `MoovApps`, `999901` |
 | `source_addr_npi`      | **0**  | Unknown               | -                         |
 | `dest_addr_ton`        | **1**  | International         | Numéro au format E.164    |
 | `dest_addr_npi`        | **1**  | ISDN (E.164)          | -                         |
@@ -49,7 +49,7 @@ Combinaison **validée par tests exhaustifs** - toute autre combinaison est reje
 
 | Champ PDU        | Format          | Exemple          | Remarques                                       |
 |------------------|-----------------|------------------|-------------------------------------------------|
-| `source_addr`    | Alphanumeric    | `INAM`           | Max 11 caractères, pas de numéro de téléphone   |
+| `source_addr`    | Alphanumeric    | `MoovApps`       | Max 11 caractères, pas de numéro de téléphone. Sender principal ; si l'envoi échoue, `SmppService` retente automatiquement avec le short code `999901`. |
 | `destination_addr` | International | `22899990010`    | Indicatif pays (228) + numéro national, sans `+` |
 
 ### Autres champs `submit_sm`
@@ -75,7 +75,7 @@ submit_sm {
   service_type:        ""
   source_addr_ton:     5
   source_addr_npi:     0
-  source_addr:         "INAM"
+  source_addr:         "MoovApps"
   dest_addr_ton:       1
   dest_addr_npi:       1
   destination_addr:    "22899990010"

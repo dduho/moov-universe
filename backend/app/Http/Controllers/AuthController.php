@@ -42,25 +42,12 @@ class AuthController extends Controller
                 ->whereNull('used_at')
                 ->update(['used_at' => now()]);
 
-            // Generate a 6-digit OTP
-            $plainCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-            $otp = OtpCode::create([
-                'user_id'    => $user->id,
-                'token'      => Str::uuid()->toString(),
-                'code'       => Hash::make($plainCode),
-                'expires_at' => now()->addMinutes(5),
-            ]);
-
-            // Send via SMPP
-            $appName = config('app.name', 'INAM');
-            $message = "{$appName} - Votre code de vérification : {$plainCode}. Valide 5 min. Ne le partagez pas.";
-
-            $sent = app(SmppService::class)->sendSms($user->phone, $message);
-
-            if (!$sent) {
-                Log::error('OTP SMS delivery failed', ['user_id' => $user->id]);
-                // Still return otp_required so the user knows to check, but log the failure
+            try {
+                $otp = $this->createAndSendOtp($user);
+            } catch (\RuntimeException $e) {
+                return response()->json([
+                    'message' => "Impossible d'envoyer le code de vérification. Veuillez réessayer dans quelques instants.",
+                ], 503);
             }
 
             return response()->json([
@@ -131,19 +118,15 @@ class AuthController extends Controller
         // Invalidate previous OTP
         $previous->update(['used_at' => now()]);
 
-        $user      = $previous->user;
-        $plainCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $user = $previous->user;
 
-        $otp = OtpCode::create([
-            'user_id'    => $user->id,
-            'token'      => Str::uuid()->toString(),
-            'code'       => Hash::make($plainCode),
-            'expires_at' => now()->addMinutes(5),
-        ]);
-
-        $appName = config('app.name', 'INAM');
-        $message = "{$appName} - Votre code de vérification : {$plainCode}. Valide 5 min. Ne le partagez pas.";
-        app(SmppService::class)->sendSms($user->phone, $message);
+        try {
+            $otp = $this->createAndSendOtp($user);
+        } catch (\RuntimeException $e) {
+            return response()->json([
+                'message' => "Impossible d'envoyer le code de vérification. Veuillez réessayer dans quelques instants.",
+            ], 503);
+        }
 
         return response()->json([
             'otp_token'  => $otp->token,
@@ -250,6 +233,52 @@ class AuthController extends Controller
             'user'                 => $user->load(['role', 'organization']),
             'must_change_password' => (bool) $user->must_change_password,
         ]);
+    }
+
+    /**
+     * Generate an OTP and send it via SMPP (MoovApps, falling back to 999901).
+     * If delivery fails, the OTP is invalidated and a brand new one is
+     * generated and resent automatically, up to $maxCycles times, so the
+     * user is never left waiting on a code that never arrived.
+     *
+     * @throws \RuntimeException if delivery still fails after all cycles
+     */
+    private function createAndSendOtp(User $user): OtpCode
+    {
+        $maxCycles = 3;
+        $previous  = null;
+
+        for ($cycle = 1; $cycle <= $maxCycles; $cycle++) {
+            if ($previous) {
+                $previous->update(['used_at' => now()]);
+            }
+
+            $plainCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            $otp = OtpCode::create([
+                'user_id'    => $user->id,
+                'token'      => Str::uuid()->toString(),
+                'code'       => Hash::make($plainCode),
+                'expires_at' => now()->addMinutes(5),
+            ]);
+
+            $appName = config('app.name', 'MoovApps');
+            $message = "{$appName} - Votre code de vérification : {$plainCode}. Valide 5 min. Ne le partagez pas.";
+
+            if (app(SmppService::class)->sendSmsWithFallback($user->phone, $message)) {
+                return $otp;
+            }
+
+            Log::warning("OTP SMS delivery failed, regenerating and retrying (cycle {$cycle}/{$maxCycles})", [
+                'user_id' => $user->id,
+            ]);
+
+            $previous = $otp;
+        }
+
+        Log::error('OTP SMS delivery failed after all retry cycles', ['user_id' => $user->id]);
+
+        throw new \RuntimeException('OTP delivery failed after all retry cycles');
     }
 
     /**
