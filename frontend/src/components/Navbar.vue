@@ -206,7 +206,7 @@
             <span class="text-xs font-extrabold text-gray-600 uppercase tracking-wider">Administration</span>
           </div>
           <router-link
-            v-for="item in adminNavigation"
+            v-for="item in mobileAdminNavigation"
             :key="item.name"
             :to="item.path"
             @click="mobileMenuOpen = false"
@@ -508,6 +508,12 @@ const adminNavigation = [
     icon: SettingsIcon,
   },
 ];
+
+const mobileAdminNavigation = computed(() => {
+  const radarItem = adminNavigation.find(item => item.path === '/admin/radar-map');
+  const otherItems = adminNavigation.filter(item => item.path !== '/admin/radar-map');
+  return radarItem ? [radarItem, ...otherItems] : otherItems;
+});
 
 // Check if any admin route is active
 const isAdminRouteActive = computed(() => {

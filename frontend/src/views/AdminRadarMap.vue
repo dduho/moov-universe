@@ -68,26 +68,6 @@
         </div>
       </div>
 
-      <!-- Stats bar -->
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">PDV à proximité</span>
-          <span class="text-2xl font-bold text-moov-orange">{{ nearbyPdvs.length }}</span>
-        </div>
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Validés</span>
-          <span class="text-2xl font-bold text-green-600">{{ nearbyPdvs.filter(p => p.status === 'validated').length }}</span>
-        </div>
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">En attente</span>
-          <span class="text-2xl font-bold text-yellow-600">{{ nearbyPdvs.filter(p => p.status === 'pending').length }}</span>
-        </div>
-        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
-          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rejetés</span>
-          <span class="text-2xl font-bold text-red-600">{{ nearbyPdvs.filter(p => p.status === 'rejected').length }}</span>
-        </div>
-      </div>
-
       <!-- GPS Error -->
       <div v-if="gpsError" class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-start gap-3">
         <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -115,6 +95,26 @@
         <div ref="mapContainer" class="w-full" style="height: 600px;"></div>
       </div>
 
+      <!-- Stats bar below map -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">PDV à proximité</span>
+          <span class="text-2xl font-bold text-moov-orange">{{ nearbyPdvs.length }}</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Validés</span>
+          <span class="text-2xl font-bold text-green-600">{{ nearbyPdvs.filter(p => p.status === 'validated').length }}</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">En attente</span>
+          <span class="text-2xl font-bold text-yellow-600">{{ nearbyPdvs.filter(p => p.status === 'pending').length }}</span>
+        </div>
+        <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl px-4 py-3 flex flex-col gap-1">
+          <span class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rejetés</span>
+          <span class="text-2xl font-bold text-red-600">{{ nearbyPdvs.filter(p => p.status === 'rejected').length }}</span>
+        </div>
+      </div>
+
       <!-- PDV list below map -->
       <div v-if="nearbyPdvs.length > 0" class="mt-6">
         <h2 class="text-lg font-bold text-gray-900 mb-3">
@@ -126,7 +126,12 @@
             v-for="pdv in nearbyPdvsSortedByDistance"
             :key="pdv.id"
             class="bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-2xl p-4 cursor-pointer hover:shadow-lg hover:border-moov-orange/30 transition-all group"
-            @click="focusOnPdv(pdv)"
+            role="button"
+            tabindex="0"
+            :aria-label="`Afficher tous les détails de ${pdv.nom_point || pdv.name || 'ce PDV'}`"
+            @click="openPdvDetails(pdv)"
+            @keydown.enter.prevent="openPdvDetails(pdv)"
+            @keydown.space.prevent="openPdvDetails(pdv)"
           >
             <div class="flex items-start justify-between gap-2 mb-2">
               <h3 class="font-bold text-gray-900 text-sm leading-tight group-hover:text-moov-orange transition-colors">
@@ -161,18 +166,26 @@
         <p class="text-sm mt-1">Essayez d'augmenter le rayon de recherche</p>
       </div>
     </div>
+
+    <RadarPdvDetailsModal
+      v-if="detailsModalOpen"
+      :point-of-sale="selectedPdv"
+      :loading="detailsLoading"
+      :error="detailsError"
+      :distance="selectedPdvDistance"
+      @close="closePdvDetails"
+      @retry="loadSelectedPdvDetails"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import { useRouter } from 'vue-router';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import Navbar from '../components/Navbar.vue';
+import RadarPdvDetailsModal from '../components/RadarPdvDetailsModal.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
-
-const router = useRouter();
 
 // --- Refs ---
 const mapContainer = ref(null);
@@ -183,6 +196,11 @@ const gpsError = ref(null);
 const userPosition = ref(null); // { lat, lng, accuracy }
 const radiusKm = ref(0.5);
 const allPdvs = ref([]);
+const detailsModalOpen = ref(false);
+const selectedPdv = ref(null);
+const selectedPdvDistance = ref(null);
+const detailsLoading = ref(false);
+const detailsError = ref('');
 
 // Leaflet instances (not reactive)
 let leafletMap = null;
@@ -419,6 +437,37 @@ function recenterMap() {
 function focusOnPdv(pdv) {
   if (!leafletMap || !pdv.latitude || !pdv.longitude) return;
   leafletMap.setView([parseFloat(pdv.latitude), parseFloat(pdv.longitude)], 16, { animate: true });
+}
+
+async function openPdvDetails(pdv) {
+  focusOnPdv(pdv);
+  selectedPdv.value = pdv;
+  selectedPdvDistance.value = pdv._distance;
+  detailsModalOpen.value = true;
+  await loadSelectedPdvDetails();
+}
+
+async function loadSelectedPdvDetails() {
+  if (!selectedPdv.value?.id) return;
+  detailsLoading.value = true;
+  detailsError.value = '';
+  try {
+    const response = await PointOfSaleService.getById(selectedPdv.value.id);
+    const fullPdv = response?.data ?? response;
+    selectedPdv.value = { ...selectedPdv.value, ...fullPdv };
+  } catch (err) {
+    console.error('[AdminRadarMap] Failed to load PDV details:', err);
+    detailsError.value = 'Impossible de charger tous les détails de ce PDV.';
+  } finally {
+    detailsLoading.value = false;
+  }
+}
+
+function closePdvDetails() {
+  detailsModalOpen.value = false;
+  selectedPdv.value = null;
+  selectedPdvDistance.value = null;
+  detailsError.value = '';
 }
 
 function refreshRadius() {
