@@ -45,12 +45,12 @@
           </div>
         </div>
 
-        <footer class="flex shrink-0 flex-col-reverse gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:flex-row sm:justify-end sm:px-6">
-          <button type="button" class="min-h-11 rounded-xl border border-gray-300 bg-white px-6 py-2.5 font-bold text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2" @click="emit('close')">Fermer</button>
+        <footer class="flex shrink-0 flex-row gap-2 border-t border-gray-200 bg-gray-50 px-5 py-3 sm:justify-end sm:px-6">
+          <button type="button" class="min-h-11 flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 font-bold text-gray-700 transition-colors hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 sm:flex-none sm:px-6" @click="emit('close')">Fermer</button>
           <RouterLink
             v-if="pointOfSale?.id"
             :to="`/pdv/${pointOfSale.id}/edit`"
-            class="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark px-6 py-2.5 font-bold text-white shadow transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-moov-orange focus:ring-offset-2"
+            class="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark px-4 py-2.5 font-bold text-white shadow transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-moov-orange focus:ring-offset-2 sm:flex-none sm:px-6"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
