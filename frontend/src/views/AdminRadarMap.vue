@@ -12,17 +12,18 @@
             <span class="font-semibold text-moov-orange">{{ radiusKm < 1 ? `${radiusKm * 1000} m` : `${radiusKm} km` }}</span> autour de vous
           </p>
         </div>
-        <div class="flex items-center gap-3 flex-wrap">
+        <div class="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2 sm:flex sm:w-auto sm:gap-3">
           <!-- Radius selector -->
-          <div class="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-white/50 shadow rounded-xl px-4 py-2">
+          <div class="flex min-h-11 min-w-0 items-center gap-1.5 rounded-xl border border-white/50 bg-white/90 px-3 py-2 shadow backdrop-blur-md sm:gap-2 sm:px-4">
             <svg class="w-4 h-4 text-moov-orange shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            <label class="text-sm font-semibold text-gray-700 whitespace-nowrap">Rayon :</label>
+            <label class="hidden whitespace-nowrap text-sm font-semibold text-gray-700 sm:inline">Rayon :</label>
             <select
               v-model.number="radiusKm"
               @change="refreshRadius"
-              class="text-sm font-bold text-moov-orange bg-transparent border-none outline-none cursor-pointer"
+              aria-label="Rayon de recherche"
+              class="min-w-0 flex-1 cursor-pointer border-none bg-transparent text-sm font-bold text-moov-orange outline-none"
             >
               <option :value="0.5">500 m</option>
               <option :value="1">1 km</option>
@@ -35,7 +36,7 @@
 
           <!-- GPS status badge -->
           <div
-            class="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold"
+            class="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-2 text-xs font-semibold sm:gap-2 sm:px-4 sm:text-sm"
             :class="gpsStatus === 'active'
               ? 'bg-green-100 text-green-700 border border-green-200'
               : gpsStatus === 'loading'
@@ -46,7 +47,8 @@
               class="w-2 h-2 rounded-full"
               :class="gpsStatus === 'active' ? 'bg-green-500 animate-pulse' : gpsStatus === 'loading' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'"
             ></span>
-            <span>{{
+            <span class="sm:hidden">{{ gpsStatus === 'active' ? 'GPS actif' : gpsStatus === 'loading' ? 'GPS…' : 'GPS off' }}</span>
+            <span class="hidden sm:inline">{{
               gpsStatus === 'active' ? 'GPS actif'
               : gpsStatus === 'loading' ? 'Localisation...'
               : 'GPS indisponible'
@@ -57,13 +59,14 @@
           <button
             v-if="userPosition"
             @click="recenterMap"
-            class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark text-white text-sm font-semibold shadow hover:shadow-lg transition-all"
+            class="flex min-h-11 items-center gap-1.5 whitespace-nowrap rounded-xl bg-gradient-to-r from-moov-orange to-moov-orange-dark px-3 py-2 text-xs font-semibold text-white shadow transition-all hover:shadow-lg sm:gap-2 sm:px-4 sm:text-sm"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            Me recentrer
+            <span class="sm:hidden">Centrer</span>
+            <span class="hidden sm:inline">Me recentrer</span>
           </button>
         </div>
       </div>
