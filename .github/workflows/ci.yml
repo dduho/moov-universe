@@ -57,7 +57,13 @@ jobs:
           php artisan key:generate
 
       - name: Run tests
-        run: php artisan test
+        run: |
+          set -o pipefail
+          php vendor/bin/phpunit --colors=never 2>&1 | tee phpunit.log || {
+            # Résumé de l'échec visible dans les annotations du run
+            echo "::error title=PHPUnit::$(tail -c 3500 phpunit.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')"
+            exit 1
+          }
 
   frontend:
     name: Frontend (build)
