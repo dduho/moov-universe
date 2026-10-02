@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PointOfSale;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -30,36 +31,53 @@ class GeolocationController extends Controller
         $cacheKey = "geo_pdv_{$startDate}_{$endDate}_{$region}_{$status}_{$minCa}_{$maxCa}";
 
         return Cache::remember($cacheKey, $cacheEnabled ? $cacheTtl * 60 : 0, function () use ($startDate, $endDate, $region, $status, $minCa, $maxCa) {
-            $query = PointOfSale::query()
-                ->whereNotNull('latitude')
-                ->whereNotNull('longitude')
-                ->where('latitude', '!=', 0)
-                ->where('longitude', '!=', 0);
+            // Une seule requête : PDV + statistiques de la période (tables d'agrégats),
+            // restreintes aux PDV de la région demandée le cas échéant
+            $pdvFilter = $region
+                ? DB::table('point_of_sales')->where('region', $region)->select('numero_flooz')
+                : null;
+            $perPdv = TransactionAggregates::source($startDate, $endDate, ['retrait_keycost', 'count_depot', 'count_retrait'], $pdvFilter);
+
+            $query = DB::table('point_of_sales as p')
+                ->leftJoin('organizations as o', 'o.id', '=', 'p.organization_id')
+                ->leftJoinSub($perPdv, 'a', 'a.pdv_numero', '=', 'p.numero_flooz')
+                ->whereNotNull('p.latitude')
+                ->whereNotNull('p.longitude')
+                ->where('p.latitude', '!=', 0)
+                ->where('p.longitude', '!=', 0);
 
             if ($status) {
-                $query->where('status', $status);
+                $query->where('p.status', $status);
             }
 
             if ($region) {
-                $query->where('region', $region);
+                $query->where('p.region', $region);
             }
 
-            $pdvs = $query->with('organization')->get();
+            $pdvs = $query
+                ->orderBy('p.id')
+                ->select('p.id', 'p.numero_flooz', 'p.nom_point', 'p.latitude', 'p.longitude', 'p.region', 'p.status', 'o.name as dealer_name')
+                ->selectRaw('
+                    a.retrait_keycost as total_ca,
+                    a.count_depot + a.count_retrait as total_transactions,
+                    a.count_depot as total_depot,
+                    a.count_retrait as total_retrait,
+                    CAST(COALESCE(a.days_count, 0) AS UNSIGNED) as active_days
+                ')
+                ->get();
 
             $geoData = [];
-            foreach ($pdvs as $pdv) {
-                // Get CA and transaction stats for the period
-                $stats = DB::table('pdv_transactions')
-                    ->where('pdv_numero', $pdv->numero_flooz)
-                    ->whereBetween('transaction_date', [$startDate, $endDate])
-                    ->selectRaw('
-                        SUM(retrait_keycost) as total_ca,
-                        SUM(count_depot + count_retrait) as total_transactions,
-                        SUM(count_depot) as total_depot,
-                        SUM(count_retrait) as total_retrait,
-                        COUNT(DISTINCT transaction_date) as active_days
-                    ')
-                    ->first();
+            foreach ($pdvs as $stats) {
+                $pdv = (object) [
+                    'id' => $stats->id,
+                    'numero_flooz' => $stats->numero_flooz,
+                    'nom_point' => $stats->nom_point,
+                    'latitude' => $stats->latitude,
+                    'longitude' => $stats->longitude,
+                    'region' => $stats->region,
+                    'status' => $stats->status,
+                    'organization' => $stats->dealer_name !== null ? (object) ['name' => $stats->dealer_name] : null,
+                ];
 
                 $totalCa = $stats->total_ca ?? 0;
                 $totalTransactions = $stats->total_transactions ?? 0;
@@ -124,11 +142,13 @@ class GeolocationController extends Controller
 
         return Cache::remember($cacheKey, 3600, function () use ($startDate, $endDate) {
             // Group PDV by region and analyze density vs performance
+            // Agrégats par PDV, puis par région. Les moyennes reproduisent l'ancienne jointure
+            // ligne à ligne : centre pondéré par le nombre de jours de transactions (min. 1),
+            // CA moyen par ligne journalière.
+            $perPdv = TransactionAggregates::source($startDate, $endDate, ['retrait_keycost', 'count_depot', 'count_retrait']);
+
             $regionStats = DB::table('point_of_sales as p')
-                ->leftJoin('pdv_transactions as t', function($join) use ($startDate, $endDate) {
-                    $join->on('p.numero_flooz', '=', 't.pdv_numero')
-                         ->whereBetween('t.transaction_date', [$startDate, $endDate]);
-                })
+                ->leftJoinSub($perPdv, 't', 'p.numero_flooz', '=', 't.pdv_numero')
                 ->whereNotNull('p.latitude')
                 ->whereNotNull('p.longitude')
                 ->where('p.status', 'validated')
@@ -136,10 +156,10 @@ class GeolocationController extends Controller
                 ->select('p.region')
                 ->selectRaw('
                     COUNT(DISTINCT p.numero_flooz) as pdv_count,
-                    AVG(p.latitude) as center_lat,
-                    AVG(p.longitude) as center_lng,
+                    SUM(p.latitude * GREATEST(COALESCE(t.days_count, 0), 1)) / SUM(GREATEST(COALESCE(t.days_count, 0), 1)) as center_lat,
+                    SUM(p.longitude * GREATEST(COALESCE(t.days_count, 0), 1)) / SUM(GREATEST(COALESCE(t.days_count, 0), 1)) as center_lng,
                     SUM(t.retrait_keycost) as total_ca,
-                    AVG(t.retrait_keycost) as avg_ca_per_transaction,
+                    SUM(t.retrait_keycost) / SUM(t.days_count) as avg_ca_per_transaction,
                     SUM(t.count_depot + t.count_retrait) as total_transactions
                 ')
                 ->groupBy('p.region')

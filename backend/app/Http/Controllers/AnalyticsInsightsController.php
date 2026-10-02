@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PdvTransaction;
 use App\Models\PointOfSale;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -133,13 +134,13 @@ class AnalyticsInsightsController extends Controller
     {
         $insights = [];
         
-        // CA des 7 derniers jours
-        $lastWeek = DB::table('pdv_transactions')
+        // CA des 7 derniers jours (synthèse quotidienne : mêmes totaux, bien moins de lignes)
+        $lastWeek = DB::table('transaction_daily_summary')
             ->whereBetween('transaction_date', [$now->copy()->subDays(7), $now])
             ->sum('retrait_keycost');
         
         // CA des 7 jours d'avant
-        $previousWeek = DB::table('pdv_transactions')
+        $previousWeek = DB::table('transaction_daily_summary')
             ->whereBetween('transaction_date', [$now->copy()->subDays(14), $now->copy()->subDays(7)])
             ->sum('retrait_keycost');
         
@@ -244,8 +245,8 @@ class AnalyticsInsightsController extends Controller
     {
         $insights = [];
         
-        // Analyser le ratio dépôts/retraits
-        $stats = DB::table('pdv_transactions')
+        // Analyser le ratio dépôts/retraits (synthèse quotidienne)
+        $stats = DB::table('transaction_daily_summary')
             ->whereBetween('transaction_date', [$now->copy()->subDays(30), $now])
             ->selectRaw('
                 SUM(count_depot) as total_depots,
@@ -411,17 +412,20 @@ class AnalyticsInsightsController extends Controller
         $insights = [];
         
         // Trouver les top 10 PDV par CA
-        $topPdv = DB::table('pdv_transactions as t')
+        // Agrégats par PDV ; bornes de l'ancienne requête (date > now-30j, jusqu'à aujourd'hui)
+        $topPdv = TransactionAggregates::table(
+                $now->copy()->subDays(30)->startOfDay()->addDay(),
+                $now->copy()->startOfDay(),
+                ['retrait_keycost', 'count_depot', 'count_retrait']
+            )
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
             ->join('organizations as o', 'p.organization_id', '=', 'o.id')
-            ->whereBetween('t.transaction_date', [$now->copy()->subDays(30), $now])
             ->select('t.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name')
             ->selectRaw('
-                SUM(t.retrait_keycost) as ca_total,
-                SUM(t.count_depot + t.count_retrait) as total_transactions,
-                AVG(t.retrait_keycost) as ca_moyen_jour
+                t.retrait_keycost as ca_total,
+                t.count_depot + t.count_retrait as total_transactions,
+                t.retrait_keycost / t.days_count as ca_moyen_jour
             ')
-            ->groupBy('t.pdv_numero', 'p.nom_point', 'p.region', 'o.name')
             ->orderByDesc('ca_total')
             ->limit(10)
             ->get();

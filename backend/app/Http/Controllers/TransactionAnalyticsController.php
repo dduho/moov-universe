@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PdvTransaction;
 use App\Models\PointOfSale;
 use App\Models\DailyAnalyticsCache;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -204,14 +205,16 @@ class TransactionAnalyticsController extends Controller
             $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
             $monthEnd = $monthStart->copy()->endOfMonth()->endOfDay();
 
-            $rows = DB::table('pdv_transactions')
+            // Synthèse quotidienne (un jour par dealer/région) : un PDV n'est que dans un groupe,
+            // la somme des PDV actifs par groupe donne donc le nombre exact de PDV actifs du jour.
+            $rows = DB::table('transaction_daily_summary')
                 ->whereBetween('transaction_date', [$monthStart, $monthEnd])
                 ->selectRaw('
                     DATE(transaction_date) as d,
                     SUM(retrait_keycost) as total_ca,
                     SUM(count_depot + count_retrait) as total_transactions,
                     SUM(sum_depot + sum_retrait) as total_volume,
-                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs,
+                    CAST(SUM(pdv_actifs) AS UNSIGNED) as pdv_actifs,
                     SUM(count_depot) as total_depot_count,
                     SUM(sum_depot) as total_depot_amount,
                     SUM(count_retrait) as total_retrait_count,
@@ -446,19 +449,8 @@ class TransactionAnalyticsController extends Controller
     private function getEvolution($period, $startDate, $endDate)
     {
         if (in_array($period, ['month', 'quarter', 'historical_year'])) {
-            // Pour mois, trimestre ou année complète: grouper par mois
-            $evolution = DB::table('pdv_transactions')
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->selectRaw("
-                    DATE_FORMAT(transaction_date, '%Y-%m') as period,
-                    SUM(retrait_keycost) as chiffre_affaire,
-                    SUM(sum_depot + sum_retrait) as volume,
-                    SUM(count_depot + count_retrait) as transactions,
-                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs
-                ")
-                ->groupBy('period')
-                ->orderBy('period')
-                ->get();
+            // Pour mois, trimestre ou année complète: grouper par mois (tables d'agrégats)
+            $evolution = $this->monthlyEvolution($startDate, $endDate);
         } elseif ($period === 'week') {
             // Pour semaine: grouper par semaine (début de semaine)
             $evolution = DB::table('pdv_transactions')
@@ -474,15 +466,15 @@ class TransactionAnalyticsController extends Controller
                 ->orderBy('period')
                 ->get();
         } else {
-            // Pour jour, mois, historical_month, historical_week: grouper par jour
-            $evolution = DB::table('pdv_transactions')
+            // Pour jour, mois, historical_month, historical_week: grouper par jour (synthèse quotidienne)
+            $evolution = DB::table('transaction_daily_summary')
                 ->whereBetween('transaction_date', [$startDate, $endDate])
                 ->selectRaw("
                     DATE(transaction_date) as period,
                     SUM(retrait_keycost) as chiffre_affaire,
                     SUM(sum_depot + sum_retrait) as volume,
                     SUM(count_depot + count_retrait) as transactions,
-                    COUNT(DISTINCT CASE WHEN count_depot > 0 OR count_retrait > 0 THEN pdv_numero END) as pdv_actifs
+                    CAST(SUM(pdv_actifs) AS UNSIGNED) as pdv_actifs
                 ")
                 ->groupBy('period')
                 ->orderBy('period')
@@ -491,6 +483,37 @@ class TransactionAnalyticsController extends Controller
 
         // Remplir les périodes manquantes avec des zéros
         return $this->fillMissingPeriods($evolution, $period, $startDate, $endDate);
+    }
+
+    /**
+     * Évolution mois par mois sur [start, end] depuis les agrégats par PDV.
+     * PDV actifs du mois = PDV ayant au moins un jour avec dépôt ou retrait dans la partie du mois couverte.
+     */
+    private function monthlyEvolution(Carbon $startDate, Carbon $endDate)
+    {
+        $rows = collect();
+        $columns = ['retrait_keycost', 'sum_depot', 'sum_retrait', 'count_depot', 'count_retrait'];
+
+        for ($month = $startDate->copy()->startOfMonth(); $month->lte($endDate); $month->addMonthNoOverflow()) {
+            $segStart = $startDate->gt($month) ? $startDate->copy() : $month->copy();
+            $segEnd = $endDate->lt($month->copy()->endOfMonth()) ? $endDate->copy() : $month->copy()->endOfMonth();
+
+            $row = TransactionAggregates::table($segStart, $segEnd, $columns)
+                ->selectRaw("
+                    ? as period,
+                    SUM(t.retrait_keycost) as chiffre_affaire,
+                    SUM(t.sum_depot + t.sum_retrait) as volume,
+                    SUM(t.count_depot + t.count_retrait) as transactions,
+                    CAST(SUM(t.active_days > 0) AS UNSIGNED) as pdv_actifs
+                ", [$month->format('Y-m')])
+                ->first();
+
+            if ($row && $row->chiffre_affaire !== null) {
+                $rows->push($row);
+            }
+        }
+
+        return $rows;
     }
 
     /**
@@ -828,21 +851,21 @@ class TransactionAnalyticsController extends Controller
                 $currentMonthEnd = Carbon::create($year, $month, 1)->endOfMonth();
                 
                 // CA du mois courant
-                $currentCA = DB::table('pdv_transactions')
+                $currentCA = DB::table('transaction_daily_summary')
                     ->whereBetween('transaction_date', [$currentMonthStart, $currentMonthEnd])
                     ->sum('retrait_keycost');
                 
                 // CA du mois précédent
                 $previousMonthStart = $currentMonthStart->copy()->subMonth()->startOfMonth();
                 $previousMonthEnd = $currentMonthStart->copy()->subMonth()->endOfMonth();
-                $previousCA = DB::table('pdv_transactions')
+                $previousCA = DB::table('transaction_daily_summary')
                     ->whereBetween('transaction_date', [$previousMonthStart, $previousMonthEnd])
                     ->sum('retrait_keycost');
                 
                 // CA du même mois l'année précédente
                 $lastYearMonthStart = Carbon::create($year - 1, $month, 1)->startOfMonth();
                 $lastYearMonthEnd = Carbon::create($year - 1, $month, 1)->endOfMonth();
-                $lastYearCA = DB::table('pdv_transactions')
+                $lastYearCA = DB::table('transaction_daily_summary')
                     ->whereBetween('transaction_date', [$lastYearMonthStart, $lastYearMonthEnd])
                     ->sum('retrait_keycost');
                 

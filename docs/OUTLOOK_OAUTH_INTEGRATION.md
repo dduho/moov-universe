@@ -40,9 +40,9 @@ Copie ta configuration fournie dans `.env`:
 
 ```bash
 # Azure OAuth2
-AZURE_TENANT_ID=f91b4edd-ae9e-48df-8671-c46c9fa39a0f
-AZURE_CLIENT_ID=67ab8307-2d99-43bd-b64a-02073ce61e3a
-AZURE_CLIENT_SECRET=1fb6285b-35d5-401f-a855-ca3c3f029185
+AZURE_TENANT_ID=<tenant-id-azure>
+AZURE_CLIENT_ID=<client-id-azure>
+AZURE_CLIENT_SECRET=<secret-azure-a-renseigner-dans-.env>
 
 # Outlook Mailbox
 OUTLOOK_MAILBOX_EMAIL=dduho@moov-africa.tg

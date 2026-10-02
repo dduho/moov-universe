@@ -11,6 +11,9 @@ class OAuthToken extends Model
 {
     use HasFactory, SoftDeletes;
 
+    // Sans cela Laravel déduit "o_auth_tokens" : l'import Outlook échouait sur une table inexistante
+    protected $table = 'oauth_tokens';
+
     protected $fillable = [
         'provider',
         'mailbox',

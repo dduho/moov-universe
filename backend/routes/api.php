@@ -56,22 +56,20 @@ Route::get('/oauth/callback', [OutlookOAuthController::class, 'callback']);
 Route::get('/password-rules', [AuthController::class, 'getPasswordRules']);
 
 
-// Advanced cache management (Admin only) - doit être avant la route générique settings/{key}
-Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
-    Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
-    Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']); // Spécifique avant dynamique
-    Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
-    Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
-});
-
-// Public system settings (read-only)
-Route::prefix('settings')->group(function () {
-    Route::get('/', [SystemSettingController::class, 'index']);
-    Route::get('/{key}', [SystemSettingController::class, 'show']);
-});
-
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Advanced cache management (Admin only) - doit être avant la route générique settings/{key}
+    Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
+        Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
+        Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']); // Spécifique avant dynamique
+        Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
+        Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
+    });
+
+    // System settings (read-only): liste complète réservée aux admins, lecture par clé pour tout utilisateur connecté
+    Route::get('/settings', [SystemSettingController::class, 'index'])->middleware('App\\Http\\Middleware\\CheckRole:admin');
+    Route::get('/settings/{key}', [SystemSettingController::class, 'show']);
+
     // Auth routes
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
@@ -313,13 +311,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('geolocation')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::get('/pdv', [GeolocationController::class, 'getPdvGeoData']);
         Route::get('/potential-zones', [GeolocationController::class, 'getPotentialZones']);
-    });
-
-    // Advanced cache management (Admin only)
-    Route::prefix('settings/cache')->middleware('App\\Http\\Middleware\\CheckRole:admin')->middleware('auth:sanctum')->group(function () {
-        Route::get('/', [CacheSettingController::class, 'getCacheSettings']);
-        Route::post('/clear-all', [CacheSettingController::class, 'clearAllCaches']); // Spécifique avant dynamique
-        Route::post('/{widget}/clear', [CacheSettingController::class, 'clearWidgetCache']);
-        Route::post('/{widget}', [CacheSettingController::class, 'updateCacheSetting']);
     });
 });

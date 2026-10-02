@@ -16,10 +16,23 @@ class SystemSetting extends Model
         'description',
     ];
 
+    /** Mémo par requête : un même réglage est souvent lu plusieurs fois par appel API. */
+    private static array $memo = [];
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => static::$memo = []);
+        static::deleted(fn () => static::$memo = []);
+    }
+
     public static function getValue($key, $default = null)
     {
-        $setting = self::where('key', $key)->first();
-        
+        if (!array_key_exists($key, static::$memo)) {
+            static::$memo[$key] = self::where('key', $key)->first();
+        }
+
+        $setting = static::$memo[$key];
+
         if (!$setting) {
             return $default;
         }

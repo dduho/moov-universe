@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PdvTransaction;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -87,7 +88,12 @@ class TransactionImportController extends Controller
      */
     public function importUploadedFile(UploadedFile $file): array
     {
-        return $this->processFile($file);
+        $result = $this->processFile($file);
+
+        // Comme pour l'import manuel : agrégats + caches à jour pour la date importée
+        $this->invalidateAnalyticsCache($result['date']);
+
+        return $result;
     }
 
     /**
@@ -384,6 +390,13 @@ class TransactionImportController extends Controller
      */
     private function invalidateAnalyticsCache($date)
     {
+        // Tables d'agrégats (mois du fichier importé) : utilisées par les analytics
+        try {
+            TransactionAggregates::refreshMonth($date);
+        } catch (\Throwable $e) {
+            Log::error("Erreur lors du recalcul des agrégats pour {$date}: " . $e->getMessage());
+        }
+
         try {
             $carbonDate = Carbon::parse($date);
             

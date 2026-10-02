@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PointOfSale;
 use App\Models\SystemSetting;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -61,10 +62,28 @@ class RentabilityController extends Controller
      */
     private function executeRentabilityAnalysis($scope, $entityId, $startDate, $endDate, $groupBy, $sortBy, $sortOrder, $limit)
     {
-        $query = DB::table('pdv_transactions as t')
+        // Étape 1 : agrégat par PDV depuis les tables d'agrégats (mois complets + jours en bordure)
+        $perPdv = TransactionAggregates::table($startDate, $endDate, [
+                'retrait_keycost', 'count_depot', 'count_retrait', 'sum_depot', 'sum_retrait',
+                'dealer_depot_commission', 'dealer_retrait_commission', 'pdv_depot_commission', 'pdv_retrait_commission',
+            ])
+            ->select(
+                't.pdv_numero',
+                DB::raw('SUM(t.retrait_keycost) as retrait_keycost'),
+                DB::raw('SUM(t.count_depot) as count_depot'),
+                DB::raw('SUM(t.count_retrait) as count_retrait'),
+                DB::raw('SUM(t.sum_depot) as sum_depot'),
+                DB::raw('SUM(t.sum_retrait) as sum_retrait'),
+                DB::raw('SUM(t.dealer_depot_commission + t.dealer_retrait_commission) as dealer_commissions'),
+                DB::raw('SUM(t.pdv_depot_commission + t.pdv_retrait_commission) as pdv_commissions'),
+                DB::raw('SUM(t.days_count) as days_count')
+            )
+            ->groupBy('t.pdv_numero');
+
+        // Étape 2 : jointure aux PDV / dealers et regroupement demandé
+        $query = DB::query()->fromSub($perPdv, 't')
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
             ->leftJoin('organizations as o', 'p.organization_id', '=', 'o.id')
-            ->whereBetween('t.transaction_date', [$startDate, $endDate])
             ->where('p.status', 'validated');
 
         // Apply scope filters
@@ -107,9 +126,10 @@ class RentabilityController extends Controller
             DB::raw('SUM(t.count_retrait) as total_retrait_count'),
             DB::raw('SUM(t.sum_depot) as total_depot_amount'),
             DB::raw('SUM(t.sum_retrait) as total_retrait_amount'),
-            DB::raw('SUM(t.dealer_depot_commission + t.dealer_retrait_commission) as dealer_commissions'),
-            DB::raw('SUM(t.pdv_depot_commission + t.pdv_retrait_commission) as pdv_commissions'),
-            DB::raw('COUNT(DISTINCT t.transaction_date) as active_days'),
+            DB::raw('SUM(t.dealer_commissions) as dealer_commissions'),
+            DB::raw('SUM(t.pdv_commissions) as pdv_commissions'),
+            // Par PDV : nombre de jours présents dans les exports (= ancien COUNT(DISTINCT date))
+            DB::raw('CAST(MAX(t.days_count) AS UNSIGNED) as active_days'),
             DB::raw('COUNT(DISTINCT t.pdv_numero) as pdv_count'),
             DB::raw('COUNT(DISTINCT o.id) as dealer_count'),
         ]));
@@ -117,6 +137,22 @@ class RentabilityController extends Controller
         $query->groupBy($groupFields);
 
         $results = $query->get();
+
+        // Par dealer / région : jours distincts avec transactions, depuis la synthèse quotidienne
+        if ($groupBy !== 'pdv') {
+            $groupColumn = $groupBy === 'dealer' ? 'organization_id' : 'region';
+            $daysByGroup = DB::table('transaction_daily_summary')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->where('pdv_count', '>', 0)
+                ->groupBy($groupColumn)
+                ->selectRaw("{$groupColumn} as k, COUNT(DISTINCT transaction_date) as days")
+                ->pluck('days', 'k');
+
+            $results->each(function ($item) use ($groupBy, $daysByGroup) {
+                $key = $groupBy === 'dealer' ? $item->dealer_id : $item->region;
+                $item->active_days = (int) ($daysByGroup[$key] ?? 0);
+            });
+        }
 
         // Calculate rentability metrics avec le vrai modèle économique
         $rentabilityData = $results->map(function ($item) use ($groupBy, $startDate, $endDate) {

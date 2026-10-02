@@ -89,42 +89,8 @@ class PointOfSaleController extends Controller
         }
 
         if ($request->has('geo_inconsistency') && $request->geo_inconsistency) {
-            // PDV avec incohérences géographiques
-            $geoService = new \App\Services\GeoValidationService();
-            
-            // Récupérer les IDs des PDV avec incohérences
-            $pdvsToCheck = PointOfSale::query()
-                ->whereNotNull('latitude')
-                ->whereNotNull('longitude')
-                ->whereNotNull('region')
-                ->where('latitude', '!=', '')
-                ->where('longitude', '!=', '')
-                ->select('id', 'latitude', 'longitude', 'region')
-                ->get();
-            
-            $pdvIdsWithAlert = [];
-            foreach ($pdvsToCheck as $pdv) {
-                try {
-                    $validation = $geoService->validateRegionCoordinates(
-                        (float) $pdv->latitude,
-                        (float) $pdv->longitude,
-                        $pdv->region
-                    );
-                    
-                    if (isset($validation['has_alert']) && $validation['has_alert']) {
-                        $pdvIdsWithAlert[] = $pdv->id;
-                    }
-                } catch (\Exception $e) {
-                    \Log::warning('Geo validation error for PDV ' . $pdv->id . ': ' . $e->getMessage());
-                    continue;
-                }
-            }
-            
-            if (!empty($pdvIdsWithAlert)) {
-                $query->whereIn('id', $pdvIdsWithAlert);
-            } else {
-                $query->whereRaw('1 = 0');
-            }
+            // PDV avec incohérences géographiques (calculé à l'enregistrement, cf. PointOfSale::fillGeoColumns)
+            $query->where('geo_has_alert', true);
         }
 
         if ($request->has('proximity_alert') && $request->proximity_alert) {
@@ -160,6 +126,8 @@ class PointOfSaleController extends Controller
 
     private function flushPdvCache(): void
     {
+        PointOfSale::bumpMapCacheVersion();
+
         try {
             Cache::tags(['pdv-index'])->flush();
         } catch (\Throwable $e) {
@@ -180,32 +148,10 @@ class PointOfSaleController extends Controller
     public function exportAll(Request $request)
     {
         $user = $request->user();
-        
-        // S'assurer que la relation role est chargée
-        if (!$user->relationLoaded('role')) {
-            $user->load('role');
-        }
-        
+
         // Charger toutes les colonnes nécessaires pour l'export
-        $query = PointOfSale::with(['organization:id,name', 'creator:id,name', 'updater:id,name']);
-        
-        // Filter based on user role (same as index)
-        if ($user->isAdmin()) {
-            // Admins see all PDV
-        } elseif ($user->isDealerOwner()) {
-            $query->where('organization_id', $user->organization_id);
-        } elseif ($user->isCommercial()) {
-            $query->where(function($q) use ($user) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
-                      $taskQuery->where('assigned_to', $user->id);
-                  });
-            });
-        } elseif ($user->isDealerAgent()) {
-            $query->where('created_by', $user->id);
-        } else {
-            $query->whereRaw('1 = 0');
-        }
+        $query = PointOfSale::with(['organization:id,name', 'creator:id,name', 'updater:id,name'])
+            ->visibleTo($user);
 
         // Apply same filters as index
         $this->applyFilters($query, $request, $user);
@@ -440,31 +386,10 @@ class PointOfSaleController extends Controller
             'numero_proprietaire', 'autre_contact',
             // Visibilité et autres
             'support_visibilite', 'etat_support', 'numero_cagnt', 'type_activite', 'localisation'
-        ])->with(['organization:id,name', 'creator:id,name', 'updater:id,name']);
-        
-        // Ne pas charger validator et uploads dans la liste (trop lourd)
+        ])->with(['organization:id,name', 'creator:id,name', 'updater:id,name'])
+          ->visibleTo($user);
 
-        // Filter based on user role
-        if ($user->isAdmin()) {
-            // Admins see all PDV
-        } elseif ($user->isDealerOwner()) {
-            // Dealer owners see all PDV in their organization
-            $query->where('organization_id', $user->organization_id);
-        } elseif ($user->isCommercial()) {
-            // Commercials see only their own PDV + PDV with tasks assigned to them
-            $query->where(function($q) use ($user) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
-                      $taskQuery->where('assigned_to', $user->id);
-                  });
-            });
-        } elseif ($user->isDealerAgent()) {
-            // Dealer agents see only their own PDV
-            $query->where('created_by', $user->id);
-        } else {
-            // No access for other roles
-            $query->whereRaw('1 = 0');
-        }
+        // Ne pas charger validator et uploads dans la liste (trop lourd)
 
         // Apply filters (utilise la même logique que exportAll)
         $this->applyFilters($query, $request, $user);
@@ -538,86 +463,84 @@ class PointOfSaleController extends Controller
     public function forMap(Request $request)
     {
         $user = $request->user();
-        
-        // S'assurer que la relation role est chargée
+
         if (!$user->relationLoaded('role')) {
             $user->load('role');
         }
 
-        // Check cache settings
         $cacheEnabled = \App\Models\SystemSetting::getValue('cache_map_enabled', true);
         $cacheTtl = (int) \App\Models\SystemSetting::getValue('cache_map_ttl', 30);
 
-        // Create cache key based on user role and filters
-        $cacheKey = 'map_data_' . $user->id . '_' . md5(json_encode([
-            'role' => $user->role->name ?? 'unknown',
-            'org_id' => $user->organization_id,
-            'status' => $request->get('status'),
-            'region' => $request->get('region'),
-            'organization_id' => $request->get('organization_id'),
-        ]));
+        $filters = [
+            'status' => $request->get('status') ?: null,
+            'region' => $request->get('region') ?: null,
+            'organization_id' => $request->get('organization_id') ?: null,
+        ];
 
-        // Try to get from cache if enabled
-        if ($cacheEnabled) {
-            $cached = Cache::get($cacheKey);
-            if ($cached !== null) {
-                return response()->json($cached);
-            }
-        }
-        
-        // Sélectionner uniquement les champs nécessaires pour la carte
-        $query = PointOfSale::select([
-            'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
-            'profil', 'region', 'prefecture', 'ville', 'quartier',
-            'status', 'latitude', 'longitude'
-        ])->with(['organization:id,name']);
-
-        // Filter based on user role
+        // Le cache est partagé par périmètre de visibilité (tous les admins voient la même chose)
+        // et invalidé à chaque création/modification/suppression de PDV via la version.
         if ($user->isAdmin()) {
-            // Admins see all PDV
+            $scope = 'all';
         } elseif ($user->isDealerOwner()) {
-            $query->where('organization_id', $user->organization_id);
-        } elseif ($user->isCommercial()) {
-            $query->where(function($q) use ($user) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
-                      $taskQuery->where('assigned_to', $user->id);
-                  });
-            });
-        } elseif ($user->isDealerAgent()) {
-            $query->where('created_by', $user->id);
+            $scope = 'org:' . $user->organization_id;
         } else {
-            $query->whereRaw('1 = 0');
+            $scope = 'user:' . $user->id;
         }
 
-        // Apply filters
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
+        $cacheKey = 'pdv_map:v' . PointOfSale::mapCacheVersion() . ':' . $scope . ':' . md5(json_encode($filters));
+
+        $build = fn () => $this->buildMapPayload($user, $filters);
+
+        $json = $cacheEnabled
+            ? Cache::remember($cacheKey, max(1, $cacheTtl) * 60, $build)
+            : $build();
+
+        return response($json, 200, ['Content-Type' => 'application/json']);
+    }
+
+    /**
+     * Construit le JSON de la carte sans hydrater de modèles Eloquent
+     * (même format que l'ancienne réponse, avec organization {id, name}).
+     */
+    private function buildMapPayload($user, array $filters): string
+    {
+        $query = PointOfSale::query()
+            ->visibleTo($user)
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->where('latitude', '!=', 0)
+            ->where('longitude', '!=', 0);
+
+        if ($filters['status']) {
+            $query->where('status', $filters['status']);
+        }
+        if ($filters['region']) {
+            $query->where('region', $filters['region']);
+        }
+        if ($filters['organization_id']) {
+            $query->where('organization_id', $filters['organization_id']);
         }
 
-        if ($request->has('region') && $request->region) {
-            $query->where('region', $request->region);
-        }
+        $organizations = \App\Models\Organization::query()->pluck('name', 'id');
 
-        if ($request->has('organization_id') && $request->organization_id) {
-            $query->where('organization_id', $request->organization_id);
-        }
+        $rows = $query->toBase()
+            ->select([
+                'id', 'organization_id', 'nom_point', 'numero_flooz', 'shortcode',
+                'profil', 'region', 'prefecture', 'ville', 'quartier',
+                'status', 'latitude', 'longitude',
+            ])
+            ->orderBy('id')
+            ->get()
+            ->map(function ($row) use ($organizations) {
+                $row->latitude = (float) $row->latitude;
+                $row->longitude = (float) $row->longitude;
+                $row->organization = $row->organization_id !== null && isset($organizations[$row->organization_id])
+                    ? ['id' => $row->organization_id, 'name' => $organizations[$row->organization_id]]
+                    : null;
+                return $row;
+            });
 
-        // Exclure les PDV sans coordonnées GPS valides
-        $query->whereNotNull('latitude')
-              ->whereNotNull('longitude')
-              ->where('latitude', '!=', 0)
-              ->where('longitude', '!=', 0);
-
-        // Retourner tous les résultats sans pagination
-        $result = $query->get();
-
-        // Store in cache if enabled
-        if ($cacheEnabled) {
-            Cache::put($cacheKey, $result, $cacheTtl * 60); // Convert minutes to seconds
-        }
-
-        return response()->json($result);
+        return json_encode($rows, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     public function store(Request $request)
@@ -763,7 +686,8 @@ class PointOfSaleController extends Controller
             return response()->json(['message' => 'Forbidden - You do not have access to this PDV'], 403);
         }
 
-        // has_active_task est maintenant calculé automatiquement via l'accessor du modèle
+        // Attributs calculés (tâches, validation géo, champs manquants) uniquement sur le détail
+        $pdv->withDetailAttributes();
 
         // Check proximity if PDV has coordinates
         $proximityCheck = null;
@@ -1106,30 +1030,9 @@ class PointOfSaleController extends Controller
     public function getGpsStats(Request $request)
     {
         $user = $request->user();
-        
-        if (!$user->relationLoaded('role')) {
-            $user->load('role');
-        }
-        
+
         // Base query based on role
-        $baseQuery = PointOfSale::query();
-        
-        if ($user->isAdmin()) {
-            // Admin sees all
-        } elseif ($user->isDealerOwner()) {
-            $baseQuery->where('organization_id', $user->organization_id);
-        } elseif ($user->isCommercial()) {
-            $baseQuery->where(function($q) use ($user) {
-                $q->where('created_by', $user->id)
-                  ->orWhereHas('tasks', function($taskQuery) use ($user) {
-                      $taskQuery->where('assigned_to', $user->id);
-                  });
-            });
-        } elseif ($user->isDealerAgent()) {
-            $baseQuery->where('created_by', $user->id);
-        } else {
-            $baseQuery->whereRaw('1 = 0');
-        }
+        $baseQuery = PointOfSale::query()->visibleTo($user);
         
         // Total PDVs
         $total = (clone $baseQuery)->count();

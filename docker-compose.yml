@@ -45,8 +45,8 @@ services:
     command: >
       sh -c "
         composer install &&
-        php artisan key:generate &&
-        php artisan migrate:fresh --seed &&
+        (grep -q '^APP_KEY=base64:' .env || php artisan key:generate) &&
+        php artisan migrate --force &&
         php artisan serve --host=0.0.0.0 --port=8000
       "
 

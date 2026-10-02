@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\PointOfSale;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +97,57 @@ class FraudDetectionController extends Controller
     }
 
     /**
+     * PDV validés du périmètre (scope dealer / pdv), joints à leur dealer.
+     * Les détecteurs ci-dessous font une seule requête ensembliste au lieu d'une requête par PDV.
+     */
+    private function scopedValidatedPdvs($scope, $entityId)
+    {
+        $query = DB::table('point_of_sales as p')
+            ->leftJoin('organizations as o', 'o.id', '=', 'p.organization_id')
+            ->where('p.status', 'validated');
+
+        if ($scope === 'dealer' && $entityId) {
+            $query->where('p.organization_id', $entityId);
+        } elseif ($scope === 'pdv' && $entityId) {
+            $query->where('p.id', $entityId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * Transactions de la période jointes aux PDV validés du périmètre.
+     * La requête part de pdv_transactions (plage de dates) : sans cela MySQL parcourt les
+     * 25k PDV et relit leurs transactions une par une (~5x plus lent).
+     * Le premier élément du SELECT est préfixé par joinOrderHint() (cf. appelants).
+     */
+    private function scopedTransactions($scope, $entityId, $startDate, $endDate)
+    {
+        $query = DB::table('pdv_transactions as t')
+            ->join('point_of_sales as p', 'p.numero_flooz', '=', 't.pdv_numero')
+            ->leftJoin('organizations as o', 'o.id', '=', 'p.organization_id')
+            ->whereBetween('t.transaction_date', [$startDate, $endDate])
+            ->where('p.status', 'validated');
+
+        if ($scope === 'dealer' && $entityId) {
+            $query->where('p.organization_id', $entityId);
+        } elseif ($scope === 'pdv' && $entityId) {
+            $query->where('p.id', $entityId);
+        }
+
+        return $query;
+    }
+
+    /**
+     * En global, forcer la lecture par plage de dates puis la jointure aux PDV (STRAIGHT_JOIN).
+     * Pour un dealer ou un PDV, laisser MySQL partir des quelques PDV concernés.
+     */
+    private function joinOrderHint($scope): string
+    {
+        return $scope === 'global' ? 'STRAIGHT_JOIN ' : '';
+    }
+
+    /**
      * Detect split deposit fraud - PDV multiplying deposits to gain more commissions
      * Key indicators: High depot count relative to retrait count
      */
@@ -105,38 +157,35 @@ class FraudDetectionController extends Controller
         $checkedCount = 0;
         $matchedCount = 0;
 
-        $pdvQuery = PointOfSale::where('status', 'validated');
-        if ($scope === 'dealer' && $entityId) {
-            $pdvQuery->where('organization_id', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $pdvQuery->where('id', $entityId);
-        }
-        // Récupérer TOUS les PDV validés pour détecter les fraudes
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Une seule requête : statistiques par PDV sur la période (seuls les PDV ayant des transactions)
+        $rows = $this->scopedTransactions($scope, $entityId, $startDate, $endDate)
+            ->groupBy('p.id', 'p.nom_point', 'p.numero_flooz', 'p.region', 'o.name')
+            ->orderBy('p.id')
+            ->selectRaw($this->joinOrderHint($scope) . 'p.id, p.nom_point, p.numero_flooz, p.region, o.name as dealer_name')
+            ->selectRaw('
+                SUM(t.count_depot) as total_depot,
+                SUM(t.count_retrait) as total_retrait,
+                SUM(t.sum_depot) as total_depot_amount,
+                AVG(t.sum_depot / NULLIF(t.count_depot, 0)) as avg_depot_amount,
+                COUNT(DISTINCT t.transaction_date) as active_days
+            ')
+            ->get();
 
         Log::info("Split Deposit Detection", [
             'scope' => $scope,
             'entity_id' => $entityId,
-            'pdv_count' => $pdvs->count(),
+            'pdv_count' => $rows->count(),
             'date_range' => "$startDate to $endDate"
         ]);
 
-        foreach ($pdvs as $pdv) {
-            $stats = DB::table('pdv_transactions')
-                ->where('pdv_numero', $pdv->numero_flooz)
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->selectRaw('
-                    SUM(count_depot) as total_depot,
-                    SUM(count_retrait) as total_retrait,
-                    SUM(sum_depot) as total_depot_amount,
-                    AVG(sum_depot / NULLIF(count_depot, 0)) as avg_depot_amount,
-                    COUNT(DISTINCT transaction_date) as active_days
-                ')
-                ->first();
-
-            if (!$stats) {
-                continue;
-            }
+        foreach ($rows as $stats) {
+            $pdv = (object) [
+                'id' => $stats->id,
+                'nom_point' => $stats->nom_point,
+                'numero_flooz' => $stats->numero_flooz,
+                'region' => $stats->region,
+                'organization' => (object) ['name' => $stats->dealer_name],
+            ];
 
             $totalOperations = $stats->total_depot + $stats->total_retrait;
             
@@ -210,36 +259,30 @@ class FraudDetectionController extends Controller
         $alerts = [];
         $threshold = 500000; // 500k FCFA
 
-        $pdvQuery = PointOfSale::where('status', 'validated');
-        if ($scope === 'dealer' && $entityId) {
-            $pdvQuery->where('organization_id', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $pdvQuery->where('id', $entityId);
-        }
-        $pdvNumeros = $pdvQuery->pluck('numero_flooz', 'id');
-
         // Since pdv_transactions is daily aggregated data, we can't detect exact hours
         // Instead, we'll look for unusual weekend/off-day high volume
-        foreach ($pdvNumeros as $pdvId => $numeroFlooz) {
-            $suspiciousPatterns = DB::table('pdv_transactions')
-                ->where('pdv_numero', $numeroFlooz)
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->whereRaw('DAYOFWEEK(transaction_date) IN (1, 7)') // Sunday=1, Saturday=7
-                ->where(function ($q) use ($threshold) {
-                    $q->where('sum_retrait', '>', $threshold)
-                      ->orWhere('sum_depot', '>', $threshold);
-                })
-                ->get();
+        $suspiciousPatterns = $this->scopedValidatedPdvs($scope, $entityId)
+            ->join('pdv_transactions as t', 't.pdv_numero', '=', 'p.numero_flooz')
+            ->whereBetween('t.transaction_date', [$startDate, $endDate])
+            ->whereRaw('DAYOFWEEK(t.transaction_date) IN (1, 7)') // Sunday=1, Saturday=7
+            ->where(function ($q) use ($threshold) {
+                $q->where('t.sum_retrait', '>', $threshold)
+                  ->orWhere('t.sum_depot', '>', $threshold);
+            })
+            ->orderBy('p.id')
+            ->orderBy('t.id')
+            ->select('p.id as pdv_id', 'p.nom_point', 'p.numero_flooz', 'p.region', 'o.name as dealer_name',
+                't.transaction_date', 't.sum_retrait', 't.sum_depot')
+            ->get();
 
-            foreach ($suspiciousPatterns as $pattern) {
-                $pdv = PointOfSale::find($pdvId);
+        foreach ($suspiciousPatterns as $pattern) {
                 $alerts[] = [
                     'type' => 'off_hours_large_transaction',
-                    'pdv_id' => $pdvId,
-                    'pdv_name' => $pdv->nom_point ?? 'Unknown',
-                    'pdv_numero' => $numeroFlooz,
-                    'dealer_name' => $pdv->organization->name ?? 'Unknown',
-                    'region' => $pdv->region ?? 'Unknown',
+                    'pdv_id' => $pattern->pdv_id,
+                    'pdv_name' => $pattern->nom_point ?? 'Unknown',
+                    'pdv_numero' => $pattern->numero_flooz,
+                    'dealer_name' => $pattern->dealer_name ?? 'Unknown',
+                    'region' => $pattern->region ?? 'Unknown',
                     'date' => $pattern->transaction_date,
                     'flagged_amount' => max($pattern->sum_retrait, $pattern->sum_depot),
                     'description' => "Transactions importantes le weekend: " . number_format(max($pattern->sum_retrait, $pattern->sum_depot)) . " FCFA",
@@ -248,7 +291,6 @@ class FraudDetectionController extends Controller
                         'amount_exceeds_threshold' => true,
                     ],
                 ];
-            }
         }
 
         return $alerts;
@@ -261,32 +303,37 @@ class FraudDetectionController extends Controller
     {
         $alerts = [];
 
-        $pdvQuery = PointOfSale::where('status', 'validated');
-        if ($scope === 'dealer' && $entityId) {
-            $pdvQuery->where('organization_id', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $pdvQuery->where('id', $entityId);
-        }
-        // Scan all validated PDV for activity spikes
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Volumes journaliers + total/nombre de jours par PDV (fonctions de fenêtre), puis
+        // pré-filtre exact en entiers : jour > 3 x moyenne  <=>  jour * nb_jours > 3 * total.
+        $daily = $this->scopedTransactions($scope, $entityId, $startDate, $endDate)
+            ->selectRaw($this->joinOrderHint($scope) . 'p.id as pdv_id, p.nom_point, p.numero_flooz, p.region, o.name as dealer_name,
+                t.id as tx_id, t.transaction_date')
+            ->selectRaw('
+                (t.count_depot + t.count_retrait) as total_transactions,
+                (t.sum_depot + t.sum_retrait) as total_amount,
+                COUNT(*) OVER (PARTITION BY p.id) as days_count,
+                SUM(t.count_depot + t.count_retrait) OVER (PARTITION BY p.id) as volume_total
+            ');
 
-        foreach ($pdvs as $pdv) {
-            // Get daily transaction volumes
-            $dailyVolumes = DB::table('pdv_transactions')
-                ->where('pdv_numero', $pdv->numero_flooz)
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->selectRaw('
-                    transaction_date,
-                    (count_depot + count_retrait) as total_transactions,
-                    (sum_depot + sum_retrait) as total_amount
-                ')
-                ->get();
+        $spikes = DB::query()->fromSub($daily, 'd')
+            ->where('d.days_count', '>', 7)
+            ->whereRaw('d.volume_total > 5 * d.days_count')
+            ->whereRaw('d.total_transactions * d.days_count > 3 * d.volume_total')
+            ->orderBy('d.pdv_id')
+            ->orderBy('d.tx_id')
+            ->get();
 
-            if ($dailyVolumes->count() > 7) {
-                $avgVolume = $dailyVolumes->avg('total_transactions');
-                $avgAmount = $dailyVolumes->avg('total_amount');
+        foreach ($spikes as $day) {
+                $pdv = (object) [
+                    'id' => $day->pdv_id,
+                    'nom_point' => $day->nom_point,
+                    'numero_flooz' => $day->numero_flooz,
+                    'region' => $day->region,
+                    'organization' => (object) ['name' => $day->dealer_name],
+                ];
+                $avgVolume = $day->volume_total / $day->days_count;
 
-                foreach ($dailyVolumes as $day) {
+                {
                     if ($day->total_transactions > ($avgVolume * 3) && $avgVolume > 5) {
                         $alerts[] = [
                             'type' => 'activity_spike',
@@ -306,7 +353,6 @@ class FraudDetectionController extends Controller
                         ];
                     }
                 }
-            }
         }
 
         return $alerts;
@@ -320,25 +366,25 @@ class FraudDetectionController extends Controller
     {
         $alerts = [];
 
-        $pdvQuery = PointOfSale::where('status', 'validated');
-        if ($scope === 'dealer' && $entityId) {
-            $pdvQuery->where('organization_id', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $pdvQuery->where('id', $entityId);
-        }
-        // Scan all validated PDV for activity spikes
-        $pdvs = $pdvQuery->with('organization')->get();
+        // Sommes par PDV depuis les tables d'agrégats (mois complets + jours en bordure)
+        $pdvFilter = $scope === 'global' ? null : $this->scopedValidatedPdvs($scope, $entityId)->select('p.numero_flooz');
+        $perPdv = TransactionAggregates::source($startDate, $endDate, ['count_depot', 'retrait_keycost', 'sum_depot'], $pdvFilter);
 
-        foreach ($pdvs as $pdv) {
-            $stats = DB::table('pdv_transactions')
-                ->where('pdv_numero', $pdv->numero_flooz)
-                ->whereBetween('transaction_date', [$startDate, $endDate])
-                ->selectRaw('
-                    SUM(count_depot) as total_depot,
-                    SUM(retrait_keycost) as total_ca,
-                    SUM(sum_depot) as total_depot_amount
-                ')
-                ->first();
+        $rows = $this->scopedValidatedPdvs($scope, $entityId)
+            ->joinSub($perPdv, 'a', 'a.pdv_numero', '=', 'p.numero_flooz')
+            ->orderBy('p.id')
+            ->select('p.id', 'p.nom_point', 'p.numero_flooz', 'p.region', 'o.name as dealer_name')
+            ->selectRaw('a.count_depot as total_depot, a.retrait_keycost as total_ca, a.sum_depot as total_depot_amount')
+            ->get();
+
+        foreach ($rows as $stats) {
+            $pdv = (object) [
+                'id' => $stats->id,
+                'nom_point' => $stats->nom_point,
+                'numero_flooz' => $stats->numero_flooz,
+                'region' => $stats->region,
+                'organization' => (object) ['name' => $stats->dealer_name],
+            ];
 
             if ($stats && $stats->total_ca > 0) {
                 // Cast to numeric to avoid null/strings edge cases

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('point_of_sale_id')->constrained()->onDelete('cascade');
             $table->string('upload_id'); // UUID from uploads table
             $table->string('file_path')->nullable(); // Chemin du fichier stocké
+            $table->string('mime_type')->nullable();
             $table->enum('type', ['id_document', 'photo', 'fiscal_document']);
             $table->timestamps();
 

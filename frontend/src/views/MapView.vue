@@ -439,10 +439,14 @@ const goToDetail = (id) => {
   router.push(`/pdv/${id}`);
 };
 
+// Les icônes ne dépendent que de (couleur, statut, alerte) : quelques dizaines de combinaisons
+// pour ~20 000 marqueurs, on les met donc en cache au lieu de recréer un divIcon par PDV.
+const markerIconCache = new Map();
+
 // Create custom SVG icon for a marker
 const createMarkerIcon = (pos) => {
   let markerColor;
-  
+
   if (displayMode.value === 'performance') {
     markerColor = getPerformanceColor(pos.id);
   } else if (displayMode.value === 'status') {
@@ -450,10 +454,14 @@ const createMarkerIcon = (pos) => {
   } else {
     markerColor = getDealerColor(pos.organization_id);
   }
-  
+
   const statusColor = getStatusDotColor(pos.status);
-  const hasAlert = pos.has_proximity_alert;
-  
+  const hasAlert = !!pos.has_proximity_alert;
+
+  const cacheKey = `${markerColor}|${statusColor}|${hasAlert}`;
+  const cachedIcon = markerIconCache.get(cacheKey);
+  if (cachedIcon) return cachedIcon;
+
   const alertBadge = hasAlert ? `
     <circle cx="35" cy="5" r="8" fill="#F97316" stroke="white" stroke-width="2"/>
     <text x="35" y="9" text-anchor="middle" font-size="10" fill="white" font-weight="bold">!</text>
@@ -469,13 +477,15 @@ const createMarkerIcon = (pos) => {
     </svg>
   `;
   
-  return L.divIcon({
+  const icon = L.divIcon({
     html: svgIcon,
     className: 'custom-marker-icon',
     iconSize: [40, 50],
     iconAnchor: [20, 50],
     popupAnchor: [0, -50]
   });
+  markerIconCache.set(cacheKey, icon);
+  return icon;
 };
 
 // Create popup content for a marker
@@ -629,7 +639,8 @@ const addMarkersToMap = async (pdvList) => {
       icon: createMarkerIcon(pos)
     });
     
-    marker.bindPopup(createPopupContent(pos), {
+    // Contenu généré à l'ouverture du popup seulement (pas pour les ~20 000 marqueurs d'avance)
+    marker.bindPopup(() => createPopupContent(pos), {
       maxWidth: 300,
       className: 'custom-popup'
     });
@@ -715,9 +726,14 @@ const loadPerformanceData = async () => {
   if (displayMode.value !== 'performance') return;
   
   try {
+    const toIsoDate = (d) => d.toISOString().split('T')[0];
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - 30);
+
     const params = {
-      start_date: '2025-12-01', // 30 derniers jours
-      end_date: '2026-01-06',
+      start_date: toIsoDate(start), // 30 derniers jours
+      end_date: toIsoDate(end),
       group_by: 'pdv',
       limit: 1000
     };
@@ -960,52 +976,6 @@ const focusOnAlert = (alert) => {
   }
 };
 
-// Detect and clear duplicate coordinates (admin only)
-const duplicatesCleared = ref(false);
-const duplicateClearingInProgress = ref(false);
-
-const detectAndClearDuplicates = async (pdvList) => {
-  if (!authStore.isAdmin || duplicatesCleared.value) return pdvList;
-  
-  // Detect duplicates locally
-  const coordMap = new Map();
-  const duplicateCoords = new Set();
-  
-  pdvList.forEach(pdv => {
-    if (!pdv.latitude || !pdv.longitude) return;
-    const coordKey = `${parseFloat(pdv.latitude).toFixed(6)},${parseFloat(pdv.longitude).toFixed(6)}`;
-    
-    if (coordMap.has(coordKey)) {
-      duplicateCoords.add(coordKey);
-    } else {
-      coordMap.set(coordKey, pdv.id);
-    }
-  });
-  
-  if (duplicateCoords.size > 0) {
-    console.log(`Found ${duplicateCoords.size} duplicate coordinate sets`);
-    
-    // Call backend to clear duplicates
-    try {
-      duplicateClearingInProgress.value = true;
-      const result = await PointOfSaleService.clearDuplicateCoordinates();
-      console.log(`Cleared coordinates for ${result.cleared_count} PDVs`);
-      
-      // Filter out affected PDVs from the local list
-      const affectedIds = new Set(result.affected_ids);
-      pdvList = pdvList.filter(p => !affectedIds.has(p.id));
-      
-      duplicatesCleared.value = true;
-    } catch (error) {
-      console.error('Error clearing duplicate coordinates:', error);
-    } finally {
-      duplicateClearingInProgress.value = false;
-    }
-  }
-  
-  return pdvList;
-};
-
 onMounted(async () => {
   try {
     loading.value = true;
@@ -1028,11 +998,6 @@ onMounted(async () => {
     let data = await PointOfSaleService.getForMap();
     let pdvList = (Array.isArray(data) ? data : [])
       .filter(p => p.latitude && p.longitude && p.status !== 'rejected');
-    
-    // Detect and clear duplicates (admin only)
-    if (authStore.isAdmin) {
-      pdvList = await detectAndClearDuplicates(pdvList);
-    }
     
     // Deduplicate by ID before setting to state
     const uniquePdvMap = new Map();

@@ -64,9 +64,67 @@ class PointOfSale extends Model
         'validated_at' => 'datetime',
         'rejected_at' => 'datetime',
         'is_locked' => 'boolean',
+        'geo_has_alert' => 'boolean',
     ];
 
-    protected $appends = ['has_active_task', 'has_task_in_revision', 'geo_validation', 'missing_required_fields'];
+    protected $hidden = ['geo_actual_region', 'geo_has_alert'];
+
+    /**
+     * Attributs calculés ajoutés à la sérialisation du détail d'un PDV.
+     * Ils ne sont PAS dans $appends : sur une liste de 25k PDV ils coûtaient
+     * 2 requêtes SQL + un test point-dans-polygone par ligne.
+     * Utiliser withDetailAttributes() là où le frontend en a besoin.
+     */
+    public const DETAIL_APPENDS = ['has_active_task', 'has_task_in_revision', 'geo_validation', 'missing_required_fields'];
+
+    protected static function booted(): void
+    {
+        // Région réelle (déduite du GPS) et alerte d'incohérence stockées en base,
+        // pour filtrer en SQL au lieu de recalculer les polygones à chaque requête.
+        static::saving(function (PointOfSale $pdv) {
+            if ($pdv->isDirty(['latitude', 'longitude', 'region']) || !$pdv->exists) {
+                $pdv->fillGeoColumns();
+            }
+        });
+
+        static::saved(fn () => static::bumpMapCacheVersion());
+        static::deleted(fn () => static::bumpMapCacheVersion());
+    }
+
+    /**
+     * Version des données carte : incluse dans les clés de cache de /for-map,
+     * l'incrémenter rend toutes les anciennes entrées obsolètes (sans Cache::tags).
+     */
+    public static function mapCacheVersion(): int
+    {
+        return (int) \Illuminate\Support\Facades\Cache::get('pdv_map_version', 1);
+    }
+
+    public static function bumpMapCacheVersion(): void
+    {
+        try {
+            \Illuminate\Support\Facades\Cache::forever('pdv_map_version', static::mapCacheVersion() + 1);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('PDV map cache version bump failed: ' . $e->getMessage());
+        }
+    }
+
+    public function fillGeoColumns(): void
+    {
+        $validation = app(\App\Services\GeoValidationService::class)->validateRegionCoordinates(
+            $this->latitude !== null ? (float) $this->latitude : null,
+            $this->longitude !== null ? (float) $this->longitude : null,
+            $this->region
+        );
+
+        $this->geo_actual_region = $validation['actual_region'] ?? null;
+        $this->geo_has_alert = (bool) ($validation['has_alert'] ?? false);
+    }
+
+    public function withDetailAttributes(): static
+    {
+        return $this->append(self::DETAIL_APPENDS);
+    }
 
     /**
      * Accessor pour la validation géographique
@@ -81,9 +139,8 @@ class PointOfSale extends Model
                 'message' => null
             ];
         }
-        
-        $geoService = new \App\Services\GeoValidationService();
-        return $geoService->validateRegionCoordinates(
+
+        return app(\App\Services\GeoValidationService::class)->validateRegionCoordinates(
             (float) $this->latitude,
             (float) $this->longitude,
             $this->region
@@ -96,6 +153,10 @@ class PointOfSale extends Model
      */
     public function getHasActiveTaskAttribute()
     {
+        if ($this->relationLoaded('tasks')) {
+            return $this->tasks->contains(fn ($task) => $task->status !== 'validated');
+        }
+
         return $this->tasks()->whereNotIn('status', ['validated'])->exists();
     }
 
@@ -105,6 +166,10 @@ class PointOfSale extends Model
      */
     public function getHasTaskInRevisionAttribute()
     {
+        if ($this->relationLoaded('tasks')) {
+            return $this->tasks->contains(fn ($task) => $task->status === 'revision_requested');
+        }
+
         return $this->tasks()->where('status', 'revision_requested')->exists();
     }
 
@@ -178,6 +243,39 @@ class PointOfSale extends Model
         return $query->where('organization_id', $organizationId);
     }
 
+    /**
+     * Restreint aux PDV visibles par l'utilisateur selon son rôle.
+     */
+    public function scopeVisibleTo($query, User $user)
+    {
+        if (!$user->relationLoaded('role')) {
+            $user->load('role');
+        }
+
+        if ($user->isAdmin()) {
+            return $query;
+        }
+
+        if ($user->isDealerOwner()) {
+            return $query->where('organization_id', $user->organization_id);
+        }
+
+        if ($user->isCommercial()) {
+            return $query->where(function ($q) use ($user) {
+                $q->where('created_by', $user->id)
+                  ->orWhereHas('tasks', function ($taskQuery) use ($user) {
+                      $taskQuery->where('assigned_to', $user->id);
+                  });
+            });
+        }
+
+        if ($user->isDealerAgent()) {
+            return $query->where('created_by', $user->id);
+        }
+
+        return $query->whereRaw('1 = 0');
+    }
+
     public function tasks()
     {
         return $this->hasMany(Task::class);
@@ -217,12 +315,55 @@ class PointOfSale extends Model
         return $this->tags()->delete();
     }
 
+    private const MISSING_PLACEHOLDERS = ['N/A', 'NA', 'NON RENSEIGNE', 'NON RENSEIGNÉ', 'NON RENSEIGNEE', 'NON RENSEIGNÉE'];
+
+    public const REQUIRED_FIELDS = [
+        'nom_point' => 'Nom du point de vente',
+        'numero_flooz' => 'Numéro Flooz',
+        'shortcode' => 'Shortcode',
+        'profil' => 'Profil',
+        'region' => 'Région',
+        'prefecture' => 'Préfecture',
+        'commune' => 'Commune',
+        'ville' => 'Ville',
+        'quartier' => 'Quartier',
+        'latitude' => 'Latitude',
+        'longitude' => 'Longitude',
+        'numero_proprietaire' => 'Téléphone propriétaire',
+        'support_visibilite' => 'Support de visibilité',
+        'numero_cagnt' => 'Numéro CAGNT',
+    ];
+
+    /**
+     * Équivalent SQL de getMissingRequiredFieldsAttribute() : PDV ayant au moins un champ requis manquant.
+     */
+    public function scopeIncomplete($query)
+    {
+        return $query->where(function ($q) {
+            foreach (array_keys(self::REQUIRED_FIELDS) as $field) {
+                if (in_array($field, ['latitude', 'longitude'], true)) {
+                    $q->orWhereNull($field)->orWhere($field, 0);
+                    continue;
+                }
+
+                $q->orWhereNull($field)
+                  ->orWhere($field, '')
+                  ->orWhere($field, '0')
+                  ->orWhereIn(\Illuminate\Support\Facades\DB::raw("UPPER(TRIM(`{$field}`))"), self::MISSING_PLACEHOLDERS);
+            }
+
+            $q->orWhere('numero_flooz', 'like', '990%')
+              ->orWhere('numero_cagnt', 'like', '000%')
+              ->orWhere('numero_proprietaire', 'like', '000%');
+        });
+    }
+
     /**
      * Champs requis considérés manquants
      */
     public function getMissingRequiredFieldsAttribute(): array
     {
-        $placeholders = ['N/A', 'NA', 'NON RENSEIGNE', 'NON RENSEIGNÉ', 'NON RENSEIGNEE', 'NON RENSEIGNÉE'];
+        $placeholders = self::MISSING_PLACEHOLDERS;
 
         $required = [
             'nom_point' => 'Nom du point de vente',
@@ -263,6 +404,11 @@ class PointOfSale extends Model
             }
 
             $isEmpty = ($value === null || $value === '' || $value === 0 || $value === '0');
+
+            // Coordonnées castées en "0.00000000" : considérées absentes (comme scopeIncomplete)
+            if (in_array($field, ['latitude', 'longitude'], true) && is_numeric($value) && (float) $value == 0.0) {
+                $isEmpty = true;
+            }
 
             if ($isPlaceholder || $isEmpty) {
                 $missing[] = $label;

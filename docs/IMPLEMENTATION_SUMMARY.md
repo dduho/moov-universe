@@ -188,9 +188,9 @@ OUTLOOK_IMPORT_TIMEZONE=...
 Toutes les configurations ont été fournies et sont prêtes:
 
 ```
-Azure Tenant ID:     f91b4edd-ae9e-48df-8671-c46c9fa39a0f
-Client ID:           67ab8307-2d99-43bd-b64a-02073ce61e3a
-Client Secret:       1fb6285b-35d5-401f-a855-ca3c3f029185
+Azure Tenant ID:     <tenant-id-azure>
+Client ID:           <client-id-azure>
+Client Secret:       <secret-azure-a-renseigner-dans-.env>
 Mailbox:             dduho@moov-africa.tg
 Folder:              "FLOOZ TOGO"
 Subject Filter:      "Agents consolidated reporting"

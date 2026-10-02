@@ -61,7 +61,13 @@ Cette commande va:
 - Créer et démarrer le conteneur Laravel (backend)
 - Créer et démarrer le conteneur Vue.js (frontend)
 - Installer les dépendances
-- Exécuter les migrations et seeders
+- Exécuter les migrations (sans effacer les données existantes)
+
+Au premier démarrage uniquement, charger les données initiales :
+
+```bash
+docker-compose exec backend php artisan db:seed
+```
 
 ### 4. Accéder à l'application
 
@@ -292,9 +298,37 @@ php artisan make:model ModelName -m
 # Créer un contrôleur
 php artisan make:controller ControllerName
 
-# Tests
+# Tests (base MySQL dédiée `moov_test`, vidée à chaque exécution)
 php artisan test
 ```
+
+### Données transactionnelles et agrégats
+
+Les écrans d'analytics ne lisent plus directement `pdv_transactions` (plusieurs millions de lignes) mais deux tables d'agrégats :
+
+- `pdv_transaction_monthly` : un mois par PDV ;
+- `transaction_daily_summary` : un jour par dealer et par région.
+
+Elles sont recalculées automatiquement à chaque import (manuel, SFTP ou Outlook), puis chaque jour à 08:55 (3 derniers jours) et chaque dimanche à 03:00 (recalcul complet). En cas de doute :
+
+```bash
+php artisan analytics:refresh-aggregates --all          # tout recalculer
+php artisan analytics:refresh-aggregates --date=2026-07-28
+php artisan pdv:refresh-geo                             # cohérence GPS / région des PDV
+```
+
+Le service `App\Services\TransactionAggregates` combine mois complets et jours en bordure de période : les sommes sont exactes pour n'importe quelle plage de dates.
+
+### Déploiement
+
+Le serveur n'est pas joignable depuis GitHub : le déploiement se fait à la main sur le serveur, une fois la CI (tests + build, workflow `CI`) au vert.
+
+```bash
+cd /data/www/moov-universe
+./deploy.sh          # pull, composer, migrations, caches, build du frontend, cron, rechargement PHP-FPM
+```
+
+La documentation détaillée (rôles, OTP, Outlook, imports…) se trouve dans [docs/](docs/).
 
 ### Commandes utiles Frontend
 

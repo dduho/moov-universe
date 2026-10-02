@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Sur une base vierge la table n'existe pas encore (créée en 2025_12_03) : elle inclut déjà ces colonnes
+        if (!Schema::hasTable('point_of_sale_uploads')) {
+            return;
+        }
+
         Schema::table('point_of_sale_uploads', function (Blueprint $table) {
             // Ajouter la colonne mime_type si elle n'existe pas
             if (!Schema::hasColumn('point_of_sale_uploads', 'mime_type')) {
@@ -24,6 +29,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('point_of_sale_uploads')) {
+            return;
+        }
+
         Schema::table('point_of_sale_uploads', function (Blueprint $table) {
             if (Schema::hasColumn('point_of_sale_uploads', 'mime_type')) {
                 $table->dropColumn('mime_type');

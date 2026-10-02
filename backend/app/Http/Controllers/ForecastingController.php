@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
@@ -85,42 +86,17 @@ class ForecastingController extends Controller
             $daysPassed = $now->day;
             $daysRemaining = $daysInMonth - $daysPassed;
 
-            // Récupérer les données du mois en cours
-            $query = DB::table('pdv_transactions')
-                ->whereBetween('transaction_date', [$monthStart, $now]);
-
-            // Appliquer les filtres selon le scope
-            if ($scope === 'region' && $entityId) {
-                $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                      ->where('p.region', $entityId);
-            } elseif ($scope === 'dealer' && $entityId) {
-                $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                      ->join('organizations as o', 'p.organization_id', '=', 'o.id')
-                      ->where('o.name', $entityId);
-            } elseif ($scope === 'pdv' && $entityId) {
-                $query->where('pdv_numero', $entityId);
-            }
-
-            // Pour scope global, utiliser uniquement les agrégats sans récupérer chaque PDV
-            // Limiter à un échantillon représentatif si trop de données
-            if ($scope === 'global') {
-                // Requête optimisée : agrégation directe sans détail par PDV
-                $query->selectRaw('
+            // Données du mois en cours : synthèse quotidienne (un jour par dealer/région),
+            // sauf pour un PDV précis (index unique pdv_numero + date)
+            $query = $this->scopedDailyQuery($scope, $entityId)
+                ->whereBetween('transaction_date', [$monthStart, $now])
+                ->selectRaw('
                     DATE(transaction_date) as date,
                     SUM(retrait_keycost) as ca,
                     SUM(count_depot + count_retrait) as transactions
                 ')
                 ->groupBy('date')
                 ->orderBy('date');
-            } else {
-                $query->selectRaw('
-                    DATE(transaction_date) as date,
-                    SUM(retrait_keycost) as ca,
-                    SUM(count_depot + count_retrait) as transactions
-                ')
-                ->groupBy('date')
-                ->orderBy('date');
-            }
 
             // Données journalières du mois
             $dailyData = $query->get();
@@ -290,21 +266,58 @@ class ForecastingController extends Controller
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
         $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
-        $query = DB::table('pdv_transactions')
-            ->whereBetween('transaction_date', [$lastMonthStart, $lastMonthEnd]);
+        return $this->scopedDailyQuery($scope, $entityId)
+            ->whereBetween('transaction_date', [$lastMonthStart, $lastMonthEnd])
+            ->sum('retrait_keycost') ?? 0;
+    }
 
-        if ($scope === 'region' && $entityId) {
-            $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                  ->where('p.region', $entityId);
-        } elseif ($scope === 'dealer' && $entityId) {
-            $query->join('point_of_sales as p', 'pdv_transactions.pdv_numero', '=', 'p.numero_flooz')
-                  ->join('organizations as o', 'p.organization_id', '=', 'o.id')
-                  ->where('o.name', $entityId);
-        } elseif ($scope === 'pdv' && $entityId) {
-            $query->where('pdv_numero', $entityId);
+    /**
+     * Source journalière filtrée selon le scope : transaction_daily_summary (global/région/dealer)
+     * ou pdv_transactions pour un PDV précis.
+     */
+    private function scopedDailyQuery($scope, $entityId)
+    {
+        if ($scope === 'pdv' && $entityId) {
+            return DB::table('pdv_transactions')->where('pdv_numero', $entityId);
         }
 
-        return $query->sum('retrait_keycost') ?? 0;
+        $query = DB::table('transaction_daily_summary');
+
+        if ($scope === 'region' && $entityId) {
+            $query->where('region', $entityId);
+        } elseif ($scope === 'dealer' && $entityId) {
+            $query->whereIn('organization_id', DB::table('organizations')->where('name', $entityId)->select('id'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Agrégats par PDV sur les 30 derniers jours, coupés en deux quinzaines.
+     * Bornes identiques à l'ancienne requête (transaction_date >= now()-30j / now()-15j :
+     * une date comparée à un datetime exclut le jour de la borne).
+     */
+    private function lastThirtyDaysPerPdv($now)
+    {
+        $previousStart = $now->copy()->subDays(30)->startOfDay()->addDay();
+        $recentStart = $now->copy()->subDays(15)->startOfDay()->addDay();
+        $today = $now->copy()->startOfDay();
+        $columns = ['retrait_keycost'];
+
+        $previous = TransactionAggregates::source($previousStart, $recentStart->copy()->subDay(), $columns)
+            ->addSelect(DB::raw('0 as recent_flag'));
+        $recent = TransactionAggregates::source($recentStart, $today, $columns)
+            ->addSelect(DB::raw('1 as recent_flag'));
+
+        return DB::query()->fromSub($previous->unionAll($recent), 't1')
+            ->selectRaw('
+                t1.pdv_numero,
+                SUM(CASE WHEN t1.recent_flag = 1 THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
+                SUM(CASE WHEN t1.recent_flag = 0 THEN t1.retrait_keycost ELSE 0 END) as ca_previous,
+                SUM(t1.retrait_keycost) / SUM(t1.days_count) as ca_daily_avg,
+                SUM(t1.days_count) as active_days
+            ')
+            ->groupBy('t1.pdv_numero');
     }
 
     /**
@@ -334,17 +347,10 @@ class ForecastingController extends Controller
         $last30Days = $now->copy()->subDays(30);
 
         // PDV avec croissance CA >20% sur 30 jours
-        $pdvs = DB::table('pdv_transactions as t1')
-            ->join('point_of_sales as p', 't1.pdv_numero', '=', 'p.numero_flooz')
+        $pdvs = DB::query()->fromSub($this->lastThirtyDaysPerPdv($now), 'a')
+            ->join('point_of_sales as p', 'a.pdv_numero', '=', 'p.numero_flooz')
             ->join('organizations as o', 'p.organization_id', '=', 'o.id')
-            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name')
-            ->selectRaw('
-                SUM(CASE WHEN t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
-                SUM(CASE WHEN t1.transaction_date < ? THEN t1.retrait_keycost ELSE 0 END) as ca_previous,
-                AVG(t1.retrait_keycost) as ca_daily_avg
-            ', [$now->copy()->subDays(15), $now->copy()->subDays(15)])
-            ->where('t1.transaction_date', '>=', $last30Days)
-            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name')
+            ->select('a.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name', 'a.ca_recent', 'a.ca_previous', 'a.ca_daily_avg')
             ->havingRaw('ca_recent > 0 AND ca_previous > 0')
             ->havingRaw('((ca_recent - ca_previous) / ca_previous) > 0.20')
             ->orderByRaw('((ca_recent - ca_previous) / ca_previous) DESC')
@@ -375,18 +381,11 @@ class ForecastingController extends Controller
         $last30Days = $now->copy()->subDays(30);
 
         // PDV avec chute CA >30% ou CA très faible
-        $pdvs = DB::table('pdv_transactions as t1')
-            ->join('point_of_sales as p', 't1.pdv_numero', '=', 'p.numero_flooz')
+        $pdvs = DB::query()->fromSub($this->lastThirtyDaysPerPdv($now), 'a')
+            ->join('point_of_sales as p', 'a.pdv_numero', '=', 'p.numero_flooz')
             ->join('organizations as o', 'p.organization_id', '=', 'o.id')
-            ->select('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name', 'p.created_at')
-            ->selectRaw('
-                SUM(CASE WHEN t1.transaction_date >= ? THEN t1.retrait_keycost ELSE 0 END) as ca_recent,
-                SUM(CASE WHEN t1.transaction_date < ? THEN t1.retrait_keycost ELSE 0 END) as ca_previous,
-                AVG(t1.retrait_keycost) as ca_daily_avg,
-                COUNT(DISTINCT t1.transaction_date) as active_days
-            ', [$now->copy()->subDays(15), $now->copy()->subDays(15)])
-            ->where('t1.transaction_date', '>=', $last30Days)
-            ->groupBy('t1.pdv_numero', 'p.nom_point', 'p.region', 'o.name', 'p.created_at')
+            ->select('a.pdv_numero', 'p.nom_point', 'p.region', 'o.name as dealer_name', 'p.created_at', 'a.ca_recent', 'a.ca_previous', 'a.ca_daily_avg')
+            ->selectRaw('CAST(a.active_days AS UNSIGNED) as active_days')
             ->havingRaw('ca_previous > 0 AND ((ca_recent - ca_previous) / ca_previous) < -0.30')
             ->orderByRaw('((ca_recent - ca_previous) / ca_previous) ASC')
             ->limit(10)
@@ -426,15 +425,15 @@ class ForecastingController extends Controller
             ->pluck('total', 'region');
 
         // Régions avec taux d'activation PDV faible mais potentiel élevé
-        $regions = DB::table('pdv_transactions as t')
+        // Bornes de l'ancienne requête : date > (now - 30j) et <= aujourd'hui
+        $regions = TransactionAggregates::table($last30Days->copy()->startOfDay()->addDay(), $now->copy()->startOfDay(), ['retrait_keycost'])
             ->join('point_of_sales as p', 't.pdv_numero', '=', 'p.numero_flooz')
             ->select('p.region')
             ->selectRaw('
                 COUNT(DISTINCT t.pdv_numero) as pdv_actifs,
                 SUM(t.retrait_keycost) as ca_total,
-                AVG(t.retrait_keycost) as ca_avg_per_active_pdv
+                SUM(t.retrait_keycost) / SUM(t.days_count) as ca_avg_per_active_pdv
             ')
-            ->whereBetween('t.transaction_date', [$last30Days, $now])
             ->whereNotNull('p.region')
             ->groupBy('p.region')
             ->limit(20) // Limiter à 20 régions max

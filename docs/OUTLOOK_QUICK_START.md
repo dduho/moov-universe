@@ -45,9 +45,9 @@ php artisan transactions:import-outlook
 ### B. Configuration .env
 ```bash
 # Copier dans .env (remplacer par tes vraies valeurs):
-AZURE_TENANT_ID=f91b4edd-ae9e-48df-8671-c46c9fa39a0f
-AZURE_CLIENT_ID=67ab8307-2d99-43bd-b64a-02073ce61e3a
-AZURE_CLIENT_SECRET=1fb6285b-35d5-401f-a855-ca3c3f029185
+AZURE_TENANT_ID=<tenant-id-azure>
+AZURE_CLIENT_ID=<client-id-azure>
+AZURE_CLIENT_SECRET=<secret-azure-a-renseigner-dans-.env>
 APP_URL=https://universe.moov-africa.tg
 
 OUTLOOK_MAILBOX_EMAIL=dduho@moov-africa.tg

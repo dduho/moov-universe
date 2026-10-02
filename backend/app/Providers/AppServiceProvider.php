@@ -11,7 +11,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Sans état : une seule instance suffit (évite de réallouer les polygones des régions)
+        $this->app->singleton(\App\Services\GeoValidationService::class);
     }
 
     /**

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PointOfSale;
 use App\Models\Organization;
+use App\Services\TransactionAggregates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -124,15 +125,18 @@ class StatisticsController extends Controller
             ->get();
 
         // PDV incomplets (champs requis manquants) - limité pour éviter la charge
+        // Le filtre est fait en SQL (scopeIncomplete) : on ne charge que les 10 PDV affichés
         $incompletePdvs = (clone $query)
-            ->select(['id', 'nom_point', 'numero_flooz', 'region', 'prefecture', 'created_at', 'organization_id', 'created_by'])
+            ->incomplete()
+            ->select(array_merge(
+                ['id', 'created_at', 'organization_id', 'created_by'],
+                array_keys(PointOfSale::REQUIRED_FIELDS)
+            ))
             ->with(['organization:id,name', 'creator:id,name'])
+            ->orderBy('id')
+            ->limit(10)
             ->get()
-            ->filter(function ($pdv) {
-                return !empty($pdv->missing_required_fields);
-            })
-            ->values()
-            ->take(10);
+            ->each->append('missing_required_fields');
 
         // Top dealers classés par chiffre d'affaires annuel (retrait_keycost)
         $now = Carbon::now();
@@ -152,17 +156,24 @@ class StatisticsController extends Controller
         
         $yesterdayDate = $now->copy()->subDay()->toDateString();
 
-        $txQuery = DB::table('pdv_transactions as t')
-            ->join('point_of_sales as p', 'p.numero_flooz', '=', 't.pdv_numero')
+        // Agrégats par PDV d'abord (table mensuelle + jours partiels), puis jointure aux 25k PDV
+        $perPdv = TransactionAggregates::table($yearStart, $yearEnd, ['retrait_keycost', 'dealer_depot_commission', 'dealer_retrait_commission'])
+            ->select(
+                't.pdv_numero',
+                DB::raw('SUM(t.retrait_keycost) as revenue'),
+                DB::raw('SUM(t.dealer_depot_commission + t.dealer_retrait_commission) as dealer_commissions')
+            )
+            ->groupBy('t.pdv_numero');
+
+        $txQuery = DB::query()->fromSub($perPdv, 'a')
+            ->join('point_of_sales as p', 'p.numero_flooz', '=', 'a.pdv_numero')
             ->join('organizations as o', 'o.id', '=', 'p.organization_id')
-            ->whereBetween('t.transaction_date', [$yearStart, $yearEnd])
             ->select(
                 'p.organization_id',
                 'o.name',
                 'o.code',
-                DB::raw('SUM(t.retrait_keycost) as revenue'),
-                DB::raw("SUM(CASE WHEN DATE(t.transaction_date) = '{$yesterdayDate}' THEN t.retrait_keycost ELSE 0 END) as revenue_yesterday"),
-                DB::raw('SUM(t.dealer_depot_commission + t.dealer_retrait_commission) as dealer_commissions')
+                DB::raw('SUM(a.revenue) as revenue'),
+                DB::raw('SUM(a.dealer_commissions) as dealer_commissions')
             )
             ->groupBy('p.organization_id', 'o.name', 'o.code');
 
@@ -170,20 +181,29 @@ class StatisticsController extends Controller
             $txQuery->where('p.organization_id', $user->organization_id);
         }
 
+        // CA de la veille par dealer : synthèse quotidienne
+        $revenueYesterday = DB::table('transaction_daily_summary')
+            ->where('transaction_date', $yesterdayDate)
+            ->whereBetween('transaction_date', [$yearStart->toDateString(), $yearEnd->toDateString()])
+            ->whereNotNull('organization_id')
+            ->groupBy('organization_id')
+            ->selectRaw('organization_id, SUM(retrait_keycost) as total')
+            ->pluck('total', 'organization_id');
+
         $pdvCounts = PointOfSale::select('organization_id', DB::raw('count(*) as total_pdv'))
             ->when(!$user->isAdmin(), fn ($q) => $q->where('organization_id', $user->organization_id))
             ->groupBy('organization_id')
             ->pluck('total_pdv', 'organization_id');
 
         $topDealers = collect($txQuery->get())
-            ->map(function ($item) use ($pdvCounts) {
+            ->map(function ($item) use ($pdvCounts, $revenueYesterday) {
                 $orgId = $item->organization_id;
                 return [
                     'id' => $orgId,
                     'name' => $item->name,
                     'code' => $item->code,
                     'revenue' => (float) $item->revenue,
-                    'revenue_yesterday' => (float) $item->revenue_yesterday,
+                    'revenue_yesterday' => (float) ($revenueYesterday[$orgId] ?? 0),
                     'dealer_commissions' => (float) $item->dealer_commissions,
                     'total_pdv' => (int) ($pdvCounts[$orgId] ?? 0),
                 ];
@@ -302,23 +322,28 @@ class StatisticsController extends Controller
     public function geoAlerts(Request $request)
     {
         $user = $request->user();
-        $geoService = new \App\Services\GeoValidationService();
-        
-        // Récupérer tous les PDV avec coordonnées GPS et région
+        $geoService = app(\App\Services\GeoValidationService::class);
+
+        // PDV avec coordonnées GPS et région
         $query = PointOfSale::query()
             ->whereNotNull('latitude')
             ->whereNotNull('longitude')
-            ->whereNotNull('region')
-            ->with(['organization:id,name,code', 'creator:id,name']);
-        
+            ->whereNotNull('region');
+
         if (!$user->isAdmin()) {
             $query->where('organization_id', $user->organization_id);
         }
-        
-        $pdvs = $query->get();
-        
+
+        $totalChecked = (clone $query)->count();
+
+        // L'alerte est pré-calculée à l'enregistrement (geo_has_alert) : on ne recalcule
+        // le détail du message que pour les PDV concernés.
+        $pdvs = $query->where('geo_has_alert', true)
+            ->with(['organization:id,name,code', 'creator:id,name'])
+            ->get();
+
         $alerts = [];
-        
+
         foreach ($pdvs as $pdv) {
             $validation = $geoService->validateRegionCoordinates(
                 (float) $pdv->latitude,
@@ -348,7 +373,7 @@ class StatisticsController extends Controller
         }
         
         return response()->json([
-            'total_checked' => $pdvs->count(),
+            'total_checked' => $totalChecked,
             'alerts_count' => count($alerts),
             'alerts' => $alerts
         ]);
