@@ -118,12 +118,16 @@ class AnalyticsEndpointsTest extends TestCase
             ]);
         }
 
+        // Comme après un import : agrégats recalculés avec les nouvelles lignes
+        Artisan::call('analytics:refresh-aggregates', ['--all' => true]);
+
         $start = Carbon::today()->subDays(30)->toDateString();
         $end = Carbon::today()->toDateString();
         $alerts = collect($this->getJson("/api/fraud-detection?start_date={$start}&end_date={$end}")->assertOk()->json('alerts'));
 
         $types = $alerts->where('pdv_id', $suspect->id)->pluck('type')->unique()->sort()->values()->all();
-        $this->assertSame(['activity_spike', 'split_deposit_fraud'], $types);
+        // 780 dépôts (≈ 78 000 FCFA de commission estimée) pour 10 000 FCFA de CA : aussi « commission > CA »
+        $this->assertSame(['activity_spike', 'commission_over_ca', 'split_deposit_fraud'], $types);
 
         // Les PDV « normaux » ne remontent pas en dépôts fractionnés
         $this->assertCount(0, $alerts->where('type', 'split_deposit_fraud')->where('pdv_id', '!=', $suspect->id));
