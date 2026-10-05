@@ -15,6 +15,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Rejouable : une première exécution interrompue a pu créer les tables sans enregistrer la migration
+        Schema::dropIfExists('transaction_daily_summary');
+        Schema::dropIfExists('pdv_transaction_monthly');
+
         Schema::create('pdv_transaction_monthly', function (Blueprint $table) {
             $table->date('month'); // premier jour du mois
             $table->string('pdv_numero', 64);
@@ -61,8 +65,9 @@ return new class extends Migration
 
     private function metricColumns(Blueprint $table): void
     {
+        // Signés : les exports contiennent des compteurs négatifs (régularisations, ex. -1)
         foreach (\App\Services\TransactionAggregates::COUNT_COLUMNS as $column) {
-            $table->unsignedBigInteger($column)->default(0);
+            $table->bigInteger($column)->default(0);
         }
         foreach (\App\Services\TransactionAggregates::SUM_COLUMNS as $column) {
             $table->decimal($column, 18, 2)->default(0);

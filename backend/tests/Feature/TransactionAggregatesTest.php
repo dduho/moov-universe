@@ -38,11 +38,13 @@ class TransactionAggregatesTest extends TestCase
                 }
                 $inactive = ($d->day + $i) % 5 === 0;
                 $this->transaction($numero, $d->toDateString(), [
-                    'count_depot' => $inactive ? 0 : mt_rand(1, 40),
                     'count_retrait' => $inactive ? 0 : mt_rand(0, 30),
                     'sum_depot' => mt_rand(0, 900000) / 100,
                     'retrait_keycost' => mt_rand(0, 900000) / 100,
                     'dealer_depot_commission' => mt_rand(0, 150000) / 100,
+                    // Les exports réels contiennent des régularisations négatives
+                    'count_give_receive_out_network' => ($d->day % 9 === 0) ? -1 : mt_rand(0, 3),
+                    'count_depot' => ($d->day + $i) % 11 === 0 ? -2 : ($inactive ? 0 : mt_rand(1, 40)),
                 ]);
             }
         }
@@ -69,7 +71,7 @@ class TransactionAggregatesTest extends TestCase
      */
     public function test_source_matches_raw_table(string $start, string $end): void
     {
-        $columns = ['count_depot', 'count_retrait', 'sum_depot', 'retrait_keycost', 'dealer_depot_commission'];
+        $columns = ['count_depot', 'count_retrait', 'sum_depot', 'retrait_keycost', 'dealer_depot_commission', 'count_give_receive_out_network'];
 
         $expected = DB::table('pdv_transactions')
             ->whereBetween('transaction_date', [$start, $end])
@@ -77,7 +79,8 @@ class TransactionAggregatesTest extends TestCase
             ->orderBy('pdv_numero')
             ->selectRaw('pdv_numero, COUNT(*) as days_count, SUM(count_depot > 0 OR count_retrait > 0) as active_days,
                 SUM(count_depot) as count_depot, SUM(count_retrait) as count_retrait, SUM(sum_depot) as sum_depot,
-                SUM(retrait_keycost) as retrait_keycost, SUM(dealer_depot_commission) as dealer_depot_commission')
+                SUM(retrait_keycost) as retrait_keycost, SUM(dealer_depot_commission) as dealer_depot_commission,
+                SUM(count_give_receive_out_network) as count_give_receive_out_network')
             ->get()
             ->keyBy('pdv_numero');
 
