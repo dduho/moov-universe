@@ -232,6 +232,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Transaction import routes (Admin only)
     Route::prefix('transactions')->middleware('App\\Http\\Middleware\\CheckRole:admin')->group(function () {
         Route::post('/import', [TransactionImportController::class, 'import']);
+        Route::get('/data-gaps', [TransactionImportController::class, 'getDataGaps']);
     });
 
     // Transaction Analytics routes (Admin only)

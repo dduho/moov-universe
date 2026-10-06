@@ -11,6 +11,7 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class TransactionImportController extends Controller
@@ -456,5 +457,77 @@ class TransactionImportController extends Controller
             'COUNT_GIVE_RECEIVE_OUT_NETWORK' => 'count_give_receive_out_network',
             'SUM_GIVE_RECEIVE_OUT_NETWORK' => 'sum_give_receive_out_network',
         ];
+    }
+
+    /**
+     * Jours sans transactions importées, affichés sur l'écran d'import pour guider le réimport.
+     * Deux catégories, qui ne se corrigent pas de la même façon :
+     * - "missing" : aucune ligne pour ce jour → il manque le fichier.
+     * - "zero_data" : des lignes existent mais tous les montants sont à 0 (fichier source déjà
+     *   importé mais exporté vide côté Moov, ex. avril 2026) → il faut un nouvel export, pas un réimport.
+     *
+     * Lit transaction_daily_summary (quelques milliers de lignes) plutôt que pdv_transactions
+     * (plusieurs millions) pour rester rapide.
+     */
+    public function getDataGaps(Request $request)
+    {
+        $bounds = DB::table('transaction_daily_summary')
+            ->selectRaw('MIN(transaction_date) as first_date, MAX(transaction_date) as last_date')
+            ->first();
+
+        if (!$bounds || !$bounds->first_date) {
+            return response()->json(['first_date' => null, 'last_date' => null, 'ranges' => []]);
+        }
+
+        $start = Carbon::parse($bounds->first_date);
+        $end = Carbon::today()->subDay(); // le jour courant n'est pas encore attendu
+
+        $byDate = DB::table('transaction_daily_summary')
+            ->whereBetween('transaction_date', [$start->toDateString(), $end->toDateString()])
+            ->groupBy('transaction_date')
+            ->selectRaw('transaction_date, SUM(retrait_keycost) as ca')
+            ->get()
+            ->keyBy(fn ($row) => substr($row->transaction_date, 0, 10));
+
+        $ranges = [];
+        $current = null; // ['type' => ..., 'start' => Carbon, 'end' => Carbon]
+
+        $flush = function () use (&$current, &$ranges) {
+            if ($current) {
+                $ranges[] = [
+                    'type' => $current['type'],
+                    'start' => $current['start']->toDateString(),
+                    'end' => $current['end']->toDateString(),
+                    'days' => $current['start']->diffInDays($current['end']) + 1,
+                ];
+            }
+            $current = null;
+        };
+
+        for ($day = $start->copy(); $day->lte($end); $day->addDay()) {
+            $key = $day->toDateString();
+            $row = $byDate->get($key);
+
+            $type = !$row ? 'missing' : ((float) $row->ca === 0.0 ? 'zero_data' : null);
+
+            if ($type === null) {
+                $flush();
+                continue;
+            }
+
+            if ($current && $current['type'] === $type && $current['end']->isSameDay($day->copy()->subDay())) {
+                $current['end'] = $day->copy();
+            } else {
+                $flush();
+                $current = ['type' => $type, 'start' => $day->copy(), 'end' => $day->copy()];
+            }
+        }
+        $flush();
+
+        return response()->json([
+            'first_date' => $start->toDateString(),
+            'last_date' => $end->toDateString(),
+            'ranges' => $ranges,
+        ]);
     }
 }

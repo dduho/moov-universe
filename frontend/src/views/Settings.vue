@@ -205,8 +205,31 @@
           </div>
 
           <div class="space-y-4">
+            <!-- Data Gaps -->
+            <div v-if="loadingDataGaps" class="text-xs text-gray-500">Vérification des jours manquants...</div>
+            <div v-else-if="dataGaps.ranges.length > 0" class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p class="text-sm font-semibold text-amber-900 mb-2">
+                ⚠️ Jours sans données ({{ dataGaps.first_date && formatFr(dataGaps.first_date) }} → {{ dataGaps.last_date && formatFr(dataGaps.last_date) }})
+              </p>
+              <ul class="space-y-1.5 text-sm text-amber-800">
+                <li v-for="(range, index) in dataGaps.ranges" :key="index" class="flex items-start gap-2">
+                  <span class="mt-0.5">{{ range.type === 'missing' ? '📄' : '🗂️' }}</span>
+                  <span>
+                    <strong>{{ formatRangeLabel(range) }}</strong>
+                    <span class="text-amber-700"> ({{ range.days }} jour{{ range.days > 1 ? 's' : '' }})</span>
+                    —
+                    <span v-if="range.type === 'missing'">aucun fichier importé pour cette période</span>
+                    <span v-else>fichier(s) déjà importé(s) mais sans aucun montant (export source vide) : il faut un nouvel export, pas un réimport</span>
+                  </span>
+                </li>
+              </ul>
+            </div>
+            <div v-else-if="dataGaps.first_date" class="p-3 bg-green-50 rounded-lg border border-green-200 text-sm text-green-800">
+              ✅ Aucun jour manquant entre {{ formatFr(dataGaps.first_date) }} et {{ formatFr(dataGaps.last_date) }}.
+            </div>
+
             <!-- File Upload Area -->
-            <div 
+            <div
               @dragover.prevent="isDragging = true"
               @dragleave.prevent="isDragging = false"
               @drop.prevent="handleFileDrop"
@@ -626,6 +649,8 @@ const clearingFrontendCaches = ref(false);
 // Transaction import
 const fileInput = ref(null);
 const selectedFiles = ref([]);
+const dataGaps = ref({ first_date: null, last_date: null, ranges: [] });
+const loadingDataGaps = ref(false);
 const isDragging = ref(false);
 const uploading = ref(false);
 const uploadProgress = ref(0);
@@ -677,6 +702,35 @@ const loadSettings = async () => {
     console.error('Error loading settings:', error);
   } finally {
     loading.value = false;
+  }
+};
+
+const FRENCH_MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+
+const formatFr = (isoDate) => {
+  const d = new Date(isoDate + 'T00:00:00');
+  return `${d.getDate()} ${FRENCH_MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+};
+
+const formatRangeLabel = (range) => {
+  if (range.start === range.end) return formatFr(range.start);
+  const start = new Date(range.start + 'T00:00:00');
+  const end = new Date(range.end + 'T00:00:00');
+  if (start.getFullYear() === end.getFullYear() && start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} → ${end.getDate()} ${FRENCH_MONTHS[start.getMonth()]} ${start.getFullYear()}`;
+  }
+  return `${formatFr(range.start)} → ${formatFr(range.end)}`;
+};
+
+const loadDataGaps = async () => {
+  try {
+    loadingDataGaps.value = true;
+    const { data } = await TransactionService.getDataGaps();
+    dataGaps.value = data;
+  } catch (error) {
+    console.error('Error loading transaction data gaps:', error);
+  } finally {
+    loadingDataGaps.value = false;
   }
 };
 
@@ -869,6 +923,11 @@ const uploadTransactionFiles = async () => {
     const failed = new Set(results.errors.map((e) => e.filename));
     selectedFiles.value = files.filter((f) => failed.has(f.name));
 
+    if (results.success.length > 0) {
+      // Les agrégats se recalculent après la réponse (cf. backend) : attendre un peu avant de revérifier
+      setTimeout(loadDataGaps, 15000);
+    }
+
     if (results.errors.length === 0) {
       toast.success(`Import réussi : ${results.total_imported} nouvelles entrées, ${results.total_updated} mises à jour. Les tableaux de bord seront à jour d'ici une minute.`);
     } else if (results.success.length > 0) {
@@ -1042,6 +1101,7 @@ onMounted(() => {
     return;
   }
   loadSettings();
+  loadDataGaps();
 });
 
 // Watcher pour recharger les paramètres si l'utilisateur ou le rôle change

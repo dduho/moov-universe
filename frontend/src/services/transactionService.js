@@ -35,4 +35,11 @@ export default {
       params: { year }
     });
   },
+
+  /**
+   * Get the periods without transaction data (missing files, or files imported empty)
+   */
+  async getDataGaps() {
+    return api.get('/transactions/data-gaps');
+  },
 };
