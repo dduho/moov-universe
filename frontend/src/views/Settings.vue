@@ -278,12 +278,12 @@
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  <span v-if="uploadStage === 'uploading'">Envoi du fichier... {{ uploadProgress }}%</span>
-                  <span v-else-if="uploadStage === 'processing'">Traitement en cours... {{ uploadProgress }}%</span>
+                  <span v-if="uploadStage === 'uploading'">Fichier {{ currentFileIndex }}/{{ currentFileCount }} : envoi... {{ uploadProgress }}%</span>
+                  <span v-else-if="uploadStage === 'processing'">Fichier {{ currentFileIndex }}/{{ currentFileCount }} : traitement... {{ uploadProgress }}%</span>
                   <span v-else>Finalisation...</span>
                 </div>
                 <span class="text-xs opacity-90">
-                  <span v-if="uploadStage === 'uploading'">Envoi de {{ formatFileSize(getTotalFileSize()) }} vers le serveur</span>
+                  <span v-if="uploadStage === 'uploading'">Envoi vers le serveur ({{ formatFileSize(getTotalFileSize()) }} au total)</span>
                   <span v-else-if="uploadStage === 'processing'">Traitement des données (peut prendre plusieurs minutes pour de gros fichiers)</span>
                 </span>
               </span>
@@ -631,6 +631,8 @@ const uploading = ref(false);
 const uploadProgress = ref(0);
 const uploadStage = ref(''); // 'uploading', 'processing', 'complete'
 const importResults = ref(null);
+const currentFileIndex = ref(0);
+const currentFileCount = ref(0);
 
 // Advanced Cache Management
 const cacheWidgets = ref([
@@ -800,96 +802,85 @@ const getTotalFileSize = () => {
 
 const uploadTransactionFiles = async () => {
   if (selectedFiles.value.length === 0) return;
-  
+
+  // Un fichier par requête : un gros lot dans une seule requête dépassait les délais (10 min)
+  // et un seul fichier en erreur faisait tout échouer.
+  const files = [...selectedFiles.value];
+  const results = { success: [], errors: [], total_imported: 0, total_updated: 0, total_skipped: 0 };
+
+  uploading.value = true;
+  importResults.value = null;
+
   try {
-    uploading.value = true;
-    uploadProgress.value = 0;
-    uploadStage.value = 'uploading';
-    importResults.value = null;
-    
-    let progressInterval = null;
-    let uploadStarted = false;
-    let lastProgress = 0;
-    const totalSize = getTotalFileSize();
-    const estimatedUploadTimeMs = (totalSize / (1024 * 1024)) * 1000; // ~1 sec par MB
-    const uploadProgressStep = 50 / (estimatedUploadTimeMs / 500); // 50% en estimatedUploadTimeMs
-    
-    // Démarrer l'animation de progression immédiatement
-    progressInterval = setInterval(() => {
-      if (uploadStage.value === 'uploading' && uploadProgress.value < 50) {
-        uploadProgress.value = Math.min(50, uploadProgress.value + uploadProgressStep);
-      } else if (uploadStage.value === 'processing' && uploadProgress.value < 95) {
-        uploadProgress.value = Math.min(95, uploadProgress.value + 0.3);
-      }
-    }, 500);
-    
-    const response = await TransactionService.uploadFiles(
-      selectedFiles.value,
-      (progressEvent) => {
-        if (!uploadStarted) {
-          uploadStarted = true;
-          console.log('Upload started:', progressEvent);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      currentFileIndex.value = i + 1;
+      currentFileCount.value = files.length;
+      uploadStage.value = 'uploading';
+
+      // Part de la barre globale réservée à ce fichier
+      const sliceStart = (i / files.length) * 100;
+      const slice = 100 / files.length;
+      uploadProgress.value = Math.round(sliceStart);
+
+      // Pendant le traitement serveur, on avance doucement dans la seconde moitié de la tranche
+      const processingTimer = setInterval(() => {
+        if (uploadStage.value === 'processing') {
+          uploadProgress.value = Math.min(Math.round(sliceStart + slice * 0.95), uploadProgress.value + 1);
         }
-        
-        // Phase 1: Upload du fichier (0-50%)
-        if (progressEvent.loaded && progressEvent.total) {
-          const percentCompleted = Math.round((progressEvent.loaded * 50) / progressEvent.total);
-          
-          // Utiliser le vrai pourcentage si disponible
-          if (percentCompleted > lastProgress) {
-            uploadProgress.value = percentCompleted;
-            lastProgress = percentCompleted;
+      }, 1500);
+
+      try {
+        const response = await TransactionService.uploadFiles([file], (progressEvent) => {
+          if (progressEvent.loaded && progressEvent.total) {
+            uploadProgress.value = Math.round(sliceStart + (progressEvent.loaded / progressEvent.total) * slice * 0.5);
+            if (progressEvent.loaded >= progressEvent.total) {
+              uploadStage.value = 'processing';
+            }
           }
-          
-          // Quand upload terminé, passer au traitement
-          if (percentCompleted >= 50 && uploadStage.value === 'uploading') {
-            uploadStage.value = 'processing';
-            console.log('Switching to processing stage');
-          }
+        });
+
+        const data = response.data;
+        results.success.push(...(data.success || []));
+        results.errors.push(...(data.errors || []));
+        results.total_imported += data.total_imported || 0;
+        results.total_updated += data.total_updated || 0;
+        results.total_skipped += data.total_skipped || 0;
+      } catch (error) {
+        console.error('Error uploading file:', file.name, error);
+        let message = error.response?.data?.error || error.response?.data?.message || error.message;
+        if (error.code === 'ECONNABORTED') {
+          message = 'Délai dépassé pendant le traitement du fichier';
+        } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
+          message = 'Erreur réseau (fichier trop volumineux ou serveur injoignable)';
         }
+        results.errors.push({ filename: file.name, error: message });
+      } finally {
+        clearInterval(processingTimer);
       }
-    );
-    
-    // Si on n'a pas reçu de vrais événements de progression, basculer manuellement
-    if (!uploadStarted) {
-      console.log('No upload progress events received, switching to processing manually');
-      uploadProgress.value = 50;
-      uploadStage.value = 'processing';
+
+      importResults.value = { ...results };
+      uploadProgress.value = Math.round(sliceStart + slice);
     }
-    
-    // Nettoyer l'intervalle si présent
-    if (progressInterval) {
-      clearInterval(progressInterval);
-    }
-    
-    // Phase 3: Terminé
+
     uploadStage.value = 'complete';
-    uploadProgress.value = 100;
-    
-    importResults.value = response.data;
-    
-    // Clear selected files if all were successful
-    if (response.data.errors.length === 0) {
-      selectedFiles.value = [];
-      const totalImported = response.data.total_imported || 0;
-      const totalUpdated = response.data.total_updated || 0;
-      toast.success(`Import réussi: ${totalImported} nouvelles entrées, ${totalUpdated} mises à jour!`);
-    } else {
+
+    // Ne garder dans la sélection que les fichiers en erreur, pour pouvoir les relancer
+    const failed = new Set(results.errors.map((e) => e.filename));
+    selectedFiles.value = files.filter((f) => failed.has(f.name));
+
+    if (results.errors.length === 0) {
+      toast.success(`Import réussi : ${results.total_imported} nouvelles entrées, ${results.total_updated} mises à jour. Les tableaux de bord seront à jour d'ici une minute.`);
+    } else if (results.success.length > 0) {
       toast.warning('Import partiellement réussi. Consultez les détails ci-dessous.');
-    }
-  } catch (error) {
-    console.error('Error uploading files:', error);
-    if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-      toast.error('Erreur réseau: Le fichier est peut-être trop volumineux ou le serveur ne répond pas. Vérifiez que le backend est en cours d\'exécution.');
-    } else if (error.code === 'ECONNABORTED') {
-      toast.error('Timeout: Le traitement prend trop de temps. Essayez avec des fichiers plus petits.');
     } else {
-      toast.error('Erreur lors de l\'importation des fichiers: ' + (error.response?.data?.message || error.message));
+      toast.error("Aucun fichier n'a pu être importé. Consultez les détails ci-dessous.");
     }
   } finally {
     uploading.value = false;
     uploadProgress.value = 0;
     uploadStage.value = '';
+    currentFileIndex.value = 0;
   }
 };
 

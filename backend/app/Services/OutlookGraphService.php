@@ -123,7 +123,7 @@ class OutlookGraphService
      */
     public function getAccessToken($mailbox): string
     {
-        $token = OAuthToken::forMailbox('outlook', $mailbox);
+        $token = OAuthToken::forMailbox('outlook', $mailbox)->first();
 
         if (!$token) {
             throw new Exception("No OAuth token found for mailbox: {$mailbox}");

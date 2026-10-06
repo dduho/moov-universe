@@ -4,7 +4,9 @@ namespace App\Services;
 
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Agrégats des transactions PDV.
@@ -197,6 +199,76 @@ class TransactionAggregates
                 [$start, $end]
             );
         });
+    }
+
+    private const PENDING_KEY = 'transaction_aggregates:pending_dates';
+    private const PENDING_MUTEX = 'transaction_aggregates:pending_mutex';
+    private const WORKER_LOCK = 'transaction_aggregates:worker';
+
+    /**
+     * Note une date importée dont le mois doit être recalculé (voir processPendingRefreshes).
+     */
+    public static function queueRefresh(string|\DateTimeInterface $date): void
+    {
+        $date = Carbon::parse($date)->toDateString();
+
+        Cache::lock(self::PENDING_MUTEX, 10)->block(10, function () use ($date) {
+            $pending = Cache::get(self::PENDING_KEY, []);
+            $pending[] = $date;
+            Cache::forever(self::PENDING_KEY, array_values(array_unique($pending)));
+        });
+    }
+
+    /**
+     * Recalcule les mois des dates en attente, un seul processus à la fois.
+     * Si un autre processus travaille déjà, il reprendra les dates ajoutées entre-temps.
+     *
+     * @param callable|null $afterBatch reçoit les dates traitées (invalidation des caches)
+     * @return int nombre de mois recalculés
+     */
+    public static function processPendingRefreshes(?callable $afterBatch = null): int
+    {
+        $refreshed = 0;
+
+        // Boucle : une date peut être ajoutée juste après qu'on a vidé la file
+        while (!empty(Cache::get(self::PENDING_KEY, []))) {
+            $worker = Cache::lock(self::WORKER_LOCK, 1800);
+            if (!$worker->get()) {
+                return $refreshed; // un autre processus s'en charge
+            }
+
+            try {
+                while (true) {
+                    $dates = Cache::lock(self::PENDING_MUTEX, 10)->block(10, function () {
+                        $pending = Cache::get(self::PENDING_KEY, []);
+                        Cache::forget(self::PENDING_KEY);
+                        return $pending;
+                    });
+
+                    if (empty($dates)) {
+                        break;
+                    }
+
+                    $months = collect($dates)->map(fn ($d) => Carbon::parse($d)->startOfMonth()->toDateString())->unique();
+                    foreach ($months as $month) {
+                        try {
+                            self::refreshMonth($month);
+                            $refreshed++;
+                        } catch (\Throwable $e) {
+                            Log::error("Erreur lors du recalcul des agrégats pour {$month}: " . $e->getMessage());
+                        }
+                    }
+
+                    if ($afterBatch) {
+                        $afterBatch($dates);
+                    }
+                }
+            } finally {
+                $worker->release();
+            }
+        }
+
+        return $refreshed;
     }
 
     /**

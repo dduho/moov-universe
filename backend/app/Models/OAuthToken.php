@@ -39,9 +39,9 @@ class OAuthToken extends Model
      */
     public function scopeForMailbox($query, $provider, $mailbox)
     {
+        // Pas de ->first() ici : un scope qui renvoie null fait renvoyer le Builder par Laravel
         return $query->where('provider', $provider)
-                     ->where('mailbox', $mailbox)
-                     ->first();
+                     ->where('mailbox', $mailbox);
     }
 
     /**

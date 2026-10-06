@@ -386,42 +386,37 @@ class TransactionImportController extends Controller
     }
 
     /**
-     * Invalider le cache analytics après import et recalculer immédiatement
+     * Après un import : recalcul des agrégats du mois puis invalidation des caches analytics.
+     * Le recalcul (~20 s par mois en production) est fait APRÈS l'envoi de la réponse, et une
+     * seule fois par mois même si plusieurs fichiers du même mois sont importés à la suite.
      */
     private function invalidateAnalyticsCache($date)
     {
-        // Tables d'agrégats (mois du fichier importé) : utilisées par les analytics
+        TransactionAggregates::queueRefresh($date);
+
+        app()->terminating(function () {
+            TransactionAggregates::processPendingRefreshes(fn (array $dates) => static::refreshAnalyticsCaches($dates));
+        });
+    }
+
+    /**
+     * Invalide les caches analytics et recalcule le cache quotidien des dates importées.
+     */
+    public static function refreshAnalyticsCaches(array $dates): void
+    {
         try {
-            TransactionAggregates::refreshMonth($date);
-        } catch (\Throwable $e) {
-            Log::error("Erreur lors du recalcul des agrégats pour {$date}: " . $e->getMessage());
+            Cache::tags(['cache_analytics', 'analytics', 'transactions'])->flush();
+        } catch (\Exception $e) {
+            // Si les tags ne sont pas supportés ou FLUSHDB désactivé, on ignore
+            Log::warning('Cache flush failed (Redis command may be disabled): ' . $e->getMessage());
         }
 
-        try {
-            $carbonDate = Carbon::parse($date);
-            
-            // Invalider les clés de cache qui pourraient contenir cette date
-            // Format: analytics_{period}_{start}_{end}
-            $periods = ['day', 'week', 'month', 'quarter'];
-            $dateStr = $carbonDate->format('Y-m-d');
-            
-            // Invalider les clés de cache analytics avec tags
+        foreach ($dates as $date) {
             try {
-                Cache::tags(['cache_analytics', 'analytics', 'transactions'])->flush();
-            } catch (\Exception $e) {
-                // Si les tags ne sont pas supportés ou FLUSHDB désactivé, on ignore
-                Log::warning('Cache flush failed (Redis command may be disabled): ' . $e->getMessage());
+                Artisan::call('analytics:cache-daily', ['date' => $date]);
+            } catch (\Throwable $e) {
+                Log::error("Erreur lors du recalcul du cache analytics pour {$date}: " . $e->getMessage());
             }
-            
-            // Recalculer IMMÉDIATEMENT les analytics pour cette date (synchrone)
-            // Ceci garantit que les données sont disponibles avant que la réponse ne soit renvoyée
-            Artisan::call('analytics:cache-daily', [
-                'date' => $date
-            ]);
-            
-            Log::info("Cache analytics invalidé et recalculé pour la date: {$date}");
-        } catch (\Exception $e) {
-            Log::error("Erreur lors de l'invalidation du cache analytics: " . $e->getMessage());
         }
     }
 

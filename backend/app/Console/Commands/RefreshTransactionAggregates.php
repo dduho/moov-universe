@@ -16,7 +16,8 @@ class RefreshTransactionAggregates extends Command
     protected $signature = 'analytics:refresh-aggregates
                             {--date=* : Date(s) importée(s) : recalcule le mois correspondant}
                             {--days=0 : Recalcule les mois couvrant les N derniers jours}
-                            {--all : Recalcule tous les mois}';
+                            {--all : Recalcule tous les mois}
+                            {--pending : Traite les mois en attente après des imports}';
 
     /**
      * The console command description.
@@ -31,6 +32,16 @@ class RefreshTransactionAggregates extends Command
     public function handle()
     {
         $start = microtime(true);
+
+        if ($this->option('pending')) {
+            $count = TransactionAggregates::processPendingRefreshes(
+                fn (array $dates) => \App\Http\Controllers\TransactionImportController::refreshAnalyticsCaches($dates)
+            );
+            if ($count > 0) {
+                $this->info("{$count} mois en attente recalculés en " . round(microtime(true) - $start, 1) . 's');
+            }
+            return self::SUCCESS;
+        }
 
         if ($this->option('all')) {
             $count = TransactionAggregates::refreshAll(fn ($month) => $this->line("  {$month} recalculé"));

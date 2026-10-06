@@ -36,6 +36,13 @@ class Kernel extends ConsoleKernel
                  ->onOneServer()
                  ->appendOutputTo(storage_path('logs/analytics-aggregates.log'));
 
+        // Imports dont le recalcul différé n'a pas pu se faire (processus interrompu, verrou...)
+        $schedule->command('analytics:refresh-aggregates --pending')
+                 ->everyFiveMinutes()
+                 ->withoutOverlapping()
+                 ->onOneServer()
+                 ->appendOutputTo(storage_path('logs/analytics-aggregates.log'));
+
         // Recalcul complet hebdomadaire (rattachement dealer/région des PDV dans transaction_daily_summary)
         $schedule->command('analytics:refresh-aggregates --all')
                  ->weeklyOn(0, '03:00')

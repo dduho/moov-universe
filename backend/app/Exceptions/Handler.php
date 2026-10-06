@@ -27,4 +27,13 @@ class Handler extends ExceptionHandler
             //
         });
     }
+
+    /**
+     * API uniquement : pas de page de login Laravel, toujours répondre 401 en JSON
+     * (sinon 500 "Route [login] not defined" quand le client n'envoie pas Accept: application/json).
+     */
+    protected function unauthenticated($request, \Illuminate\Auth\AuthenticationException $exception)
+    {
+        return response()->json(['message' => $exception->getMessage()], 401);
+    }
 }
