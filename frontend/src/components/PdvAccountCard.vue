@@ -87,7 +87,7 @@
         </p>
 
         <template v-else>
-          <ul class="divide-y divide-gray-100 transition-opacity" :class="loading ? 'opacity-50' : ''" data-testid="transactions">
+          <ul class="divide-y divide-gray-100 transition-opacity max-h-96 overflow-y-auto overscroll-contain pr-1" :class="loading ? 'opacity-50' : ''" data-testid="transactions">
             <li v-for="tx in account.transactions" :key="tx.receipt" class="py-2.5">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
