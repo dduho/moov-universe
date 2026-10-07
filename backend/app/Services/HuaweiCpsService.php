@@ -64,15 +64,26 @@ class HuaweiCpsService
         return $this->call('SyncQueryOrgTxn', $shortcode, $body);
     }
 
+    /** Types de transactions qui ne reflètent pas l'activité auprès des clients (approvisionnement, commissions) */
+    private const NON_CUSTOMER_TYPES = ['COMT', 'GIVE'];
+
+    /** Jours sans transaction client : au plus 3 => actif, au plus 7 => peu actif, au-delà => inactif */
+    private const ACTIVE_WITHIN_DAYS = 3;
+    private const LOW_ACTIVITY_WITHIN_DAYS = 7;
+
+    /** Plafond de transactions conservées en mémoire/cache pour un compte très actif */
+    private const MAX_TRANSACTIONS = 3000;
+
     /**
-     * Solde + dernières transactions d'un PDV, normalisés pour l'affichage.
+     * Solde + historique des transactions d'un PDV sur la période, normalisés pour l'affichage.
+     * La liste est complète (la pagination se fait côté contrôleur, sur le résultat mis en cache).
      *
-     * @return array{shortcode: string, holder_name: ?string, status: ?string, currency: string,
-     *               balance: array, transactions: array, transactions_total: int, period: array, fetched_at: string}
+     * Si seul l'historique échoue (compte très actif, passerelle lente), le solde est quand même
+     * renvoyé avec 'transactions_error' et 'partial' => true.
      *
-     * @throws HuaweiApiException
+     * @throws HuaweiApiException si le solde lui-même est indisponible
      */
-    public function fetchAccount(string $shortcode, int $days = 7, int $limit = 20): array
+    public function fetchAccount(string $shortcode, int $days = 7): array
     {
         $days = max(1, min(31, $days));
         $end = now();
@@ -88,25 +99,38 @@ class HuaweiCpsService
             throw new HuaweiApiException('Aucun compte trouvé pour ce shortcode.', 'rejected', resultCode: 'no_account');
         }
 
-        $txTree = $this->queryOrganizationTransactions($shortcode, $start, $end);
-        $list = self::find($txTree, 'TransactionListData');
-        $list = is_array($list) ? $list : [];
+        $transactions = [];
+        $total = 0;
+        $transactionsError = null;
 
-        $transactions = collect(self::asList($list['TransactionItem'] ?? null))
-            ->filter(fn ($item) => is_array($item))
-            ->map(fn ($item) => [
-                'receipt' => (string) ($item['ReceiptNumber'] ?? ''),
-                'type' => (string) ($item['TxnType'] ?? ''),
-                'status' => (string) ($item['TransactionStatus'] ?? ''),
-                'amount' => (float) ($item['Amount'] ?? 0),
-                'currency' => (string) ($item['Currency'] ?? 'XOF'),
-                'completed_at' => self::parseTimestamp($item['CompletedTime'] ?? $item['InitiatedTime'] ?? null),
-                'description' => self::maskPersonalData((string) ($item['Details'] ?? '')),
-            ])
-            ->sortByDesc('completed_at')
-            ->take($limit)
-            ->values()
-            ->all();
+        try {
+            $txTree = $this->queryOrganizationTransactions($shortcode, $start, $end);
+            $list = self::find($txTree, 'TransactionListData');
+            $list = is_array($list) ? $list : [];
+
+            $transactions = collect(self::asList($list['TransactionItem'] ?? null))
+                ->filter(fn ($item) => is_array($item))
+                ->map(fn ($item) => [
+                    'receipt' => (string) ($item['ReceiptNumber'] ?? ''),
+                    'type' => (string) ($item['TxnType'] ?? ''),
+                    'status' => (string) ($item['TransactionStatus'] ?? ''),
+                    'amount' => (float) ($item['Amount'] ?? 0),
+                    'currency' => (string) ($item['Currency'] ?? 'XOF'),
+                    'completed_at' => self::parseTimestamp($item['CompletedTime'] ?? $item['InitiatedTime'] ?? null),
+                    'description' => self::maskPersonalData((string) ($item['Details'] ?? '')),
+                ])
+                ->sortByDesc('completed_at')
+                ->take(self::MAX_TRANSACTIONS)
+                ->values()
+                ->all();
+
+            $total = max((int) ($list['NbrOfTotal'] ?? 0), count($transactions));
+        } catch (HuaweiApiException $e) {
+            // Le solde reste affiché ; seul l'historique est indisponible
+            $transactionsError = $e->reason === 'unreachable'
+                ? "L'historique n'a pas pu être chargé à temps (compte très actif ou service lent). Essayez la période 7 jours."
+                : "L'historique des transactions est indisponible : " . $e->getMessage();
+        }
 
         return [
             'shortcode' => $shortcode,
@@ -119,10 +143,55 @@ class HuaweiCpsService
                 'reserved' => (float) ($account['ReservedBalance'] ?? 0),
                 'uncleared' => (float) ($account['UnclearedBalance'] ?? 0),
             ],
+            'activity' => $transactionsError ? null : self::summarizeActivity($transactions, $days),
             'transactions' => $transactions,
-            'transactions_total' => (int) ($list['NbrOfTotal'] ?? count($transactions)),
+            'transactions_total' => $total,
+            'transactions_error' => $transactionsError,
+            'partial' => $transactionsError !== null,
             'period' => ['from' => $start->toDateString(), 'to' => $end->toDateString(), 'days' => $days],
             'fetched_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Synthèse de l'activité du PDV à partir de son historique : transactions avec les clients
+     * (hors approvisionnement GIVE et commissions COMT), dernière activité et niveau d'activité.
+     *
+     * @param array<int, array> $transactions triées de la plus récente à la plus ancienne
+     */
+    public static function summarizeActivity(array $transactions, int $windowDays): array
+    {
+        $customer = array_values(array_filter(
+            $transactions,
+            fn ($tx) => !in_array($tx['type'], self::NON_CUSTOMER_TYPES, true) && $tx['completed_at'] !== null
+        ));
+
+        $sum = fn (string $type) => [
+            'count' => count(array_filter($customer, fn ($tx) => $tx['type'] === $type)),
+            'amount' => round(array_sum(array_map(fn ($tx) => $tx['amount'], array_filter($customer, fn ($tx) => $tx['type'] === $type))), 2),
+        ];
+
+        $lastAt = $customer[0]['completed_at'] ?? null;
+        $daysSince = $lastAt ? (int) floor(\Carbon\Carbon::parse($lastAt)->diffInDays(now(), false)) : null;
+        $daysSince = $daysSince !== null ? max(0, $daysSince) : null;
+
+        $level = match (true) {
+            $daysSince === null => 'inactive',
+            $daysSince <= self::ACTIVE_WITHIN_DAYS => 'active',
+            $daysSince <= self::LOW_ACTIVITY_WITHIN_DAYS => 'low',
+            default => 'inactive',
+        };
+
+        return [
+            'level' => $level,
+            'last_transaction_at' => $lastAt,
+            'days_since_last' => $daysSince,
+            'window_days' => $windowDays,
+            'customer_transactions' => count($customer),
+            'customer_volume' => round(array_sum(array_map(fn ($tx) => $tx['amount'], $customer)), 2),
+            'cash_in' => $sum('CashIn'),
+            'cash_out' => $sum('CashOut'),
+            'thresholds' => ['active' => self::ACTIVE_WITHIN_DAYS, 'low' => self::LOW_ACTIVITY_WITHIN_DAYS],
         ];
     }
 

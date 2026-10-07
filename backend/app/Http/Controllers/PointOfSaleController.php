@@ -57,13 +57,7 @@ class PointOfSaleController extends Controller
             }
         }
         if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nom_point', 'like', "%{$search}%")
-                  ->orWhere('numero_flooz', 'like', "%{$search}%")
-                  ->orWhere('shortcode', 'like', "%{$search}%")
-                  ->orWhere('numero_proprietaire', 'like', "%{$search}%");
-            });
+            $query->search($request->search);
         }
 
         // Filtres de qualité des données

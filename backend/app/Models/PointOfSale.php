@@ -244,6 +244,36 @@ class PointOfSale extends Model
     }
 
     /**
+     * Recherche libre (nom, numéro Flooz, shortcode, n° propriétaire, dealer).
+     *
+     * L'interface affiche les numéros avec des espaces ("228 96 77 75 58", "131 1244") alors que la base
+     * les stocke sans : quand la saisie ne contient que des chiffres et des séparateurs, on compare donc
+     * les chiffres seuls aux colonnes numériques.
+     */
+    public function scopeSearch($query, ?string $term)
+    {
+        $term = trim((string) $term);
+        if ($term === '') {
+            return $query;
+        }
+
+        $like = fn (string $value) => '%' . addcslashes($value, '\%_') . '%';
+        $digits = preg_replace('/\D+/', '', $term);
+        $looksLikeNumber = $digits !== '' && preg_match('/^[\d\s.\-+()]+$/', $term) === 1;
+
+        return $query->where(function ($q) use ($term, $digits, $looksLikeNumber, $like) {
+            $q->where('nom_point', 'like', $like($term));
+
+            foreach (['numero_flooz', 'shortcode', 'numero_proprietaire'] as $column) {
+                $q->orWhere($column, 'like', $like($looksLikeNumber ? $digits : $term));
+            }
+
+            // Dealer : sous-requête sur une table de quelques dizaines de lignes
+            $q->orWhereIn('organization_id', Organization::query()->select('id')->where('name', 'like', $like($term)));
+        });
+    }
+
+    /**
      * Restreint aux PDV visibles par l'utilisateur selon son rôle.
      */
     public function scopeVisibleTo($query, User $user)

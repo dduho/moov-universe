@@ -274,6 +274,13 @@ class PointOfSaleImportController extends Controller
                     } elseif ($allowUpdates) {
                         // Mettre à jour le PDV existant (updated_by = null = import)
                         $data['updated_by'] = null;
+
+                        // Un fichier sans shortcode (colonne absente, vide ou "N/A") ne doit pas effacer
+                        // un shortcode déjà connu : il sert à interroger le compte Flooz du PDV.
+                        if (empty($data['shortcode']) || strtoupper(trim((string) $data['shortcode'])) === 'N/A') {
+                            unset($data['shortcode']);
+                        }
+
                         $existing->update($data);
                         $updated[] = [
                             'line' => $i + 1,

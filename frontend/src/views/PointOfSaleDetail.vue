@@ -482,6 +482,19 @@
               :shortcode="String(pos.shortcode).trim()"
             />
 
+            <!-- Pas de shortcode : on explique pourquoi le compte Flooz n'est pas affiché -->
+            <div v-else-if="isRoleAllowedForAccount" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6" data-testid="account-unavailable">
+              <h3 class="text-lg font-bold text-gray-900 mb-1">Compte Flooz</h3>
+              <p class="text-sm text-gray-600">
+                Le solde et l'historique des transactions ne sont pas disponibles : <strong>aucun shortcode valide n'est enregistré pour ce PDV</strong>.
+                Le compte est interrogé avec le shortcode (7 chiffres), pas avec le numéro Flooz.
+              </p>
+              <router-link v-if="authStore.isAdmin" :to="`/pdv/${pos.id}/edit`"
+                           class="inline-block mt-3 px-3 py-1.5 rounded-lg text-sm font-semibold bg-moov-orange text-white hover:bg-orange-600 transition-colors">
+                Renseigner le shortcode
+              </router-link>
+            </div>
+
             <!-- Rejection Reason -->
             <div v-if="pos.status === 'rejected' && pos.rejection_reason" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-red-300 bg-red-50/50">
               <h3 class="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
@@ -874,8 +887,9 @@ const canEdit = computed(() => {
 });
 
 // Solde et transactions du compte Flooz : administrateurs et propriétaires de dealer, PDV avec shortcode valide
+const isRoleAllowedForAccount = computed(() => !!(authStore.isAdmin || authStore.isDealerOwner));
 const canSeeAccount = computed(() => {
-  if (!authStore.isAdmin && !authStore.isDealerOwner) return false;
+  if (!isRoleAllowedForAccount.value) return false;
   return /^\d{3,15}$/.test(String(pos.value?.shortcode ?? '').trim());
 });
 

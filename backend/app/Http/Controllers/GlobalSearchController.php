@@ -115,12 +115,17 @@ class GlobalSearchController extends Controller
 
         // Search in multiple fields
         $pdvQuery->where(function ($q) use ($query) {
+            // Numéros saisis avec des espaces ("131 1244") : comparés sans séparateurs (cf. PointOfSale::scopeSearch)
+            $digits = preg_replace('/\D+/', '', $query);
+            $numeric = $digits !== '' && preg_match('/^[\d\s.\-+()]+$/', $query) === 1;
+            $needle = $numeric ? $digits : $query;
+
             $q->where('nom_point', 'LIKE', "%{$query}%")
-              ->orWhere('numero_flooz', 'LIKE', "%{$query}%")
-              ->orWhere('shortcode', 'LIKE', "%{$query}%")
+              ->orWhere('numero_flooz', 'LIKE', "%{$needle}%")
+              ->orWhere('shortcode', 'LIKE', "%{$needle}%")
               ->orWhere('firstname', 'LIKE', "%{$query}%")
               ->orWhere('lastname', 'LIKE', "%{$query}%")
-              ->orWhere('numero_proprietaire', 'LIKE', "%{$query}%")
+              ->orWhere('numero_proprietaire', 'LIKE', "%{$needle}%")
               ->orWhere('ville', 'LIKE', "%{$query}%")
               ->orWhere('quartier', 'LIKE', "%{$query}%");
         });

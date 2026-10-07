@@ -57,14 +57,43 @@ class PdvAccountController extends Controller
                 ? Cache::get($cacheKey)
                 : $huawei->fetchAccount($shortcode, $days);
 
-            if (!$cached && $ttl > 0) {
+            // Un résultat partiel (historique indisponible) n'est jamais mis en cache : le prochain appel réessaie
+            if (!$cached && $ttl > 0 && empty($account['partial'])) {
                 Cache::put($cacheKey, $account, $ttl);
             }
         } catch (HuaweiApiException $e) {
             return $this->errorResponse($e);
         }
 
-        return response()->json($account + ['cached' => $cached]);
+        return response()->json($this->paginate($account, $request) + ['cached' => $cached]);
+    }
+
+    /**
+     * Découpe l'historique en pages (10 par défaut) : la liste complète reste en cache,
+     * changer de page n'appelle donc pas à nouveau la passerelle Huawei.
+     */
+    private function paginate(array $account, Request $request): array
+    {
+        $perPage = max(5, min(50, (int) $request->query('per_page', 10) ?: 10));
+        $all = $account['transactions'];
+        $total = count($all);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min($lastPage, (int) $request->query('page', 1)));
+        $offset = ($page - 1) * $perPage;
+
+        $account['transactions'] = array_slice($all, $offset, $perPage);
+        $account['pagination'] = [
+            'page' => $page,
+            'per_page' => $perPage,
+            'total' => $total,
+            'last_page' => $lastPage,
+            'from' => $total === 0 ? 0 : $offset + 1,
+            'to' => min($offset + $perPage, $total),
+            // Plus de transactions que ce que l'on conserve (compte très actif)
+            'truncated' => ($account['transactions_total'] ?? $total) > $total,
+        ];
+
+        return $account;
     }
 
     private function errorResponse(HuaweiApiException $e): JsonResponse

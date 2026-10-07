@@ -7,7 +7,7 @@
       </div>
       <button
         type="button"
-        @click="load(true)"
+        @click="refresh"
         :disabled="loading"
         class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-700 hover:border-moov-orange hover:text-moov-orange transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
         title="Interroger à nouveau le compte"
@@ -48,10 +48,25 @@
         </p>
       </div>
 
-      <!-- Transactions -->
+      <!-- Activité du PDV, d'après son historique -->
+      <div v-if="account.activity" class="mt-4 rounded-xl border p-3" :class="levelStyle.box" data-testid="activity">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Activité</p>
+          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold" :class="levelStyle.badge" :title="levelHint">{{ levelStyle.label }}</span>
+        </div>
+        <p class="text-sm font-semibold text-gray-900 mt-1.5">{{ lastActivityText }}</p>
+        <p v-if="account.activity.customer_transactions > 0" class="text-xs text-gray-600 mt-1">
+          {{ account.activity.customer_transactions }} transaction{{ account.activity.customer_transactions > 1 ? 's' : '' }} client
+          ({{ formatAmount(account.activity.customer_volume) }}) sur {{ account.activity.window_days }} jours
+          · {{ account.activity.cash_in.count }} dépôt{{ account.activity.cash_in.count > 1 ? 's' : '' }} ({{ formatAmount(account.activity.cash_in.amount) }})
+          · {{ account.activity.cash_out.count }} retrait{{ account.activity.cash_out.count > 1 ? 's' : '' }} ({{ formatAmount(account.activity.cash_out.amount) }})
+        </p>
+      </div>
+
+      <!-- Historique -->
       <div class="mt-5">
         <div class="flex items-center justify-between mb-2">
-          <h4 class="text-sm font-bold text-gray-900">Dernières transactions</h4>
+          <h4 class="text-sm font-bold text-gray-900">Historique des transactions</h4>
           <div class="inline-flex rounded-lg border border-gray-200 overflow-hidden text-xs font-semibold" role="group" aria-label="Période">
             <button v-for="option in periods" :key="option.days" type="button"
                     @click="changePeriod(option.days)" :disabled="loading"
@@ -62,26 +77,48 @@
           </div>
         </div>
 
-        <p v-if="account.transactions.length === 0" class="text-sm text-gray-500 py-3">
+        <div v-if="account.transactions_error" class="p-3 rounded-lg border bg-amber-50 border-amber-200 text-sm text-amber-900">
+          <p>{{ account.transactions_error }}</p>
+          <button type="button" class="mt-1 font-semibold underline" @click="refresh">Réessayer</button>
+        </div>
+
+        <p v-else-if="account.pagination.total === 0" class="text-sm text-gray-500 py-3">
           Aucune transaction sur les {{ account.period.days }} derniers jours.
         </p>
 
-        <ul v-else class="divide-y divide-gray-100">
-          <li v-for="tx in account.transactions" :key="tx.receipt" class="py-2.5">
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold text-gray-900">{{ typeLabel(tx.type) }}</p>
-                <p class="text-xs text-gray-500 line-clamp-2 break-words" :title="tx.description">{{ tx.description }}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(tx.completed_at) }} · Réf. {{ tx.receipt }}</p>
+        <template v-else>
+          <ul class="divide-y divide-gray-100 transition-opacity" :class="loading ? 'opacity-50' : ''" data-testid="transactions">
+            <li v-for="tx in account.transactions" :key="tx.receipt" class="py-2.5">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-gray-900">{{ typeLabel(tx.type) }}</p>
+                  <p class="text-xs text-gray-500 line-clamp-2 break-words" :title="tx.description">{{ tx.description }}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{{ formatDateTime(tx.completed_at) }} · Réf. {{ tx.receipt }}</p>
+                </div>
+                <p class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ formatAmount(tx.amount) }}</p>
               </div>
-              <p class="text-sm font-bold text-gray-900 whitespace-nowrap">{{ formatAmount(tx.amount) }}</p>
-            </div>
-          </li>
-        </ul>
+            </li>
+          </ul>
 
-        <p v-if="account.transactions_total > account.transactions.length" class="text-xs text-gray-500 mt-2">
-          {{ account.transactions.length }} plus récentes affichées sur {{ account.transactions_total }}.
-        </p>
+          <!-- Pagination : 10 transactions par page -->
+          <nav class="flex items-center justify-between gap-2 mt-3" aria-label="Pagination de l'historique" data-testid="pagination">
+            <p class="text-xs text-gray-500">
+              {{ account.pagination.from }}–{{ account.pagination.to }} sur {{ account.pagination.total }}<span v-if="account.pagination.truncated">+</span>
+            </p>
+            <div class="flex items-center gap-1.5">
+              <button type="button" @click="goToPage(page - 1)" :disabled="loading || page <= 1"
+                      class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-moov-orange hover:text-moov-orange disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Page précédente">‹ Précédent</button>
+              <span class="text-xs text-gray-600 px-1">Page {{ account.pagination.page }} / {{ account.pagination.last_page }}</span>
+              <button type="button" @click="goToPage(page + 1)" :disabled="loading || page >= account.pagination.last_page"
+                      class="px-2.5 py-1 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-moov-orange hover:text-moov-orange disabled:opacity-40 disabled:cursor-not-allowed"
+                      aria-label="Page suivante">Suivant ›</button>
+            </div>
+          </nav>
+          <p v-if="account.pagination.truncated" class="text-xs text-gray-500 mt-1">
+            Compte très actif : seules les {{ account.pagination.total }} transactions les plus récentes sont conservées.
+          </p>
+        </template>
       </div>
 
       <p class="text-xs text-gray-400 mt-4">
@@ -92,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 
 const props = defineProps({
@@ -109,6 +146,7 @@ const account = ref(null);
 const error = ref(null);
 const loading = ref(false);
 const days = ref(7);
+const page = ref(1);
 let requestId = 0;
 
 const TYPE_LABELS = {
@@ -118,6 +156,28 @@ const TYPE_LABELS = {
   GIVE: 'Transfert reçu (Give)',
 };
 const typeLabel = (type) => TYPE_LABELS[type] || type || 'Transaction';
+
+const LEVELS = {
+  active: { label: 'Actif', box: 'bg-green-50 border-green-200', badge: 'bg-green-100 text-green-700' },
+  low: { label: 'Peu actif', box: 'bg-amber-50 border-amber-200', badge: 'bg-amber-100 text-amber-800' },
+  inactive: { label: 'Inactif', box: 'bg-red-50 border-red-200', badge: 'bg-red-100 text-red-700' },
+};
+const levelStyle = computed(() => LEVELS[account.value?.activity?.level] || LEVELS.inactive);
+
+const levelHint = computed(() => {
+  const t = account.value?.activity?.thresholds;
+  return t
+    ? `Actif : transaction client dans les ${t.active} derniers jours · Peu actif : jusqu'à ${t.low} jours · Inactif : au-delà. Les approvisionnements (Give) et commissions ne comptent pas.`
+    : '';
+});
+
+const lastActivityText = computed(() => {
+  const a = account.value?.activity;
+  if (!a) return '';
+  if (!a.last_transaction_at) return `Aucune transaction client sur les ${a.window_days} derniers jours`;
+  const when = a.days_since_last === 0 ? "aujourd'hui" : a.days_since_last === 1 ? 'hier' : `il y a ${a.days_since_last} jours`;
+  return `Dernière transaction client : ${when} (${formatDateTime(a.last_transaction_at)})`;
+});
 
 const formatAmount = (value) => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 2 }).format(value ?? 0);
 
@@ -133,15 +193,16 @@ const formatTime = (iso) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 };
 
-const load = async (refresh = false) => {
+const load = async ({ refresh = false } = {}) => {
   const current = ++requestId;
   loading.value = true;
   if (refresh) error.value = null;
 
   try {
-    const data = await PointOfSaleService.getAccount(props.pdvId, { days: days.value, refresh });
+    const data = await PointOfSaleService.getAccount(props.pdvId, { days: days.value, page: page.value, refresh });
     if (current !== requestId) return; // une requête plus récente a pris le relais
     account.value = data;
+    page.value = data.pagination?.page ?? 1; // le serveur ramène une page hors limites à la dernière page
     error.value = null;
   } catch (err) {
     if (current !== requestId) return;
@@ -156,15 +217,30 @@ const load = async (refresh = false) => {
   }
 };
 
+const refresh = () => {
+  page.value = 1;
+  load({ refresh: true });
+};
+
+const goToPage = (target) => {
+  const last = account.value?.pagination?.last_page ?? 1;
+  const next = Math.max(1, Math.min(last, target));
+  if (next === page.value) return;
+  page.value = next;
+  load();
+};
+
 const changePeriod = (value) => {
   if (days.value === value) return;
   days.value = value;
+  page.value = 1;
   load();
 };
 
 onMounted(load);
 watch(() => [props.pdvId, props.shortcode], () => {
   account.value = null;
+  page.value = 1;
   load();
 });
 </script>

@@ -195,19 +195,104 @@ class PdvAccountTest extends TestCase
         $this->assertSame(0, $none['transactions_total']);
     }
 
-    public function test_transactions_are_limited_to_the_most_recent(): void
+    public function test_history_is_paginated_ten_per_page_from_the_cached_list(): void
     {
         $items = [];
-        for ($i = 1; $i <= 30; $i++) {
+        for ($i = 1; $i <= 25; $i++) {
             $items[] = $this->item("R{$i}", 'CashIn', '100.00', sprintf('202610%02d120000', $i), 'Cash In');
         }
         $this->fakeHuawei(null, $this->txnXml($items));
+        $pdv = $this->pdvWithShortcode('8932019');
+        Sanctum::actingAs($this->user('admin'));
 
-        $account = app(HuaweiCpsService::class)->fetchAccount('8932019', 31, 20);
+        $first = $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=31")->assertOk();
+        $first->assertJsonCount(10, 'transactions')
+            ->assertJsonPath('transactions.0.receipt', 'R25')
+            ->assertJsonPath('transactions.9.receipt', 'R16')
+            ->assertJsonPath('pagination', ['page' => 1, 'per_page' => 10, 'total' => 25, 'last_page' => 3, 'from' => 1, 'to' => 10, 'truncated' => false]);
+        Http::assertSentCount(2);
 
-        $this->assertCount(20, $account['transactions']);
-        $this->assertSame('R30', $account['transactions'][0]['receipt']);
-        $this->assertSame(30, $account['transactions_total']);
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=31&page=3")
+            ->assertOk()
+            ->assertJsonCount(5, 'transactions')
+            ->assertJsonPath('transactions.0.receipt', 'R5')
+            ->assertJsonPath('pagination.from', 21)
+            ->assertJsonPath('pagination.to', 25)
+            ->assertJsonPath('cached', true);
+        Http::assertSentCount(2); // changer de page n'appelle pas Huawei
+
+        // Page hors limites : ramenée à la dernière page ; page invalide : première page
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=31&page=99")->assertJsonPath('pagination.page', 3);
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=31&page=-4")->assertJsonPath('pagination.page', 1);
+    }
+
+    public function test_empty_history_still_has_a_valid_pagination(): void
+    {
+        $this->fakeHuawei(null, $this->ok('<res:SyncQueryOrgTxnResult><res:TransactionListData><res:NbrOfReturned>0</res:NbrOfReturned><res:NbrOfTotal>0</res:NbrOfTotal></res:TransactionListData></res:SyncQueryOrgTxnResult>'));
+        $pdv = $this->pdvWithShortcode('8932019');
+        Sanctum::actingAs($this->user('admin'));
+
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account")
+            ->assertOk()
+            ->assertJsonPath('pagination', ['page' => 1, 'per_page' => 10, 'total' => 0, 'last_page' => 1, 'from' => 0, 'to' => 0, 'truncated' => false])
+            ->assertJsonPath('activity.level', 'inactive')
+            ->assertJsonPath('activity.last_transaction_at', null);
+    }
+
+    public function test_activity_level_follows_the_last_customer_transaction(): void
+    {
+        Carbon::setTestNow('2026-10-07 12:00:00');
+        $tx = fn (string $type, string $at, float $amount = 1000) => ['receipt' => $type . $at, 'type' => $type, 'status' => 'Completed',
+            'amount' => $amount, 'currency' => 'XOF', 'completed_at' => $at, 'description' => ''];
+
+        // Dépôt client hier : actif ; l'approvisionnement (GIVE) et les commissions (COMT) plus récents ne comptent pas
+        $active = HuaweiCpsService::summarizeActivity([
+            $tx('COMT', '2026-10-07 09:00:00', 50), $tx('GIVE', '2026-10-07 08:00:00', 80000),
+            $tx('CashIn', '2026-10-06 10:00:00', 600), $tx('CashOut', '2026-10-05 10:00:00', 400),
+        ], 7);
+        $this->assertSame('active', $active['level']);
+        $this->assertSame('2026-10-06 10:00:00', $active['last_transaction_at']);
+        $this->assertSame(1, $active['days_since_last']);
+        $this->assertSame(2, $active['customer_transactions']);
+        $this->assertSame(1000.0, $active['customer_volume']);
+        $this->assertSame(['count' => 1, 'amount' => 600.0], $active['cash_in']);
+        $this->assertSame(['count' => 1, 'amount' => 400.0], $active['cash_out']);
+
+        $this->assertSame('low', HuaweiCpsService::summarizeActivity([$tx('CashIn', '2026-10-03 11:00:00')], 7)['level']);   // 4 jours
+        $this->assertSame('inactive', HuaweiCpsService::summarizeActivity([$tx('CashIn', '2026-09-20 11:00:00')], 30)['level']); // 17 jours
+        $this->assertSame('inactive', HuaweiCpsService::summarizeActivity([$tx('GIVE', '2026-10-07 08:00:00')], 7)['level']);    // aucune transaction client
+        $this->assertNull(HuaweiCpsService::summarizeActivity([], 7)['days_since_last']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_balance_is_kept_when_only_the_history_fails(): void
+    {
+        Http::swap(new \Illuminate\Http\Client\Factory());
+        Http::fake(function (HttpRequest $request) {
+            if (str_contains($request->body(), 'QueryOrganizationBalance')) {
+                return Http::response($this->balanceXml(), 200);
+            }
+            throw new ConnectionException('cURL error 28: timed out');
+        });
+        $pdv = $this->pdvWithShortcode('8932019');
+        Sanctum::actingAs($this->user('admin'));
+
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=30")
+            ->assertOk()
+            ->assertJsonPath('balance.available', 343349)
+            ->assertJsonPath('partial', true)
+            ->assertJsonPath('activity', null)
+            ->assertJsonCount(0, 'transactions')
+            ->assertJsonPath('pagination.total', 0);
+        $this->assertStringContainsString('7 jours', $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=30")->json('transactions_error'));
+
+        // Résultat partiel jamais mis en cache : dès que la passerelle répond, l'historique revient
+        $this->fakeHuawei();
+        $this->getJson("/api/point-of-sales/{$pdv->id}/account?days=30")
+            ->assertOk()
+            ->assertJsonPath('partial', false)
+            ->assertJsonPath('pagination.total', 3);
     }
 
     public function test_masking_and_timestamp_helpers(): void
@@ -268,6 +353,7 @@ class PdvAccountTest extends TestCase
 
     public function test_admin_gets_account_for_pdv_with_shortcode(): void
     {
+        Carbon::setTestNow('2026-10-20 10:00:00'); // dernière transaction simulée : 1er octobre => 19 jours
         $this->fakeHuawei();
         $pdv = $this->pdvWithShortcode('8932019');
         Sanctum::actingAs($this->user('admin'));
@@ -279,7 +365,11 @@ class PdvAccountTest extends TestCase
             ->assertJsonPath('balance.available', 343349)
             ->assertJsonPath('cached', false)
             ->assertJsonCount(3, 'transactions')
+            ->assertJsonPath('pagination.total', 3)
+            ->assertJsonPath('activity.level', 'inactive') // les transactions simulées datent d'octobre 2026, pas d'aujourd'hui
             ->assertJsonMissingPath('transactions.0.initiator');
+
+        Carbon::setTestNow();
     }
 
     public function test_response_is_cached_and_refresh_bypasses_the_cache(): void
