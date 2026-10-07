@@ -33,6 +33,7 @@ use App\Http\Controllers\RentabilityController;
 use App\Http\Controllers\DealerAnalyticsController;
 use App\Http\Controllers\OutlookOAuthController;
 use App\Http\Controllers\OutlookImportController;
+use App\Http\Controllers\PdvAccountController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -119,6 +120,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/export-all', [PointOfSaleController::class, 'exportAll']); // Endpoint dédié pour export
         Route::get('/for-map', [PointOfSaleController::class, 'forMap']);
         Route::get('/gps-stats', [PointOfSaleController::class, 'getGpsStats']);
+        Route::get('/{id}/account', [PdvAccountController::class, 'show'])->whereNumber('id')->middleware('throttle:30,1'); // solde + transactions (Huawei)
         Route::get('/proximity-alerts', [PointOfSaleController::class, 'getProximityAlerts']);
         Route::post('/', [PointOfSaleController::class, 'store']);
         Route::get('/{id}', [PointOfSaleController::class, 'show']);

@@ -475,6 +475,13 @@
               </div>
             </div>
 
+            <!-- Compte Flooz (solde + transactions en direct), si le PDV a un shortcode -->
+            <PdvAccountCard
+              v-if="canSeeAccount"
+              :pdv-id="pos.id"
+              :shortcode="String(pos.shortcode).trim()"
+            />
+
             <!-- Rejection Reason -->
             <div v-if="pos.status === 'rejected' && pos.rejection_reason" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6 border-2 border-red-300 bg-red-50/50">
               <h3 class="text-lg font-bold text-red-800 mb-3 flex items-center gap-2">
@@ -761,6 +768,7 @@ import PdvStatsModal from '../components/PdvStatsModal.vue';
 import RejectionModal from '../components/RejectionModal.vue';
 import TaskList from '../components/TaskList.vue';
 import NotesSection from '../components/NotesSection.vue';
+import PdvAccountCard from '../components/PdvAccountCard.vue';
 import PointOfSaleService from '../services/PointOfSaleService';
 import SystemSettingService from '../services/systemSettingService';
 import { validateRegionCoordinates } from '../data/regionBoundaries';
@@ -863,6 +871,12 @@ const hasTaskInRevision = computed(() => {
 // Les admins peuvent modifier un PDV quel que soit son état.
 const canEdit = computed(() => {
   return !!authStore.isAdmin;
+});
+
+// Solde et transactions du compte Flooz : administrateurs et propriétaires de dealer, PDV avec shortcode valide
+const canSeeAccount = computed(() => {
+  if (!authStore.isAdmin && !authStore.isDealerOwner) return false;
+  return /^\d{3,15}$/.test(String(pos.value?.shortcode ?? '').trim());
 });
 
 const getStatusClass = (status) => {

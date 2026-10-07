@@ -77,4 +77,22 @@ return [
         'import_timezone' => env('OUTLOOK_IMPORT_TIMEZONE', 'UTC'),
     ],
 
+    // API SOAP synchrone Huawei CPS (solde et transactions du compte d'un PDV, interrogés par shortcode).
+    // Les identifiants viennent uniquement du .env (jamais dans le code : le dépôt est public).
+    'huawei' => [
+        'url' => env('HUAWEI_API_URL', 'https://10.81.19.203:30003/payment/services/SYNCAPIRequestMgrService'),
+        'third_party_id' => env('HUAWEI_THIRD_PARTY_ID'),
+        'identifier' => env('HUAWEI_IDENTIFIER'),
+        'caller_password' => env('HUAWEI_CALLER_PASSWORD'),
+        'security_credential' => env('HUAWEI_SECURITY_CRED'),
+        // Obligatoire dans l'en-tête SOAP ; sans effet pour les appels synchrones utilisés ici
+        'result_url' => env('HUAWEI_RESULT_URL', 'https://10.81.27.150:8088/mockAPIResultMgrBinding'),
+        // Nom de domaine couvert par le certificat wildcard (*.moov-africa.tg), résolu vers l'IP de 'url'
+        'tls_host' => env('HUAWEI_TLS_HOST'),
+        'verify_ssl' => (bool) env('HUAWEI_VERIFY_SSL', true),
+        'timeout' => (int) env('HUAWEI_TIMEOUT', 20),
+        // Durée de mise en cache d'une réponse (secondes), pour ne pas solliciter l'API à chaque affichage
+        'cache_ttl' => (int) env('HUAWEI_CACHE_TTL', 60),
+    ],
+
 ];

@@ -171,6 +171,18 @@ export default {
     return response.data;
   },
 
+  /**
+   * Solde et dernières transactions du compte Flooz du PDV (API Huawei, via son shortcode).
+   * Toujours en direct : pas de cache hors-ligne pour des données financières.
+   */
+  async getAccount(id, { days = 7, refresh = false } = {}) {
+    const response = await api.get(`/point-of-sales/${id}/account`, {
+      params: { days, refresh: refresh ? 1 : 0 },
+      timeout: 45000,
+    });
+    return response.data;
+  },
+
   async create(data) {
     const response = await api.post('/point-of-sales', data);
     return response.data;
