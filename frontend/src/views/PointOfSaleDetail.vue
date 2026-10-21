@@ -409,7 +409,7 @@
           </div>
 
           <!-- Right Column -->
-          <div class="space-y-8">
+          <div class="contents lg:block lg:space-y-8">
             <!-- Quick Info Card -->
             <div class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6">
               <h3 class="text-lg font-bold text-gray-900 mb-4">Informations rapides</h3>
@@ -478,12 +478,13 @@
             <!-- Compte Flooz (solde + transactions en direct), si le PDV a un shortcode -->
             <PdvAccountCard
               v-if="canSeeAccount"
+              class="order-first lg:order-none"
               :pdv-id="pos.id"
               :shortcode="String(pos.shortcode).trim()"
             />
 
             <!-- Pas de shortcode : on explique pourquoi le compte Flooz n'est pas affiché -->
-            <div v-else-if="isRoleAllowedForAccount" class="bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6" data-testid="account-unavailable">
+            <div v-else-if="isRoleAllowedForAccount" class="order-first lg:order-none bg-white/90 backdrop-blur-md border border-white/50 shadow-2xl p-6" data-testid="account-unavailable">
               <h3 class="text-lg font-bold text-gray-900 mb-1">Compte Flooz</h3>
               <p class="text-sm text-gray-600">
                 Le solde et l'historique des transactions ne sont pas disponibles : <strong>aucun shortcode valide n'est enregistré pour ce PDV</strong>.
