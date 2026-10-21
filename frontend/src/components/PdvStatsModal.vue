@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <Transition name="modal">
-      <div v-if="isOpen" class="fixed inset-0 z-50 overflow-y-auto" @click.self="close">
+      <div v-if="isOpen" class="fixed inset-0 overflow-y-auto" :class="overlayClass" @click.self="close">
         <div class="flex min-h-screen items-center justify-center p-4">
           <!-- Backdrop -->
           <div class="fixed inset-0 bg-black/50 backdrop-blur-sm" @click="close"></div>
@@ -429,6 +429,11 @@ const props = defineProps({
   pdvId: {
     type: Number,
     required: true
+  },
+  // Classe de z-index (à surcharger quand la modale s'ouvre par-dessus une autre modale)
+  overlayClass: {
+    type: String,
+    default: 'z-50'
   }
 });
 

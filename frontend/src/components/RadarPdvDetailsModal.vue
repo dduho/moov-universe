@@ -37,6 +37,29 @@
           </div>
 
           <div v-else class="space-y-6">
+            <!-- Solde et dernières transactions en direct (si le PDV a un shortcode) -->
+            <PdvAccountCard
+              v-if="canSeeAccount"
+              :key="pointOfSale.id"
+              :pdv-id="pointOfSale.id"
+              :shortcode="String(pointOfSale.shortcode).trim()"
+              class="border border-gray-200 shadow-none!"
+            />
+            <p v-else-if="isRoleAllowedForAccount" class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600" data-testid="account-unavailable">
+              <strong class="text-gray-900">Compte Flooz indisponible :</strong> aucun shortcode valide (7 chiffres) n'est enregistré pour ce PDV. Utilisez « Modifier » pour le renseigner.
+            </p>
+
+            <button
+              v-if="pointOfSale?.id"
+              type="button"
+              class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2.5 font-bold text-white shadow transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+              data-testid="open-stats"
+              @click="showStats = true"
+            >
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+              Statistiques transactionnelles
+            </button>
+
             <DetailSection title="Informations Flooz" :items="floozDetails" />
             <DetailSection title="Propriétaire" :items="ownerDetails" />
             <DetailSection title="Localisation" :items="locationDetails" />
@@ -60,11 +83,23 @@
         </footer>
       </section>
     </div>
+
+    <!-- Statistiques du PDV (même modale que sur la fiche), au-dessus de cette fenêtre -->
+    <PdvStatsModal
+      v-if="pointOfSale?.id"
+      :is-open="showStats"
+      :pdv-id="Number(pointOfSale.id)"
+      overlay-class="z-[2100]"
+      @close="showStats = false"
+    />
   </Teleport>
 </template>
 
 <script setup>
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import PdvAccountCard from './PdvAccountCard.vue';
+import PdvStatsModal from './PdvStatsModal.vue';
+import { useAuthStore } from '../stores/auth';
 
 const DetailSection = (props) => h('section', {}, [
   h('h3', { class: 'mb-3 text-base font-bold text-gray-900 sm:text-lg' }, props.title),
@@ -84,6 +119,12 @@ const props = defineProps({
 });
 const emit = defineEmits(['close', 'retry']);
 const closeButton = ref(null);
+const showStats = ref(false);
+const authStore = useAuthStore();
+
+// Solde/transactions : administrateurs et propriétaires de dealer, PDV avec shortcode valide
+const isRoleAllowedForAccount = computed(() => !!(authStore.isAdmin || authStore.isDealerOwner));
+const canSeeAccount = computed(() => isRoleAllowedForAccount.value && /^\d{3,15}$/.test(String(props.pointOfSale?.shortcode ?? '').trim()));
 const previousOverflow = document.body.style.overflow;
 
 const value = (...keys) => keys.map(key => props.pointOfSale?.[key]).find(item => item !== null && item !== undefined && item !== '') || 'N/A';
