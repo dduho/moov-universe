@@ -80,4 +80,35 @@ class PdvShortcodeImportCommandTest extends TestCase
         }
         $this->assertStringNotContainsString('22899979614', $rejected);
     }
+
+    public function test_codes_moved_between_pdv_by_the_file_are_applied_as_a_whole(): void
+    {
+        $admin = $this->user('admin');
+        $org = $this->organization();
+        $a = $this->pdv($org, $admin, ['numero_flooz' => '22890000001', 'shortcode' => '1111111']);
+        $b = $this->pdv($org, $admin, ['numero_flooz' => '22890000002', 'shortcode' => '2222222']);
+        $c = $this->pdv($org, $admin, ['numero_flooz' => '22890000003', 'shortcode' => '3333333']);
+        $d = $this->pdv($org, $admin, ['numero_flooz' => '22890000004', 'shortcode' => null]);
+        // E veut le code de F, mais F n'est pas dans le fichier : refusé
+        $e = $this->pdv($org, $admin, ['numero_flooz' => '22890000005', 'shortcode' => null]);
+        $f = $this->pdv($org, $admin, ['numero_flooz' => '22890000006', 'shortcode' => '6666666']);
+
+        $file = $this->file(implode("\n", [
+            "Numéro Flooz\tShortcode",
+            "22890000001\t2222222", // échange A <-> B
+            "22890000002\t1111111",
+            "22890000004\t3333333", // D prend le code de C, C change
+            "22890000003\t4444444",
+            "22890000005\t6666666",
+        ]));
+
+        $this->artisan('pdv:import-shortcodes', ['file' => $file, '--apply' => true, '--report' => sys_get_temp_dir() . '/r_' . uniqid() . '.csv'])->assertSuccessful();
+
+        $this->assertSame('2222222', $a->fresh()->shortcode);
+        $this->assertSame('1111111', $b->fresh()->shortcode);
+        $this->assertSame('3333333', $d->fresh()->shortcode);
+        $this->assertSame('4444444', $c->fresh()->shortcode);
+        $this->assertNull($e->fresh()->shortcode);
+        $this->assertSame('6666666', $f->fresh()->shortcode);
+    }
 }

@@ -85,15 +85,16 @@ class ImportPdvShortcodes extends Command
 
         // Rapprochement avec la base
         $stats = ['to_set' => 0, 'to_change' => 0, 'unchanged' => 0];
-        $updates = []; // id => shortcode
-        $changes = [];
+        $pending = [];  // id du PDV => [ligne, numéro Flooz, nouveau shortcode, ancien shortcode]
+        $holders = [];  // shortcode => [[id, numéro Flooz], ...] : PDV qui le portent aujourd'hui en base
 
         foreach (array_chunk(array_keys($candidates), 1000) as $chunk) {
             $pdvs = DB::table('point_of_sales')->whereIn('numero_flooz', $chunk)->get(['id', 'numero_flooz', 'shortcode', 'is_locked'])->keyBy('numero_flooz');
 
-            // Shortcodes déjà portés par un autre PDV de la base
             $codes = array_map(fn ($f) => $candidates[$f][1], $chunk);
-            $taken = DB::table('point_of_sales')->whereIn('shortcode', $codes)->get(['id', 'numero_flooz', 'shortcode'])->groupBy('shortcode');
+            foreach (DB::table('point_of_sales')->whereIn('shortcode', $codes)->get(['id', 'numero_flooz', 'shortcode']) as $holder) {
+                $holders[$holder->shortcode][] = [$holder->id, $holder->numero_flooz];
+            }
 
             foreach ($chunk as $flooz) {
                 [$line, $code] = $candidates[$flooz];
@@ -101,29 +102,45 @@ class ImportPdvShortcodes extends Command
 
                 if (!$pdv) {
                     $rejected[] = [$line, $flooz, $code, 'aucun PDV avec ce numéro Flooz'];
-                    continue;
-                }
-                if ($pdv->is_locked) {
+                } elseif ($pdv->is_locked) {
                     $rejected[] = [$line, $flooz, $code, 'PDV verrouillé par un administrateur'];
-                    continue;
-                }
-                if ($pdv->shortcode === $code) {
+                } elseif ($pdv->shortcode === $code) {
                     $stats['unchanged']++;
-                    continue;
-                }
-                $other = $this->isPhoneCode($code) ? null : ($taken->get($code) ?? collect())->first(fn ($p) => $p->id !== $pdv->id);
-                if ($other) {
-                    $rejected[] = [$line, $flooz, $code, "shortcode déjà porté par un autre PDV de la base (numéro {$other->numero_flooz})"];
-                    continue;
-                }
-
-                $updates[$pdv->id] = $code;
-                if ($pdv->shortcode === null || $pdv->shortcode === '' || strtoupper($pdv->shortcode) === 'N/A') {
-                    $stats['to_set']++;
                 } else {
-                    $stats['to_change']++;
-                    $changes[] = [$line, $flooz, $pdv->shortcode, $code];
+                    $pending[$pdv->id] = [$line, $flooz, $code, $pdv->shortcode];
                 }
+            }
+        }
+
+        // Un shortcode ne peut aller qu'à un PDV : il est refusé s'il reste porté par un autre PDV après mise à jour.
+        // Un PDV qui reçoit lui-même un nouveau shortcode dans ce fichier libère l'ancien (échanges et permutations
+        // inclus) ; on répète tant qu'un refus en entraîne un autre.
+        do {
+            $dropped = false;
+            foreach ($pending as $id => [$line, $flooz, $code]) {
+                if ($this->isPhoneCode($code)) {
+                    continue; // un numéro de téléphone peut servir à plusieurs PDV
+                }
+                foreach ($holders[$code] ?? [] as [$holderId, $holderFlooz]) {
+                    if ($holderId !== $id && !isset($pending[$holderId])) {
+                        $rejected[] = [$line, $flooz, $code, "shortcode déjà porté par un autre PDV de la base (numéro {$holderFlooz})"];
+                        unset($pending[$id]);
+                        $dropped = true;
+                        break;
+                    }
+                }
+            }
+        } while ($dropped);
+
+        $updates = [];
+        $changes = [];
+        foreach ($pending as $id => [$line, $flooz, $code, $old]) {
+            $updates[$id] = $code;
+            if ($old === null || $old === '' || strtoupper($old) === 'N/A') {
+                $stats['to_set']++;
+            } else {
+                $stats['to_change']++;
+                $changes[] = [$line, $flooz, $old, $code];
             }
         }
 
