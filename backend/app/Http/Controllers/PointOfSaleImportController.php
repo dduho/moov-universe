@@ -366,13 +366,16 @@ class PointOfSaleImportController extends Controller
             'ville' => ['ville', 'city'],
             'quartier' => ['quartier', 'quarter'],
             'canton' => ['canton'],
+            'numero' => ['n°', 'n', 'no', 'num', 'numero ordre', 'numero d ordre'],
             'dealer_name' => ['dealer_name', 'dealer name', 'dealer', 'nom_dealer', 'nom du dealer'],
             'latitude' => ['latitude', 'lat'],
             'longitude' => ['longitude', 'long', 'lng'],
             // Informations gérant
             'firstname' => ['firstname', 'firstname prenom', 'prenom', 'prénom'],
             'lastname' => ['lastname', 'lastname nom', 'nom', 'nom de famille'],
-            'gender' => ['gender', 'gender sexe', 'sexe', 'sexe du gerant', 'sexe_gerant', 'sexe gerant'],
+            'gender' => ['gender', 'gender sexe'],
+            // Colonne « SEXE » (sexe du gérant), distincte de « GENDER » quand les deux existent
+            'sexe_gerant' => ['sexe', 'sexe du gerant', 'sexe_gerant', 'sexe gerant'],
             'date_of_birth' => [
                 'date_of_birth', 
                 'date of birth', 
@@ -399,16 +402,20 @@ class PointOfSaleImportController extends Controller
             'nationality' => ['nationality', 'nationality nationalite', 'nationalite', 'nationalité'],
             'profession' => ['profession', 'profession profession'],
             'type_activite' => ['type_activite', 'type d activite', "type d'activite", 'type activite', 'activite'],
+            'localisation' => ['localisation', 'description localisation', 'localisation du pdv', 'adresse'],
             // Fiscalité
             'nif' => ['nif'],
             'regime_fiscal' => ['regime_fiscal', 'regime fiscal'],
+            'nif_particulier' => ['nif_particulier', 'nif particulier', 'nif du particulier'],
             // Contacts
-            'phone' => ['phone', 'telephone', 'téléphone', 'numero proprietaire du pdv', 'contact'],
+            'phone' => ['phone', 'telephone', 'téléphone', 'numero proprietaire du pdv', 'numero proprietaire', 'numero du proprietaire', 'proprietaire', 'contact'],
             'autre_contact' => ['autre_contact', 'autre contact', 'autre contact du pdv'],
             // Visibilité
             'support_visibilite' => ['support_visibilite', 'support de visibilite', 'support visibilite', 'support'],
             'etat_support' => ['etat_support', 'etat du support', 'etat du support de visibilite', 'etat support', 'etat'],
             'numero_cagnt' => ['numero_cagnt', 'numero cagnt', 'cagnt'],
+            // Suivi commercial
+            'commercial' => ['commercial', 'nom du commercial', 'commercial du pdv'],
         ];
         
         foreach ($headers as $index => $header) {
@@ -463,11 +470,11 @@ class PointOfSaleImportController extends Controller
         $quartier = $this->normalizeCommune($quartier) ?: 'Non spécifié';
         
         // Récupérer et normaliser le sexe
-        $gender = $this->getColumnValue($row, $headerMap, 'gender');
-        $gender = $this->normalizeGender($gender);
-        
-        $sexe_gerant = $this->getColumnValue($row, $headerMap, 'sexe_gerant');
-        $sexe_gerant = $this->normalizeGender($sexe_gerant);
+        // Deux colonnes possibles (GENDER et SEXE) : chacune alimente son champ, et à défaut on reprend l'autre
+        $genderRaw = $this->normalizeGender($this->getColumnValue($row, $headerMap, 'gender'));
+        $sexeRaw = $this->normalizeGender($this->getColumnValue($row, $headerMap, 'sexe_gerant'));
+        $gender = $genderRaw ?? $sexeRaw;
+        $sexe_gerant = $sexeRaw ?? $genderRaw;
 
         // Récupérer prénom/nom gérant avec valeur par défaut si manquant
         $firstname = $this->getColumnValue($row, $headerMap, 'firstname') ?: 'N/A';
@@ -533,6 +540,7 @@ class PointOfSaleImportController extends Controller
 
         return [
             'organization_id' => $organizationId,
+            'numero' => $this->normalizeSequenceNumber($this->getColumnValue($row, $headerMap, 'numero')),
             'nom_point' => $nom_point,
             'numero_flooz' => $numero_flooz,
             'shortcode' => $this->getColumnValue($row, $headerMap, 'shortcode'),
@@ -543,6 +551,7 @@ class PointOfSaleImportController extends Controller
             'ville' => $ville,
             'quartier' => $quartier,
             'canton' => $canton,
+            'localisation' => $this->getColumnValue($row, $headerMap, 'localisation'),
             'dealer_name' => $dealer_name,
             'latitude' => $latitude,
             'longitude' => $longitude,
@@ -562,6 +571,7 @@ class PointOfSaleImportController extends Controller
             // Fiscalité
             'nif' => $nif,
             'regime_fiscal' => $regime_fiscal,
+            'nif_particulier' => $this->normalizeNIF($this->getColumnValue($row, $headerMap, 'nif_particulier')),
             // Contacts
             'numero_proprietaire' => $numero_proprietaire,
             'autre_contact' => $autre_contact,
@@ -569,6 +579,7 @@ class PointOfSaleImportController extends Controller
             'support_visibilite' => $support_visibilite,
             'etat_support' => $etat_support,
             'numero_cagnt' => $numero_cagnt,
+            'commercial' => $this->getColumnValue($row, $headerMap, 'commercial'),
             // Status
             'status' => 'validated',
             'created_by' => $user->id,
@@ -592,6 +603,14 @@ class PointOfSaleImportController extends Controller
         $commune = preg_replace('/ (\d+)$/', '_$1', $commune);
         
         return $commune;
+    }
+
+    /**
+     * N° séquentiel de la ligne dans le fichier (colonne « N° ») : entier ou null
+     */
+    private function normalizeSequenceNumber($value)
+    {
+        return ($value !== null && ctype_digit((string) $value) && strlen((string) $value) < 10) ? (int) $value : null;
     }
 
     /**
@@ -845,9 +864,10 @@ class PointOfSaleImportController extends Controller
             foreach ($formats as $format) {
                 $dateObj = \DateTime::createFromFormat($format, $date);
                 if ($dateObj !== false) {
-                    // Vérifier que la date est valide (pas de faux positifs)
+                    // Vérifier que la date est valide (pas de faux positifs). Depuis PHP 8.2,
+                    // getLastErrors() renvoie false quand il n'y a ni erreur ni avertissement.
                     $errors = \DateTime::getLastErrors();
-                    if ($errors && $errors['warning_count'] === 0 && $errors['error_count'] === 0) {
+                    if ($errors === false || ($errors['warning_count'] === 0 && $errors['error_count'] === 0)) {
                         return $dateObj->format('Y-m-d');
                     }
                 }

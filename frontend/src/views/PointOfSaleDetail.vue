@@ -396,6 +396,14 @@
                   <p class="text-sm font-semibold text-gray-500 mb-1">Régime fiscal</p>
                   <p class="text-lg font-bold text-gray-900">{{ pos.regime_fiscal || pos.tax_regime || 'N/A' }}</p>
                 </div>
+                <div v-if="pos.nif_particulier">
+                  <p class="text-sm font-semibold text-gray-500 mb-1">NIF particulier</p>
+                  <p class="text-lg font-bold text-gray-900">{{ pos.nif_particulier }}</p>
+                </div>
+                <div v-if="pos.commercial">
+                  <p class="text-sm font-semibold text-gray-500 mb-1">Commercial</p>
+                  <p class="text-lg font-bold text-gray-900">{{ pos.commercial }}</p>
+                </div>
                 <div>
                   <p class="text-sm font-semibold text-gray-500 mb-1">Support de visibilité</p>
                   <p class="text-lg font-bold text-gray-900">{{ formatVisibilitySupport(pos.support_visibilite || pos.visibility_support) || 'N/A' }}</p>

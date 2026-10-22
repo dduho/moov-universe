@@ -152,7 +152,8 @@ const locationDetails = computed(() => [
 ]);
 const contactDetails = computed(() => [
   { label: 'Téléphone principal', value: phone('numero_proprietaire', 'owner_phone') }, { label: 'Contact alternatif', value: phone('autre_contact', 'alternative_contact') },
-  { label: 'NIF', value: value('nif') }, { label: 'Numéro CAGNT', value: phone('numero_cagnt', 'cagnt_number') },
+  { label: 'NIF', value: value('nif') }, { label: 'NIF particulier', value: value('nif_particulier') },
+  { label: 'Commercial', value: value('commercial') }, { label: 'Numéro CAGNT', value: phone('numero_cagnt', 'cagnt_number') },
   { label: 'Régime fiscal', value: value('regime_fiscal', 'tax_regime') }, { label: 'Support de visibilité', value: value('support_visibilite', 'visibility_support') },
   { label: 'État du support', value: value('etat_support', 'support_state') },
 ]);

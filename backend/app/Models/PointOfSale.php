@@ -47,6 +47,8 @@ class PointOfSale extends Model
         'autre_contact',
         'nif',
         'regime_fiscal',
+        'nif_particulier',
+        'commercial',
         'support_visibilite',
         'etat_support',
         'numero_cagnt',
