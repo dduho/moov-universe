@@ -111,4 +111,33 @@ class PdvShortcodeImportCommandTest extends TestCase
         $this->assertNull($e->fresh()->shortcode);
         $this->assertSame('6666666', $f->fresh()->shortcode);
     }
+
+    public function test_blank_row_releases_its_code_only_with_the_release_blank_option(): void
+    {
+        $admin = $this->user('admin');
+        $org = $this->organization();
+        $holder = $this->pdv($org, $admin, ['numero_flooz' => '22891000001', 'shortcode' => '7777777']);
+        $claimant = $this->pdv($org, $admin, ['numero_flooz' => '22891000002', 'shortcode' => null]);
+        $locked = $this->pdv($org, $admin, ['numero_flooz' => '22891000003', 'shortcode' => '8888888', 'is_locked' => true]);
+        $claimant2 = $this->pdv($org, $admin, ['numero_flooz' => '22891000004', 'shortcode' => null]);
+
+        $file = $this->file(implode("\n", [
+            "Numéro Flooz\tShortcode",
+            "22891000001\t",            // vide dans le fichier
+            "22891000002\t7777777",
+            "22891000003\t",            // verrouillé : jamais vidé
+            "22891000004\t8888888",
+        ]));
+        $report = sys_get_temp_dir() . '/r_' . uniqid() . '.csv';
+
+        $this->artisan('pdv:import-shortcodes', ['file' => $file, '--apply' => true, '--report' => $report])->assertSuccessful();
+        $this->assertSame('7777777', $holder->fresh()->shortcode);
+        $this->assertNull($claimant->fresh()->shortcode);
+
+        $this->artisan('pdv:import-shortcodes', ['file' => $file, '--apply' => true, '--release-blank' => true, '--report' => $report])->assertSuccessful();
+        $this->assertNull($holder->fresh()->shortcode);
+        $this->assertSame('7777777', $claimant->fresh()->shortcode);
+        $this->assertSame('8888888', $locked->fresh()->shortcode);
+        $this->assertNull($claimant2->fresh()->shortcode);
+    }
 }

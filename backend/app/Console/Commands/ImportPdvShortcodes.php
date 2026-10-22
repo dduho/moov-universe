@@ -15,7 +15,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
  */
 class ImportPdvShortcodes extends Command
 {
-    protected $signature = 'pdv:import-shortcodes {file : Fichier .xlsx/.xls/.csv/.txt (Numéro Flooz ; Shortcode)} {--apply : Écrit réellement en base} {--report= : Chemin du rapport CSV des lignes écartées}';
+    protected $signature = 'pdv:import-shortcodes {file : Fichier .xlsx/.xls/.csv/.txt (Numéro Flooz ; Shortcode)} {--apply : Écrit réellement en base} {--release-blank : Un PDV dont le shortcode est vide dans le fichier perd son shortcode de la base quand le fichier l attribue à un autre PDV} {--report= : Chemin du rapport CSV des lignes écartées}';
 
     protected $description = 'Met à jour le shortcode des PDV depuis un fichier (Numéro Flooz, Shortcode) — simulation sans --apply';
 
@@ -31,6 +31,7 @@ class ImportPdvShortcodes extends Command
         $lines = $this->readRows($path);
         $rejected = [];   // [ligne, numéro, shortcode, raison]
         $candidates = []; // numéro Flooz => [ligne, shortcode]
+        $blank = [];      // numéros Flooz dont le shortcode est vide dans le fichier
 
         foreach ($lines as [$line, $rawFlooz, $rawCode]) {
             $flooz = preg_replace('/\D+/', '', (string) $rawFlooz);
@@ -42,6 +43,7 @@ class ImportPdvShortcodes extends Command
             }
             if ($code === '') {
                 $rejected[] = [$line, $flooz, '', 'shortcode vide'];
+                $blank[$flooz] = true;
                 continue;
             }
             if (!preg_match('/^\d+$/', $code)) {
@@ -92,8 +94,8 @@ class ImportPdvShortcodes extends Command
             $pdvs = DB::table('point_of_sales')->whereIn('numero_flooz', $chunk)->get(['id', 'numero_flooz', 'shortcode', 'is_locked'])->keyBy('numero_flooz');
 
             $codes = array_map(fn ($f) => $candidates[$f][1], $chunk);
-            foreach (DB::table('point_of_sales')->whereIn('shortcode', $codes)->get(['id', 'numero_flooz', 'shortcode']) as $holder) {
-                $holders[$holder->shortcode][] = [$holder->id, $holder->numero_flooz];
+            foreach (DB::table('point_of_sales')->whereIn('shortcode', $codes)->get(['id', 'numero_flooz', 'shortcode', 'is_locked']) as $holder) {
+                $holders[$holder->shortcode][] = [$holder->id, $holder->numero_flooz, (bool) $holder->is_locked];
             }
 
             foreach ($chunk as $flooz) {
@@ -115,14 +117,16 @@ class ImportPdvShortcodes extends Command
         // Un shortcode ne peut aller qu'à un PDV : il est refusé s'il reste porté par un autre PDV après mise à jour.
         // Un PDV qui reçoit lui-même un nouveau shortcode dans ce fichier libère l'ancien (échanges et permutations
         // inclus) ; on répète tant qu'un refus en entraîne un autre.
+        $releaseBlank = (bool) $this->option('release-blank');
         do {
             $dropped = false;
             foreach ($pending as $id => [$line, $flooz, $code]) {
                 if ($this->isPhoneCode($code)) {
                     continue; // un numéro de téléphone peut servir à plusieurs PDV
                 }
-                foreach ($holders[$code] ?? [] as [$holderId, $holderFlooz]) {
-                    if ($holderId !== $id && !isset($pending[$holderId])) {
+                foreach ($holders[$code] ?? [] as [$holderId, $holderFlooz, $holderLocked]) {
+                    $releasable = $releaseBlank && !$holderLocked && isset($blank[$holderFlooz]);
+                    if ($holderId !== $id && !isset($pending[$holderId]) && !$releasable) {
                         $rejected[] = [$line, $flooz, $code, "shortcode déjà porté par un autre PDV de la base (numéro {$holderFlooz})"];
                         unset($pending[$id]);
                         $dropped = true;
@@ -131,6 +135,16 @@ class ImportPdvShortcodes extends Command
                 }
             }
         } while ($dropped);
+
+        // PDV à vider : portent un shortcode que le fichier attribue à un autre PDV et dont la ligne est vide
+        $release = [];
+        foreach ($pending as $id => [$line, $flooz, $code]) {
+            foreach ($holders[$code] ?? [] as [$holderId, $holderFlooz]) {
+                if ($holderId !== $id && !isset($pending[$holderId]) && !$this->isPhoneCode($code)) {
+                    $release[$holderId] = [$holderFlooz, $code];
+                }
+            }
+        }
 
         $updates = [];
         $changes = [];
@@ -145,8 +159,11 @@ class ImportPdvShortcodes extends Command
         }
 
         if ($this->option('apply')) {
-            DB::transaction(function () use ($updates) {
+            DB::transaction(function () use ($updates, $release) {
                 // Mise à jour directe : ni horodatage ni auteur ne changent, seul le shortcode est renseigné
+                foreach ($release as $id => [$holderFlooz, $code]) {
+                    DB::table('point_of_sales')->where('id', $id)->update(['shortcode' => null]);
+                }
                 foreach ($updates as $id => $code) {
                     DB::table('point_of_sales')->where('id', $id)->update(['shortcode' => $code]);
                 }
@@ -164,6 +181,7 @@ class ImportPdvShortcodes extends Command
         $this->info(($this->option('apply') ? 'APPLIQUÉ' : 'SIMULATION (rien n\'est écrit, ajouter --apply)') . ' — ' . count($lines) . ' lignes lues');
         $this->line("  Shortcodes renseignés (PDV sans shortcode) : {$stats['to_set']}");
         $this->line("  Shortcodes remplacés (valeur différente)   : {$stats['to_change']}");
+        $this->line('  PDV vidés (shortcode vide dans le fichier, code attribué à un autre) : ' . count($release));
         $this->line("  Déjà à jour                                : {$stats['unchanged']}");
         $this->line('  Lignes écartées                            : ' . count($rejected));
         $this->line("  Rapport des lignes écartées : {$report}");
