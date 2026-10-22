@@ -120,7 +120,7 @@ const id = computed(() => {
 
 const maxLength = computed(() => {
   if (props.mask === 'phone') return 15; // "228 XX XX XX XX" = 15 chars (228 + 4 spaces + 8 digits)
-  if (props.mask === 'shortcode') return 8; // "XXX XXXX"
+  if (props.mask === 'shortcode') return 12; // 7 chiffres (XXX XXXX) ou 11 si un numéro de téléphone tient lieu de shortcode
   return undefined;
 });
 
@@ -170,6 +170,7 @@ const displayValue = computed(() => {
     const digits = value.replace(/\D/g, '');
     if (digits.length === 0) return '';
     if (digits.length <= 3) return digits;
+    if (digits.length > 7) return digits; // numéro de téléphone tenant lieu de shortcode : affiché tel quel
     return `${digits.slice(0, 3)} ${digits.slice(3, 7)}`;
   }
   
@@ -199,7 +200,9 @@ const handleInput = (event) => {
     emit('update:modelValue', digits);
   } else if (props.mask === 'shortcode') {
     // Extract only digits
-    const digits = value.replace(/\D/g, '').slice(0, 7);
+    // 7 chiffres ; 11 seulement si la valeur existante est déjà un numéro de téléphone (shortcode importé tel quel)
+    const limit = String(props.modelValue || '').replace(/\D/g, '').length > 7 ? 11 : 7;
+    const digits = value.replace(/\D/g, '').slice(0, limit);
     emit('update:modelValue', digits);
   } else {
     emit('update:modelValue', value);

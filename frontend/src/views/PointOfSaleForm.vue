@@ -1505,9 +1505,9 @@ const validateStep = async () => {
     
     if (!formData.value.shortcode) {
       errors.value.shortcode = 'Le shortcode est obligatoire';
-    } else if (formData.value.shortcode.length !== 7) {
+    } else if (formData.value.shortcode.length !== 7 && formData.value.shortcode.length !== 11) {
       errors.value.shortcode = 'Le shortcode doit contenir exactement 7 chiffres';
-    } else {
+    } else if (formData.value.shortcode.length === 7) {
       // Vérifier l'unicité du shortcode
       try {
         const result = await PointOfSaleService.checkUniqueness('shortcode', formData.value.shortcode, isEditMode.value ? editId.value : null);

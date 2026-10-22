@@ -30,6 +30,7 @@ class PdvShortcodeImportCommandTest extends TestCase
         $eightDigits = $this->pdv($org, $admin, ['numero_flooz' => '22899023081', 'shortcode' => null]);
         $empty = $this->pdv($org, $admin, ['numero_flooz' => '22879766785', 'shortcode' => null]);
         $phoneAsCode = $this->pdv($org, $admin, ['numero_flooz' => '22899175109', 'shortcode' => null]);
+        $phoneAsCode2 = $this->pdv($org, $admin, ['numero_flooz' => '22899175110', 'shortcode' => null]);
         $dupA = $this->pdv($org, $admin, ['numero_flooz' => '22899094953', 'shortcode' => null]);
         $dupB = $this->pdv($org, $admin, ['numero_flooz' => '22899130723', 'shortcode' => null]);
         $locked = $this->pdv($org, $admin, ['numero_flooz' => '22897409033', 'shortcode' => null, 'is_locked' => true]);
@@ -44,7 +45,8 @@ class PdvShortcodeImportCommandTest extends TestCase
             "22897430123\t5454023",            // déjà à jour
             "22899023081\t78219902",           // 8 chiffres : écarté
             "22879766785\t",                   // vide : écarté
-            "22899175109\t22896776202",        // numéro de téléphone : écarté
+            "22899175109	22896776202",        // numero de telephone : conserve tel quel
+            "22899175110	22896776202",        // meme numero pour un autre PDV : autorise
             "22899094953\t5453968",            // même shortcode pour deux PDV : écartés
             "22899130723\t5453968",
             "22897409033\t5454018",            // PDV verrouillé : écarté
@@ -66,12 +68,14 @@ class PdvShortcodeImportCommandTest extends TestCase
         $this->assertSame('0151880', $sixDigits->fresh()->shortcode);
         $this->assertSame('5454022', $replaced->fresh()->shortcode);
         $this->assertSame('5454023', $same->fresh()->shortcode);
-        foreach ([$eightDigits, $empty, $phoneAsCode, $dupA, $dupB, $locked, $takenElsewhere] as $untouched) {
+        $this->assertSame('22896776202', $phoneAsCode->fresh()->shortcode);
+        $this->assertSame('22896776202', $phoneAsCode2->fresh()->shortcode);
+        foreach ([$eightDigits, $empty, $dupA, $dupB, $locked, $takenElsewhere] as $untouched) {
             $this->assertNull($untouched->fresh()->shortcode, $untouched->numero_flooz);
         }
 
         $rejected = file_get_contents($report);
-        foreach (['22899023081', '22879766785', '22899175109', '22899094953', '22899130723', '22897409033', '22897453635', '22800000000'] as $flooz) {
+        foreach (['22899023081', '22879766785', '22899094953', '22899130723', '22897409033', '22897453635', '22800000000'] as $flooz) {
             $this->assertStringContainsString($flooz, $rejected);
         }
         $this->assertStringNotContainsString('22899979614', $rejected);

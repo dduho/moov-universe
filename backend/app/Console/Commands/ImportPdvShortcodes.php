@@ -51,7 +51,8 @@ class ImportPdvShortcodes extends Command
             if (strlen($code) === 6) {
                 $code = '0' . $code; // zéro initial perdu
             }
-            if (strlen($code) !== 7) {
+            // Un numéro de téléphone (11 chiffres, indicatif 228) tient lieu de shortcode pour certains PDV : conservé tel quel
+            if (!$this->isPhoneCode($code) && strlen($code) !== 7) {
                 $rejected[] = [$line, $flooz, $code, 'shortcode de ' . strlen($code) . ' chiffres (7 attendus)'];
                 continue;
             }
@@ -69,7 +70,9 @@ class ImportPdvShortcodes extends Command
         // Un même shortcode donné à plusieurs numéros du fichier : on n'en applique aucun
         $byCode = [];
         foreach ($candidates as $flooz => [$line, $code]) {
-            $byCode[$code][] = $flooz;
+            if (!$this->isPhoneCode($code)) { // un numéro de téléphone peut légitimement servir à plusieurs PDV
+                $byCode[$code][] = $flooz;
+            }
         }
         foreach ($byCode as $code => $floozList) {
             if (count($floozList) > 1) {
@@ -108,7 +111,7 @@ class ImportPdvShortcodes extends Command
                     $stats['unchanged']++;
                     continue;
                 }
-                $other = ($taken->get($code) ?? collect())->first(fn ($p) => $p->id !== $pdv->id);
+                $other = $this->isPhoneCode($code) ? null : ($taken->get($code) ?? collect())->first(fn ($p) => $p->id !== $pdv->id);
                 if ($other) {
                     $rejected[] = [$line, $flooz, $code, "shortcode déjà porté par un autre PDV de la base (numéro {$other->numero_flooz})"];
                     continue;
@@ -167,6 +170,11 @@ class ImportPdvShortcodes extends Command
         return self::SUCCESS;
     }
 
+    private function isPhoneCode(string $code): bool
+    {
+        return strlen($code) === 11 && str_starts_with($code, '228');
+    }
+
     /** @return array<int, array{0:int,1:mixed,2:mixed}> [n° de ligne du fichier, numéro Flooz, shortcode] */
     private function readRows(string $path): array
     {
@@ -174,27 +182,42 @@ class ImportPdvShortcodes extends Command
 
         if (in_array($extension, ['txt', 'tsv', 'csv'], true)) {
             $content = preg_replace('/^\xEF\xBB\xBF/', '', (string) file_get_contents($path));
-            $rows = [];
-            foreach (preg_split('/\r\n|\n|\r/', $content) as $i => $text) {
-                if (trim($text) === '') {
-                    continue;
-                }
-                $cells = preg_split('/[\t;,]/', $text);
-                $rows[] = [$i + 1, $cells[0] ?? '', $cells[1] ?? ''];
+            $table = [];
+            foreach (preg_split('/\r\n|\n|\r/', $content) as $text) {
+                $table[] = trim($text) === '' ? [] : preg_split('/[\t;,]/', $text);
             }
         } else {
-            $sheet = IOFactory::load($path)->getSheet(0);
-            $rows = [];
-            foreach ($sheet->toArray(null, true, true, false) as $i => $cells) {
-                $rows[] = [$i + 1, $cells[0] ?? '', $cells[1] ?? ''];
+            $table = IOFactory::load($path)->getSheet(0)->toArray(null, true, true, false);
+        }
+
+        // Colonnes repérées par leur intitulé (« Numéro Flooz », « Shortcode »), sinon les deux premières
+        $floozCol = 0;
+        $codeCol = 1;
+        $first = $table[0] ?? [];
+        if ($first && !preg_match('/\d{6,}/', implode('', array_map('strval', $first)))) {
+            foreach ($first as $i => $header) {
+                $name = preg_replace('/[^a-z]/', '', strtolower(\Illuminate\Support\Str::ascii((string) $header)));
+                if (str_contains($name, 'flooz') && $name !== 'shortcode') {
+                    $floozCol = $i;
+                } elseif ($name === 'shortcode') {
+                    $codeCol = $i;
+                }
+            }
+            array_shift($table);
+            $offset = 2;
+        } else {
+            $offset = 1;
+        }
+
+        $rows = [];
+        foreach ($table as $i => $cells) {
+            $flooz = $cells[$floozCol] ?? '';
+            $code = $cells[$codeCol] ?? '';
+            if (trim((string) $flooz) !== '' || trim((string) $code) !== '') {
+                $rows[] = [$i + $offset, $flooz, $code];
             }
         }
 
-        // Ligne d'en-tête éventuelle (« Numéro Flooz », « Shortcode »)
-        if ($rows && !preg_match('/\d{6,}/', (string) $rows[0][1])) {
-            array_shift($rows);
-        }
-
-        return array_values(array_filter($rows, fn ($r) => trim((string) $r[1]) !== '' || trim((string) $r[2]) !== ''));
+        return $rows;
     }
 }
