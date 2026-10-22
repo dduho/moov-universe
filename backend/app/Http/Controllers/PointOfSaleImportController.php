@@ -428,6 +428,13 @@ class PointOfSaleImportController extends Controller
             $normalized = preg_replace('/\s+/', ' ', $normalized);
             $normalized = trim($normalized);
             
+            // La description de la localisation porte plusieurs intitulés possibles
+            // (« LOCALISATION », « DESCRIPTION DE LA LOCALISATION », « LOCALISATION (DESCRIPTION) »…)
+            if (!isset($map['localisation']) && str_contains($normalized, 'localisation')) {
+                $map['localisation'] = $index;
+                continue;
+            }
+
             // Chercher la correspondance dans les alias
             foreach ($aliases as $canonical => $variants) {
                 foreach ($variants as $variant) {
@@ -543,7 +550,7 @@ class PointOfSaleImportController extends Controller
             'numero' => $this->normalizeSequenceNumber($this->getColumnValue($row, $headerMap, 'numero')),
             'nom_point' => $nom_point,
             'numero_flooz' => $numero_flooz,
-            'shortcode' => $this->getColumnValue($row, $headerMap, 'shortcode'),
+            'shortcode' => $this->normalizeShortcode($this->getColumnValue($row, $headerMap, 'shortcode')),
             'profil' => $profil ?: 'DISTRO', // Valeur par défaut
             'region' => strtoupper($region),
             'prefecture' => $prefecture,
@@ -603,6 +610,24 @@ class PointOfSaleImportController extends Controller
         $commune = preg_replace('/ (\d+)$/', '_$1', $commune);
         
         return $commune;
+    }
+
+    /**
+     * Le shortcode est un code (7 chiffres), pas un nombre : on le garde tel quel, zéros initiaux compris.
+     * Quand Excel a déjà converti la cellule en nombre (« 0140834 » → 140834), on restitue les zéros perdus.
+     */
+    private function normalizeShortcode($value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $code = trim((string) $value);
+        if (preg_match('/^\d{1,6}$/', $code)) {
+            return str_pad($code, 7, '0', STR_PAD_LEFT);
+        }
+
+        return $code;
     }
 
     /**
@@ -958,51 +983,94 @@ class PointOfSaleImportController extends Controller
     }
 
     /**
-     * Télécharger un modèle Excel
+     * Colonnes du fichier d'import (ordre et intitulés du fichier PDV réel) : [intitulé, obligatoire, exemple, description]
+     */
+    private const TEMPLATE_COLUMNS = [
+        ['N°', false, '1', 'Numéro de ligne (facultatif)'],
+        ['DEALER', false, 'PSDTT', "Informatif : le dealer retenu est celui choisi à l'écran d'import"],
+        ['NUMERO FLOOZ', true, '22896370351', '11 chiffres, indicatif 228 compris'],
+        ['SHORT CODE', false, '0140834', '7 chiffres, zéros initiaux conservés'],
+        ['NOM DU POINT', true, 'PSDTT-ETS EXEMPLE 0351', 'Nom du point de vente'],
+        ['PROFIL', false, 'DISTRO', 'DISTRO, AGNT, DISTROWNIF, DISTROTC, BANKAGNT ou FTAGNT (défaut : DISTRO)'],
+        ['FIRSTNAME', false, 'Kossi', 'Prénom du gérant'],
+        ['LASTNAME', false, 'Mensah', 'Nom du gérant'],
+        ['GENDER', false, 'MASCULIN', 'MASCULIN ou FEMININ'],
+        ['IDDESCRIPTION', false, 'CARTE NATIONALE D IDENTITE', "Type de pièce : carte nationale d'identité, carte d'électeur, passeport, permis de conduire, carte consulaire, carte de séjour, carte ANID"],
+        ['IDNUMBER', false, '0311-687-6', 'Numéro de la pièce'],
+        ['IDEXPIRYDATE', false, '15/01/2030', "Date d'expiration de la pièce (jj/mm/aaaa)"],
+        ['NATIONALITY', false, 'TOGOLAISE', 'Nationalité'],
+        ['PROFESSION', false, 'COMMERCANT', 'Profession'],
+        ["TYPE D'ACTIVITE", false, 'COMMERCE GENERAL', "Type d'activité"],
+        ['LOCALISATION', false, 'Marché de Assahoun, en face du poste de police', 'Description de la localisation (repères)'],
+        ['REGION', true, 'MARITIME', 'MARITIME, PLATEAUX, CENTRALE, KARA ou SAVANES'],
+        ['PREFECTURE', false, 'Avé', 'Préfecture'],
+        ['COMMUNE', false, 'Avé_1', 'Commune'],
+        ['CANTON', false, 'Asahoun', 'Canton'],
+        ['QUARTIER', false, 'NOUVEAU MARCHE', 'Quartier'],
+        ['VILLE', false, 'KEVE', 'Ville'],
+        ['LATITUDE', false, '6.265606', 'Latitude (degrés décimaux)'],
+        ['LONGITUDE', false, '0.543565', 'Longitude (degrés décimaux)'],
+        ['NUMERO PROPRIETAIRE DU PDV', false, '22897157098', 'Téléphone du propriétaire (8 chiffres ou 11 avec 228)'],
+        ['AUTRE CONTACT DU PDV', false, '22897157098', 'Autre contact'],
+        ['SEXE', false, 'MASCULIN', 'Sexe du gérant : MASCULIN ou FEMININ'],
+        ['NIF', false, '1001665855', 'NIF (laisser vide ou « Sans NIF » si aucun)'],
+        ['REGIME FISCAL', false, 'Sans TVA', 'Sans TVA ou Avec TVA'],
+        ['NIF PARTICULIER', false, '1002027875', 'NIF particulier'],
+        ['SUPPORT DE VISIBILITE', false, 'AUTOCOLLANT', 'Un ou plusieurs supports séparés par « + » ou « , » : autocollant, drapelet, chevalet, potence, parasols…'],
+        ['ETAT DU SUPPORT', false, 'DEFRAICHI', 'BON, ACCEPTABLE, MAUVAIS ou DEFRAICHI'],
+        ['NUMERO CAGNT', false, '22879395515', 'Numéro CAGNT'],
+        ['COMMERCIAL', false, 'KPONKA yaovi', 'Commercial en charge du PDV'],
+    ];
+
+    /**
+     * Télécharger un modèle Excel (tous les champs du fichier d'import)
      */
     public function downloadTemplate()
     {
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('PDV');
 
-        // En-têtes
-        $headers = [
-            'nom_point', 'numero_flooz', 'shortcode', 'profil', 'region', 'prefecture',
-            'commune', 'ville', 'quartier', 'dealer_name', 'latitude', 'longitude'
-        ];
+        $coordinate = fn (int $index) => \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index);
+        $lastColumn = $coordinate(count(self::TEMPLATE_COLUMNS));
+        $textColumns = ['NUMERO FLOOZ', 'SHORT CODE', 'IDNUMBER', 'IDEXPIRYDATE', 'NUMERO PROPRIETAIRE DU PDV', 'AUTRE CONTACT DU PDV', 'NIF', 'NIF PARTICULIER', 'NUMERO CAGNT'];
 
-        $sheet->fromArray([$headers], null, 'A1');
+        foreach (self::TEMPLATE_COLUMNS as $i => [$header, $required, $example]) {
+            $column = $coordinate($i + 1);
 
-        // Exemple de ligne
-        $exampleRow = [
-            'Boutique Test',
-            '9012345678',
-            'TEST01',
-            'PSDTT',
-            'MARITIME',
-            'Golfe',
-            'Golfe_1',
-            'Lomé',
-            'Tokoin',
-            'John Doe',
-            '6.1319',
-            '1.2223'
-        ];
-        $sheet->fromArray([$exampleRow], null, 'A2');
+            // Colonnes « codes » en texte : Excel ne doit pas les convertir en nombres (zéros initiaux conservés)
+            if (in_array($header, $textColumns, true)) {
+                $sheet->getStyle("{$column}2:{$column}2000")->getNumberFormat()->setFormatCode(\PhpOffice\PhpSpreadsheet\Style\NumberFormat::FORMAT_TEXT);
+            }
 
-        // Style pour les en-têtes
-        $sheet->getStyle('A1:L1')->getFont()->setBold(true);
-        $sheet->getStyle('A1:L1')->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('FF6B00');
-
-        // Auto-size columns
-        foreach (range('A', 'L') as $col) {
-            $sheet->getColumnDimension($col)->setAutoSize(true);
+            $sheet->setCellValue("{$column}1", $header);
+            $sheet->setCellValueExplicit("{$column}2", $example, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->getStyle("{$column}1")->getFill()
+                ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                ->getStartColor()->setRGB($required ? 'FF6B00' : 'FFD9B3');
+            $sheet->getColumnDimension($column)->setWidth(max(14, min(40, strlen($header) + 4)));
         }
 
+        $sheet->getStyle("A1:{$lastColumn}1")->getFont()->setBold(true);
+        $sheet->freezePane('A2');
+
+        // Feuille d'aide : une ligne par colonne (la 1re feuille reste celle lue à l'import)
+        $help = $spreadsheet->createSheet();
+        $help->setTitle('Aide');
+        $help->fromArray([['Colonne', 'Obligatoire', 'Exemple', 'Description']], null, 'A1');
+        foreach (self::TEMPLATE_COLUMNS as $r => [$header, $required, $example, $description]) {
+            foreach ([$header, $required ? 'OUI' : 'non', $example, $description] as $c => $value) {
+                $help->setCellValueExplicit([$c + 1, $r + 2], (string) $value, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            }
+        }
+        $help->getStyle('A1:D1')->getFont()->setBold(true);
+        foreach (['A' => 30, 'B' => 12, 'C' => 40, 'D' => 90] as $col => $width) {
+            $help->getColumnDimension($col)->setWidth($width);
+        }
+        $spreadsheet->setActiveSheetIndex(0);
+
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        
+
         $filename = 'modele_import_pdv.xlsx';
         $temp_file = tempnam(sys_get_temp_dir(), $filename);
         $writer->save($temp_file);
